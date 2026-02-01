@@ -4,16 +4,22 @@ from services import client
 import json
 
 def setup_routes(app):
-    # Verileri çeken rota (İsimlendirme düzeltildi)
+    # --- YENİ: VERİ SİLME ROTASI ---
+    @app.route('/analiz-sil/<int:id>', methods=['DELETE'])
+    def analiz_sil(id):
+        conn = get_db_connection()
+        conn.execute('DELETE FROM analizler WHERE id = ?', (id,))
+        conn.commit()
+        conn.close()
+        return jsonify({"mesaj": "Veri başarıyla silindi!"}), 200
+
     @app.route('/analizler', methods=['GET'])
     def get_analizler():
         conn = get_db_connection()
-        # 'deneme_ad' sütununu 'ad' olarak isimlendiriyoruz (Frontend ile uyum için)
         veriler = conn.execute('SELECT id, deneme_ad as ad, net, tarih FROM analizler ORDER BY id DESC').fetchall()
         conn.close()
         return jsonify([dict(row) for row in veriler])
 
-    # Yeni veri ekleyen rota
     @app.route('/analiz-ekle', methods=['POST'])
     def analiz_ekle():
         yeni_veri = request.get_json()
@@ -28,7 +34,6 @@ def setup_routes(app):
         conn.close()
         return jsonify({"mesaj": "Veri kaydedildi!"}), 201
 
-    # AI Yorumunu hazırlayan rota
     @app.route('/ai-yorumla', methods=['GET'])
     def ai_yorumla():
         conn = get_db_connection()

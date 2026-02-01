@@ -9,8 +9,6 @@ import { COLORS, GUNLER } from '../src/constants/theme';
 import SetupScreen from './setup';
 
 const { width } = Dimensions.get('window');
-
-// Sabit domain adresin (Boşluksuz ve tam hali)
 const API_URL = 'https://sam-unsublimed-unoptimistically.ngrok-free.dev'; 
 
 export default function Index() {
@@ -28,7 +26,6 @@ export default function Index() {
   const [isBreak, setIsBreak] = useState(false);
   const intervalRef = useRef<any>(null);
 
-  // Ngrok engelini ve JSON hatasını çözen ortak header yapısı
   const headers = {
     'Content-Type': 'application/json',
     'ngrok-skip-browser-warning': 'true'
@@ -64,18 +61,13 @@ export default function Index() {
       const res = await fetch(`${API_URL}/ai-yorumla`, { headers });
       const data = await res.json();
       setAiYorum(data.yorum);
-    } catch (e) { 
-      setAiYorum("Koçun şu an meşgul Burak, ama netlerin harika görünüyor!"); 
-    }
+    } catch (e) { setAiYorum("Koçun şu an meşgul Burak!"); }
     setLoadingYorum(false);
   };
 
   const yeniAnalizEkle = async () => {
     if (!denemeAd || !denemeNet) return Alert.alert("Hata", "Lütfen tüm alanları doldur!");
-    
-    // Backend'in beklediği 'ad' anahtarı ile veriyi hazırlıyoruz
     const yeni = { ad: denemeAd, net: parseFloat(denemeNet), tarih: new Date().toLocaleDateString('tr-TR') };
-    
     try {
       const res = await fetch(`${API_URL}/analiz-ekle`, {
         method: 'POST',
@@ -88,6 +80,26 @@ export default function Index() {
         fetchAIYorum();
       }
     } catch (e) { Alert.alert("Hata", "Sunucuya bağlanılamadı."); }
+  };
+
+  // --- YENİ: SİLME FONKSİYONU ---
+  const analizSil = async (id: number) => {
+    Alert.alert("Veriyi Sil", "Bu denemeyi silmek istediğinden emin misin?", [
+      { text: "Vazgeç", style: "cancel" },
+      { 
+        text: "Sil", 
+        style: "destructive", 
+        onPress: async () => {
+          try {
+            const res = await fetch(`${API_URL}/analiz-sil/${id}`, { method: 'DELETE', headers });
+            if (res.ok) {
+              fetchAnalizler();
+              fetchAIYorum();
+            }
+          } catch (e) { Alert.alert("Hata", "Silme işlemi başarısız."); }
+        }
+      }
+    ]);
   };
 
   const toggleTask = async (index: number) => {
@@ -138,7 +150,9 @@ export default function Index() {
         <TextInput style={styles.input} placeholder="Netiniz" keyboardType="numeric" value={denemeNet} onChangeText={setDenemeNet} placeholderTextColor={COLORS.gray} />
         <TouchableOpacity style={[styles.btn, { backgroundColor: COLORS.warning }]} onPress={yeniAnalizEkle}><Text style={styles.btnText}>Veriyi Kaydet</Text></TouchableOpacity>
       </View>
-      <View style={{ padding: 20, flex: 1 }}><AnalizTablosu veriler={analizler} /></View>
+      <View style={{ padding: 20, flex: 1 }}>
+        <AnalizTablosu veriler={analizler} onSil={analizSil} />
+      </View>
     </SafeAreaView>
   );
 
