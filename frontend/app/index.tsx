@@ -10,8 +10,8 @@ import SetupScreen from './setup';
 
 const { width } = Dimensions.get('window');
 
-// BURAYI BİR KEZ SABİT ADRESİNLE DEĞİŞTİR, BİR DAHA DOKUNMA!
-const API_URL = 'https://senin-sabit-domainin.ngrok-free.app'; 
+// Sabit domain adresin (Boşluksuz ve tam hali)
+const API_URL = 'https://sam-unsublimed-unoptimistically.ngrok-free.dev'; 
 
 export default function Index() {
   const [schedule, setSchedule] = useState<any[] | null>(null);
@@ -23,11 +23,16 @@ export default function Index() {
   const [denemeAd, setDenemeAd] = useState('');
   const [denemeNet, setDenemeNet] = useState('');
 
-  // Pomodoro Timer State
   const [timer, setTimer] = useState(25 * 60);
   const [isActive, setIsActive] = useState(false);
   const [isBreak, setIsBreak] = useState(false);
   const intervalRef = useRef<any>(null);
+
+  // Ngrok engelini ve JSON hatasını çözen ortak header yapısı
+  const headers = {
+    'Content-Type': 'application/json',
+    'ngrok-skip-browser-warning': 'true'
+  };
 
   useEffect(() => { loadInitialData(); }, []);
 
@@ -38,15 +43,11 @@ export default function Index() {
     }
   }, [view]);
 
-  // Ortak Header: Ngrok engelini ve JSON hatasını kökten çözer
-  const headers = {
-    'Content-Type': 'application/json',
-    'ngrok-skip-browser-warning': 'true'
-  };
-
   const loadInitialData = async () => {
-    const savedProg = await AsyncStorage.getItem('@SınavımAI_Program');
-    if (savedProg) setSchedule(JSON.parse(savedProg));
+    try {
+      const savedProg = await AsyncStorage.getItem('@SınavımAI_Program');
+      if (savedProg) setSchedule(JSON.parse(savedProg));
+    } catch (e) { console.error("Veri yükleme hatası", e); }
   };
 
   const fetchAnalizler = async () => {
@@ -63,12 +64,16 @@ export default function Index() {
       const res = await fetch(`${API_URL}/ai-yorumla`, { headers });
       const data = await res.json();
       setAiYorum(data.yorum);
-    } catch (e) { setAiYorum("Koçun şu an meşgul Burak, ama netlerin harika görünüyor!"); }
+    } catch (e) { 
+      setAiYorum("Koçun şu an meşgul Burak, ama netlerin harika görünüyor!"); 
+    }
     setLoadingYorum(false);
   };
 
   const yeniAnalizEkle = async () => {
     if (!denemeAd || !denemeNet) return Alert.alert("Hata", "Lütfen tüm alanları doldur!");
+    
+    // Backend'in beklediği 'ad' anahtarı ile veriyi hazırlıyoruz
     const yeni = { ad: denemeAd, net: parseFloat(denemeNet), tarih: new Date().toLocaleDateString('tr-TR') };
     
     try {

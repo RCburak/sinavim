@@ -1,17 +1,16 @@
 from flask import Flask
 from flask_cors import CORS
 from routes import setup_routes
-from database import init_db # database.py'dan çekiyoruz
+from database import init_db
 
 app = Flask(__name__)
-CORS(app)
+# CORS ayarını en geniş haliyle bırakıyoruz ki ngrok sorun çıkarmasın
+CORS(app, resources={r"/*": {"origins": "*"}})
 
-# Veritabanını ve tabloları oluştur
+# Önce tabloları kontrol et, sonra sunucuyu aç
 init_db()
-
-# API rotalarını yükle
 setup_routes(app)
 
 if __name__ == '__main__':
-    # host='0.0.0.0' mobil cihazın bağlanabilmesi için önemli
+    # Terminalde 'ngrok http 8000' kullanıyorsan burası 8000 olmalı
     app.run(debug=True, host='0.0.0.0', port=8000)

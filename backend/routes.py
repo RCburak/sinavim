@@ -1,22 +1,43 @@
 from flask import request, jsonify
 from database import get_db_connection
-from services import client # Groq istemcisini services'dan çekiyoruz
+from services import client 
 import json
 
 def setup_routes(app):
-    # ... mevcut /analizler ve /analiz-ekle rotaların burada kalıyor ...
+    # Verileri çeken rota (İsimlendirme düzeltildi)
+    @app.route('/analizler', methods=['GET'])
+    def get_analizler():
+        conn = get_db_connection()
+        # 'deneme_ad' sütununu 'ad' olarak isimlendiriyoruz (Frontend ile uyum için)
+        veriler = conn.execute('SELECT id, deneme_ad as ad, net, tarih FROM analizler ORDER BY id DESC').fetchall()
+        conn.close()
+        return jsonify([dict(row) for row in veriler])
 
+    # Yeni veri ekleyen rota
+    @app.route('/analiz-ekle', methods=['POST'])
+    def analiz_ekle():
+        yeni_veri = request.get_json()
+        ad = yeni_veri.get('ad')
+        net = yeni_veri.get('net')
+        tarih = yeni_veri.get('tarih')
+
+        conn = get_db_connection()
+        conn.execute('INSERT INTO analizler (deneme_ad, net, tarih) VALUES (?, ?, ?)',
+                     (ad, net, tarih))
+        conn.commit()
+        conn.close()
+        return jsonify({"mesaj": "Veri kaydedildi!"}), 201
+
+    # AI Yorumunu hazırlayan rota
     @app.route('/ai-yorumla', methods=['GET'])
     def ai_yorumla():
         conn = get_db_connection()
-        # Son 5 denemeyi çekelim
         veriler = conn.execute('SELECT deneme_ad, net FROM analizler ORDER BY id DESC LIMIT 5').fetchall()
         conn.close()
 
         if not veriler:
             return jsonify({"yorum": "Henüz analiz edilecek kadar verimiz yok Burak. Birkaç deneme ekle, hemen yorumlayayım! 🚀"})
 
-        # Verileri AI'nın anlayacağı metne çeviriyoruz
         deneme_ozeti = ", ".join([f"{row['deneme_ad']}: {row['net']} net" for row in veriler])
 
         system_prompt = f"""
