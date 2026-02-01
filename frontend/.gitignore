@@ -1,13 +1,22 @@
+# --- Secrets & Environment ---
+.env
+.env.local
+.env.sample
+backend/.env
+frontend/.env
+
 # --- Backend (Python/Flask) ---
 backend/venv/
 backend/__pycache__/
-backend/.env
 backend/*.pyc
 backend/sinavim.db
 backend/.pytest_cache/
 backend/.vscode/
+venv/
+__pycache__/
 
 # --- Frontend (React Native/Expo) ---
+node_modules/
 frontend/node_modules/
 frontend/.expo/
 frontend/dist/
@@ -39,8 +48,3 @@ Thumbs.db
 
 # --- TypeScript ---
 *.tsbuildinfo
-
-# --- Environment Files ---
-.env
-.env*.local
-.env.sample
