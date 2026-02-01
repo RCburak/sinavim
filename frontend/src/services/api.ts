@@ -1,13 +1,15 @@
-const BASE_URL = 'https://sam-unsublimed-unoptimistically.ngrok-free.dev';
+const BASE_URL = 'https://senin-ngrok-adresin.ngrok-free.app';
 
-export const generateProgram = async (goal: string, hours: number) => {
-  const response = await fetch(`${BASE_URL}/generate-program`, {
+export const getAnalizler = async () => {
+  const response = await fetch(`${BASE_URL}/analizler`);
+  return await response.json();
+};
+
+export const postAnaliz = async (veri: any) => {
+  const response = await fetch(`${BASE_URL}/analiz-ekle`, {
     method: 'POST',
-    headers: { 
-      'Content-Type': 'application/json',
-      'ngrok-skip-browser-warning': 'true' 
-    },
-    body: JSON.stringify({ goal, hours }),
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(veri),
   });
   return await response.json();
 };

@@ -1,19 +1,27 @@
 from flask import request, jsonify
-from services import generate_ai_schedule
+from database import get_db_connection
 
 def setup_routes(app):
-    @app.route('/generate-program', methods=['POST'])
-    def handle_generate():
-        data = request.json
-        goal = data.get('goal')
-        hours = data.get('hours')
+    # Analizleri Getir
+    @app.route('/analizler', methods=['GET'])
+    def get_analizler():
+        conn = get_db_connection()
+        analizler = conn.execute('SELECT * FROM analizler ORDER BY id DESC').fetchall()
+        conn.close()
+        # Row objelerini listeye çeviriyoruz
+        return jsonify([dict(ix) for ix in analizler])
 
-        if not goal or not hours:
-            return jsonify({"status": "error", "message": "Eksik bilgi"}), 400
-
-        program = generate_ai_schedule(goal, hours)
+    # Yeni Analiz Ekle
+    @app.route('/analiz-ekle', methods=['POST'])
+    def add_analiz():
+        yeni_veri = request.json
+        ad = yeni_veri.get('ad')
+        net = yeni_veri.get('net')
+        tarih = yeni_veri.get('tarih')
         
-        if program:
-            return jsonify({"status": "success", "program": program})
-        else:
-            return jsonify({"status": "error", "message": "Program oluşturulamadı"}), 500
+        conn = get_db_connection()
+        conn.execute('INSERT INTO analizler (deneme_ad, net, tarih) VALUES (?, ?, ?)',
+                     (ad, net, tarih))
+        conn.commit()
+        conn.close()
+        return jsonify({"status": "success", "message": "Net kaydedildi!"})
