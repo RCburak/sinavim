@@ -5,7 +5,9 @@ import { COLORS } from '../constants/theme';
 
 export const DayFolder = ({ day, tasks, toggleTask }: any) => {
   const [isOpen, setIsOpen] = useState(false);
-  const dayTasks = tasks.filter((t: any) => t.gun === day);
+  
+  // DÜZELTME: 't.gun' yerine 't.day' kullanıyoruz
+  const dayTasks = tasks.filter((t: any) => t.day === day);
 
   if (dayTasks.length === 0) return null;
 
@@ -15,11 +17,11 @@ export const DayFolder = ({ day, tasks, toggleTask }: any) => {
         style={[styles.header, isOpen && { backgroundColor: COLORS.primary }]} 
         onPress={() => setIsOpen(!isOpen)}
       >
-        <Text style={[styles.text, isOpen && { color: COLORS.white }]}>
+        <Text style={[styles.text, isOpen && { color: '#fff' }]}>
           {isOpen ? '📂' : '📁'} {day}
         </Text>
-        <Text style={[styles.count, isOpen && { color: COLORS.white }]}>
-          {dayTasks.length} Ders
+        <Text style={[styles.count, isOpen && { color: '#fff' }]}>
+          {dayTasks.length} Görev
         </Text>
       </TouchableOpacity>
       {isOpen && (
@@ -39,8 +41,8 @@ export const DayFolder = ({ day, tasks, toggleTask }: any) => {
 
 const styles = StyleSheet.create({
   container: { marginBottom: 12, borderRadius: 15, overflow: 'hidden' },
-  header: { backgroundColor: COLORS.white, padding: 18, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', elevation: 2 },
+  header: { backgroundColor: '#fff', padding: 18, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', elevation: 2 },
   text: { fontSize: 17, fontWeight: 'bold', color: COLORS.text },
   count: { fontSize: 12, color: COLORS.gray },
-  list: { padding: 10, backgroundColor: COLORS.lightGray }
+  list: { padding: 10, backgroundColor: '#F0F2F5' }
 });

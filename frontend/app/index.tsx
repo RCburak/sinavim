@@ -82,7 +82,6 @@ export default function Index() {
     } catch (e) { Alert.alert("Hata", "Sunucuya bağlanılamadı."); }
   };
 
-  // --- YENİ: SİLME FONKSİYONU ---
   const analizSil = async (id: number) => {
     Alert.alert("Veriyi Sil", "Bu denemeyi silmek istediğinden emin misin?", [
       { text: "Vazgeç", style: "cancel" },
@@ -125,22 +124,38 @@ export default function Index() {
   }, [isActive, timer]);
 
   const formatTime = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
-  const progress = schedule ? Math.round((schedule.filter((t: any) => t.completed).length / schedule.length) * 100) : 0;
+  
+  // Düzeltme: schedule null ise hata vermemesi için güvenli kontrol
+  const progress = schedule && schedule.length > 0 
+    ? Math.round((schedule.filter((t: any) => t.completed).length / schedule.length) * 100) 
+    : 0;
+
   const tasksWithIndex = schedule?.map((item, index) => ({ ...item, originalIndex: index })) || [];
 
-  if (view === 'setup') return <SetupScreen onComplete={(data: any) => { setSchedule(data); setView('dashboard'); }} onBack={() => setView('dashboard')} />;
+  // Düzeltme: onComplete aşamasında setSchedule ile ana ekranı tazelemek için fonksiyon
+  const handleSetupComplete = (data: any) => {
+    setSchedule(data);
+    setView('dashboard');
+  };
+
+  if (view === 'setup') return <SetupScreen onComplete={handleSetupComplete} onBack={() => setView('dashboard')} />;
+  
   if (view === 'pomodoro') return (
     <SafeAreaView style={[styles.fullScreen, { backgroundColor: isBreak ? COLORS.success : COLORS.danger }]}>
       <TouchableOpacity onPress={() => setView('dashboard')} style={styles.backBtn}><Text style={styles.backBtnText}>← Dashboard</Text></TouchableOpacity>
       <PomodoroTimer timer={timer} isActive={isActive} isBreak={isBreak} onToggle={() => setIsActive(!isActive)} onReset={() => {setTimer(isBreak ? 300 : 1500); setIsActive(false);}} formatTime={formatTime} />
     </SafeAreaView>
   );
+
   if (view === 'program') return (
     <SafeAreaView style={[styles.fullScreen, { backgroundColor: COLORS.background }]}>
       <View style={[styles.header, { backgroundColor: COLORS.primary }]}><TouchableOpacity onPress={() => setView('dashboard')}><Text style={styles.backBtnText}>← Dashboard</Text></TouchableOpacity><Text style={styles.headerTitle}>Haftalık Programım</Text></View>
-      <ScrollView style={{ padding: 20 }}>{GUNLER.map(gun => <DayFolder key={gun} day={gun} tasks={tasksWithIndex} toggleTask={toggleTask} />)}</ScrollView>
+      <ScrollView style={{ padding: 20 }}>
+        {GUNLER.map(gun => <DayFolder key={gun} day={gun} tasks={tasksWithIndex} toggleTask={toggleTask} />)}
+      </ScrollView>
     </SafeAreaView>
   );
+
   if (view === 'analiz') return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }}>
       <View style={[styles.header, { backgroundColor: COLORS.warning }]}><TouchableOpacity onPress={() => setView('dashboard')}><Text style={styles.backBtnText}>← Dashboard</Text></TouchableOpacity><Text style={styles.headerTitle}>Deneme Analizi</Text></View>
@@ -159,12 +174,38 @@ export default function Index() {
   return (
     <View style={[styles.container, { backgroundColor: COLORS.background }]}>
       <StatusBar barStyle="light-content" />
-      <View style={[styles.hero, { backgroundColor: COLORS.primary }]}><SafeAreaView><Text style={styles.greeting}>Merhaba Burak! 👋</Text><View style={styles.progressBox}><Text style={styles.progressText}>Genel Başarı: %{progress}</Text><View style={[styles.progressBar, { backgroundColor: COLORS.overlay }]}><View style={[styles.progressFill, { width: `${progress}%`, backgroundColor: COLORS.secondary }]} /></View></View></SafeAreaView></View>
+      <View style={[styles.hero, { backgroundColor: COLORS.primary }]}>
+        <SafeAreaView>
+          <Text style={styles.greeting}>Merhaba Burak! 👋</Text>
+          <View style={styles.progressBox}>
+            <Text style={styles.progressText}>Genel Başarı: %{progress}</Text>
+            <View style={[styles.progressBar, { backgroundColor: 'rgba(255,255,255,0.3)' }]}>
+              <View style={[styles.progressFill, { width: `${progress}%`, backgroundColor: COLORS.secondary }]} />
+            </View>
+          </View>
+        </SafeAreaView>
+      </View>
       <ScrollView contentContainerStyle={styles.menuGrid}>
-        <TouchableOpacity style={styles.menuCard} onPress={() => setView('program')}><Text style={styles.cardEmoji}>📅</Text><Text style={styles.cardTitle}>Programım</Text><Text style={styles.cardSub}>Günlük planların</Text></TouchableOpacity>
-        <TouchableOpacity style={styles.menuCard} onPress={() => setView('pomodoro')}><Text style={styles.cardEmoji}>⏱️</Text><Text style={styles.cardTitle}>Pomodoro</Text><Text style={styles.cardSub}>{formatTime(timer)} Odaklan</Text></TouchableOpacity>
-        <TouchableOpacity style={styles.menuCard} onPress={() => setView('analiz')}><Text style={styles.cardEmoji}>📈</Text><Text style={[styles.cardTitle, { color: COLORS.warning }]}>Analizler</Text><Text style={styles.cardSub}>Net takibi yap</Text></TouchableOpacity>
-        <TouchableOpacity style={styles.menuCard} onPress={() => setView('setup')}><Text style={styles.cardEmoji}>⚙️</Text><Text style={styles.cardTitle}>Ayarlar</Text><Text style={styles.cardSub}>Yeni program kur</Text></TouchableOpacity>
+        <TouchableOpacity style={styles.menuCard} onPress={() => setView('program')}>
+          <Text style={styles.cardEmoji}>📅</Text>
+          <Text style={styles.cardTitle}>Programım</Text>
+          <Text style={styles.cardSub}>{tasksWithIndex.length} Ders Planlandı</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.menuCard} onPress={() => setView('pomodoro')}>
+          <Text style={styles.cardEmoji}>⏱️</Text>
+          <Text style={styles.cardTitle}>Pomodoro</Text>
+          <Text style={styles.cardSub}>{formatTime(timer)} Odaklan</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.menuCard} onPress={() => setView('analiz')}>
+          <Text style={styles.cardEmoji}>📈</Text>
+          <Text style={[styles.cardTitle, { color: COLORS.warning }]}>Analizler</Text>
+          <Text style={styles.cardSub}>Net takibi yap</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.menuCard} onPress={() => setView('setup')}>
+          <Text style={styles.cardEmoji}>⚙️</Text>
+          <Text style={styles.cardTitle}>Ayarlar</Text>
+          <Text style={styles.cardSub}>Yeni program kur</Text>
+        </TouchableOpacity>
       </ScrollView>
     </View>
   );
@@ -173,7 +214,7 @@ export default function Index() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   fullScreen: { flex: 1 },
-  hero: { padding: 30, borderBottomLeftRadius: 40, borderBottomRightRadius: 40, elevation: 5 },
+  hero: { padding: 30, borderBottomLeftRadius: 40, borderBottomRightRadius: 40, elevation: 5, paddingTop: 50 },
   greeting: { fontSize: 26, fontWeight: 'bold', color: '#fff' },
   progressBox: { marginTop: 20 },
   progressText: { color: '#fff', marginBottom: 8 },
