@@ -7,43 +7,46 @@ const defaultHeaders = {
 };
 
 export const analizService = {
-  // 1. Kullanıcıya özel analizleri çeker
-  getAll: async (userId: number) => {
+  // 1. Kullanıcıya özel analizleri çeker (userId artık string)
+  getAll: async (userId: string) => {
     try {
+      // URL yollarını ve parametre tipini güncelledik
       const response = await fetch(`${API_URL}/analizler/${userId}`, {
         method: 'GET',
         headers: defaultHeaders
       });
       if (!response.ok) throw new Error("Veri çekilemedi");
-      return await response.json();
+      const data = await response.json();
+      // Backend'den direkt liste geliyorsa döndür, yoksa data.analizler'i kontrol et
+      return Array.isArray(data) ? data : (data.analizler || []);
     } catch (e) {
       console.error("Analizler çekilemedi:", e);
       return [];
     }
   },
 
-  // 2. Kullanıcıya özel AI yorumunu çeker
-  getAIYorum: async (userId: number) => {
+  // 2. Kullanıcıya özel AI yorumunu çeker (userId artık string)
+  getAIYorum: async (userId: string) => {
     try {
       const response = await fetch(`${API_URL}/ai-yorumla/${userId}`, {
         method: 'GET',
         headers: defaultHeaders
       });
       const data = await response.json();
-      return data.yorum || "Veri yetersiz.";
+      return data.yorum || "Verileriniz analiz ediliyor...";
     } catch (e) {
       return "Analiz şu an yapılamıyor.";
     }
   },
 
-  // 3. Yeni analiz ekler (user_id ile birlikte)
-  add: async (ad: string, net: string, userId: number) => {
+  // 3. Yeni analiz ekler (userId artık string)
+  add: async (ad: string, net: string, userId: string) => {
     try {
       const response = await fetch(`${API_URL}/analiz-ekle`, {
         method: 'POST',
         headers: defaultHeaders,
         body: JSON.stringify({
-          user_id: userId,
+          user_id: userId, // Firebase string UID gönderiliyor
           ad: ad,
           net: parseFloat(net),
           tarih: new Date().toLocaleDateString('tr-TR')
@@ -56,7 +59,7 @@ export const analizService = {
     }
   },
 
-  // 4. Analiz siler
+  // 4. Analiz siler (Analiz ID'si hala sayı olabilir)
   delete: async (id: number) => {
     try {
       const response = await fetch(`${API_URL}/analiz-sil/${id}`, {

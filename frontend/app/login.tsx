@@ -10,6 +10,23 @@ export default function LoginScreen({ onLogin, onGoToRegister }: { onLogin: () =
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // Ortak Kayıt Fonksiyonu (E-posta veya Sosyal Giriş Sonrası)
+  const saveUserDataAndLogin = async (user: any) => {
+    try {
+      // KRİTİK DÜZELTME: Firebase'den gelen displayName bilgisini hafızaya alıyoruz
+      const displayName = user.name || user.displayName || 'Öğrenci';
+      
+      await AsyncStorage.setItem('@SınavımAI_UserLoggedIn', 'true');
+      await AsyncStorage.setItem('@SınavımAI_UserId', user.id || user.uid);
+      await AsyncStorage.setItem('@SınavımAI_UserName', displayName);
+      
+      onLogin(); // index.tsx'deki loadInitialData'yı tetikler
+    } catch (e) {
+      Alert.alert("Hata", "Giriş bilgileri kaydedilemedi.");
+    }
+  };
+
+  // 1. Klasik E-posta Girişi
   const handleLogin = async () => {
     if (email.length < 3 || password.length < 3) {
       return Alert.alert("Hata", "Lütfen bilgileri eksiksiz girin.");
@@ -18,18 +35,30 @@ export default function LoginScreen({ onLogin, onGoToRegister }: { onLogin: () =
     setLoading(true);
     try {
       const result = await authService.login(email, password);
-      
       if (result.status === "success") {
-        // Backend'den gelen tüm kritik verileri kaydediyoruz
-        await AsyncStorage.setItem('@SınavımAI_UserLoggedIn', 'true');
-        await AsyncStorage.setItem('@SınavımAI_UserId', result.user.id.toString());
-        await AsyncStorage.setItem('@SınavımAI_UserName', result.user.name);
-        onLogin();
+        await saveUserDataAndLogin(result.user);
       } else {
         Alert.alert("Giriş Başarısız", result.message);
       }
     } catch (e) {
-      Alert.alert("Hata", "Sunucuya ulaşılamıyor. Ngrok açık mı?");
+      Alert.alert("Hata", "Giriş sırasında bir sorun oluştu.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 2. Google ile Giriş
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    try {
+      const result = await authService.loginWithGoogle();
+      if (result.status === "success") {
+        await saveUserDataAndLogin(result.user);
+      } else {
+        Alert.alert("Hata", result.message);
+      }
+    } catch (e) {
+      Alert.alert("Hata", "Google girişi yapılamadı.");
     } finally {
       setLoading(false);
     }
@@ -45,16 +74,17 @@ export default function LoginScreen({ onLogin, onGoToRegister }: { onLogin: () =
               <Text style={styles.title}>Sınavım AI</Text>
               <Text style={styles.subtitle}>Başarıya giden yolda asistanın.</Text>
             </View>
+
             <View style={styles.form}>
               <TextInput style={styles.input} placeholder="E-posta" placeholderTextColor={COLORS.textSecondary} value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" />
               <TextInput style={styles.input} placeholder="Şifre" placeholderTextColor={COLORS.textSecondary} value={password} onChangeText={setPassword} secureTextEntry onSubmitEditing={handleLogin} />
               
-              <TouchableOpacity 
-                style={[styles.loginBtn, loading && { opacity: 0.7 }]} 
-                onPress={handleLogin} 
-                disabled={loading}
-              >
+              <TouchableOpacity style={[styles.loginBtn, loading && { opacity: 0.7 }]} onPress={handleLogin} disabled={loading}>
                 {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.loginBtnText}>Giriş Yap</Text>}
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.googleBtn} onPress={handleGoogleLogin} disabled={loading}>
+                <Text style={styles.googleBtnText}>G   Google ile Devam Et</Text>
               </TouchableOpacity>
 
               <TouchableOpacity style={styles.registerBtn} onPress={onGoToRegister}>
@@ -78,6 +108,8 @@ const styles = StyleSheet.create({
   input: { backgroundColor: COLORS.surface, padding: 18, borderRadius: 15, marginBottom: 15, color: COLORS.text, borderWidth: 1, borderColor: COLORS.border },
   loginBtn: { backgroundColor: COLORS.primary, padding: 18, borderRadius: 15, alignItems: 'center', marginTop: 10, elevation: 3 },
   loginBtnText: { color: COLORS.surface, fontWeight: 'bold', fontSize: 18 },
+  googleBtn: { backgroundColor: '#fff', padding: 18, borderRadius: 15, alignItems: 'center', marginTop: 15, borderWidth: 1, borderColor: '#ddd', flexDirection: 'row', justifyContent: 'center' },
+  googleBtnText: { color: '#757575', fontWeight: 'bold', fontSize: 16 },
   registerBtn: { marginTop: 25, alignItems: 'center' },
   registerText: { color: COLORS.textSecondary }
 });

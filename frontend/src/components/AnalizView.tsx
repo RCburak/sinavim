@@ -9,9 +9,9 @@ import {
   Keyboard, 
   TouchableWithoutFeedback, 
   KeyboardAvoidingView, 
-  Platform 
+  Platform,
+  ScrollView // Kaydırma sorunu için eklendi
 } from 'react-native';
-// Safe Area yönetimi için profesyonel kütüphane
 import { SafeAreaView } from 'react-native-safe-area-context'; 
 import { AnalizTablosu } from './AnalizTablosu';
 import { COLORS } from '../constants/theme';
@@ -21,21 +21,19 @@ export const AnalizView = ({
 }: any) => {
   const [denemeAd, setDenemeAd] = useState('');
   const [denemeNet, setDenemeNet] = useState('');
+  const [showAI, setShowAI] = useState(false); // AI yorumu açılır-kapanır kontrolü
 
   const handleAdd = () => {
-    if (!denemeAd || !denemeNet) return; // Boş veri girişini engelle
+    if (!denemeAd || !denemeNet) return;
     onAdd(denemeAd, denemeNet);
     setDenemeAd('');
     setDenemeNet('');
-    Keyboard.dismiss(); // Veri eklenince klavyeyi kapatır
+    Keyboard.dismiss();
   };
 
   return (
-    // 1. Ekranın boş yerine basınca klavyeyi kapatmak için sarmalıyoruz
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <View style={{ flex: 1, backgroundColor: COLORS.background }}>
-        
-        {/* 2. Klavyenin giriş alanlarını kapatmasını engelliyoruz */}
         <KeyboardAvoidingView 
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={{ flex: 1 }}
@@ -50,48 +48,65 @@ export const AnalizView = ({
               <Text style={styles.headerTitle}>Deneme Analizi</Text>
             </View>
 
-            {/* AI Yorum Kartı */}
-            <View style={styles.aiCard}>
-              <Text style={styles.aiTitle}>🤖 RC Sınavım AI Yorumu</Text>
-              {loadingYorum ? (
-                <ActivityIndicator color={COLORS.warning} />
-              ) : (
-                <Text style={styles.aiContent}>{aiYorum}</Text>
-              )}
-            </View>
-
-            {/* Veri Giriş Formu */}
-            <View style={styles.formCard}>
-              <TextInput 
-                style={styles.input} 
-                placeholder="Deneme Adı" 
-                value={denemeAd} 
-                onChangeText={setDenemeAd} 
-                placeholderTextColor={COLORS.textSecondary}
-                returnKeyType="next" // Klavyede "Sıradaki" butonu gösterir
-              />
-              <TextInput 
-                style={styles.input} 
-                placeholder="Netiniz" 
-                keyboardType="numeric" 
-                value={denemeNet} 
-                onChangeText={setDenemeNet} 
-                placeholderTextColor={COLORS.textSecondary}
-                returnKeyType="done" // Klavyede "Bitti" butonu gösterir
-                onSubmitEditing={handleAdd} // Bitti'ye basınca direkt ekler
-              />
+            {/* Kaydırılabilir İçerik Alanı */}
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 20 }}>
+              
+              {/* AI Yorum Butonu (Aç/Kapat) */}
               <TouchableOpacity 
-                style={[styles.btn, { backgroundColor: COLORS.warning }]} 
-                onPress={handleAdd}
+                style={styles.aiToggleButton} 
+                onPress={() => setShowAI(!showAI)}
               >
-                <Text style={styles.btnText}>Veriyi Kaydet</Text>
+                <Text style={styles.aiToggleText}>
+                  {showAI ? "🤖 Yorumu Kapat" : "🤖 RC AI Koç Yorumunu Gör"}
+                </Text>
               </TouchableOpacity>
-            </View>
 
-            {/* Tablo Alanı */}
-            <View style={{ paddingHorizontal: 20, paddingBottom: 20, flex: 1 }}>
-              <AnalizTablosu veriler={analizler} onSil={onSil} />
-            </View>
+              {/* AI Yorum Kartı (Koşullu Gösterim) */}
+              {showAI && (
+                <View style={styles.aiCard}>
+                  <Text style={styles.aiTitle}>Robot Koçun Tavsiyesi ✨</Text>
+                  {loadingYorum ? (
+                    <ActivityIndicator color={COLORS.warning} />
+                  ) : (
+                    <Text style={styles.aiContent}>{aiYorum}</Text>
+                  )}
+                </View>
+              )}
+
+              {/* Veri Giriş Formu */}
+              <View style={styles.formCard}>
+                <TextInput 
+                  style={styles.input} 
+                  placeholder="Deneme Adı" 
+                  value={denemeAd} 
+                  onChangeText={setDenemeAd} 
+                  placeholderTextColor={COLORS.textSecondary}
+                  returnKeyType="next"
+                />
+                <TextInput 
+                  style={styles.input} 
+                  placeholder="Netiniz" 
+                  keyboardType="numeric" 
+                  value={denemeNet} 
+                  onChangeText={setDenemeNet} 
+                  placeholderTextColor={COLORS.textSecondary}
+                  returnKeyType="done"
+                  onSubmitEditing={handleAdd}
+                />
+                <TouchableOpacity 
+                  style={[styles.btn, { backgroundColor: COLORS.warning }]} 
+                  onPress={handleAdd}
+                >
+                  <Text style={styles.btnText}>Veriyi Kaydet</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Tablo Alanı */}
+              <View style={{ paddingHorizontal: 20 }}>
+                <AnalizTablosu veriler={analizler} onSil={onSil} />
+              </View>
+
+            </ScrollView>
 
           </SafeAreaView>
         </KeyboardAvoidingView>
@@ -110,16 +125,30 @@ const styles = StyleSheet.create({
   backBtn: { padding: 5 },
   headerTitle: { color: COLORS.surface, fontSize: 20, fontWeight: 'bold', marginLeft: 15 },
   backBtnText: { color: COLORS.surface, fontWeight: 'bold', fontSize: 16 },
+  aiToggleButton: {
+    backgroundColor: COLORS.warning,
+    margin: 20,
+    marginBottom: 10,
+    padding: 12,
+    borderRadius: 15,
+    alignItems: 'center'
+  },
+  aiToggleText: {
+    color: COLORS.surface,
+    fontWeight: 'bold',
+    fontSize: 14
+  },
   aiCard: { 
     backgroundColor: '#FFF4E5', 
-    margin: 20, 
+    marginHorizontal: 20, 
+    marginBottom: 20,
     padding: 15, 
     borderRadius: 20, 
     borderLeftWidth: 5, 
     borderLeftColor: COLORS.warning 
   },
   aiTitle: { fontWeight: 'bold', color: COLORS.warning, marginBottom: 5 },
-  aiContent: { color: COLORS.text, fontStyle: 'italic' },
+  aiContent: { color: COLORS.text, fontStyle: 'italic', lineHeight: 20 },
   formCard: { 
     backgroundColor: COLORS.surface, 
     marginHorizontal: 20, 

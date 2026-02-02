@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, LayoutAnimation, Platform, UIManager } from 'react-native';
 import { COLORS } from '../constants/theme';
 
-// Android için animasyon desteği
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
@@ -10,8 +9,14 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 export const DayFolder = ({ day, tasks, toggleTask }: any) => {
   const [isOpen, setIsOpen] = useState(false);
   
-  // Sadece o güne ait görevleri filtrele
-  const dayTasks = tasks.filter((t: any) => t.day === day);
+  // ESNEK FİLTRELEME: Harf ve kelime uyuşmazlıklarını çözer
+  const dayTasks = tasks.filter((t: any) => {
+    const itemDay = (t.gun || t.gün || t.day || "").toLowerCase();
+    const currentDay = day.toLowerCase();
+    
+    // Ya tam eşleşmeli ya da gün ismi (pazar) dersin gün bilgisinde (pazartesi) geçmeli
+    return itemDay === currentDay || itemDay.includes(currentDay) || currentDay.includes(itemDay);
+  });
 
   const toggleOpen = () => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -87,8 +92,7 @@ const styles = StyleSheet.create({
   checkIcon: { color: '#fff', fontSize: 14, fontWeight: 'bold' },
   taskInfo: { flex: 1 },
   taskText: { fontSize: 15, color: COLORS.text, fontWeight: '500' },
-  durationText: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 }, // DÜZELTİLDİ: gray -> textSecondary
+  durationText: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
   completedText: { textDecorationLine: 'line-through', color: COLORS.textSecondary, opacity: 0.6 },
-  emptyText: { textAlign: 'center', padding: 20, color: COLORS.textSecondary, fontStyle: 'italic' }, // DÜZELTİLDİ: gray -> textSecondary
-  deleteText: { fontSize: 18 }
+  emptyText: { textAlign: 'center', padding: 20, color: COLORS.textSecondary, fontStyle: 'italic' }
 });

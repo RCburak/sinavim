@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { analizService } from '../services/analizService';
 
@@ -7,18 +7,25 @@ export const useAnaliz = () => {
   const [aiYorum, setAiYorum] = useState('Verileriniz analiz ediliyor...');
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    refreshAnaliz();
+  }, []);
+
   const refreshAnaliz = async () => {
     setLoading(true);
     try {
       const userId = await AsyncStorage.getItem('@SınavımAI_UserId');
-      if (!userId) return;
+      if (!userId) {
+        setLoading(false);
+        return;
+      }
 
-      // getAll ve getAIYorum artık userId parametresi almalı
-      const data = await analizService.getAll(parseInt(userId));
-      setAnalizler(data);
+      // Artık userId direkt string olarak kabul ediliyor
+      const data = await analizService.getAll(userId);
+      setAnalizler(data || []);
       
-      const yorum = await analizService.getAIYorum(parseInt(userId));
-      setAiYorum(yorum);
+      const yorum = await analizService.getAIYorum(userId);
+      setAiYorum(yorum || 'Henüz analiz yorumu oluşturulmadı.');
     } catch (e) {
       console.error("Analiz yükleme hatası:", e);
     } finally {
@@ -27,19 +34,26 @@ export const useAnaliz = () => {
   };
 
   const addAnaliz = async (ad: string, net: string) => {
-    const userId = await AsyncStorage.getItem('@SınavımAI_UserId');
-    if (!userId) return false;
+    try {
+      const userId = await AsyncStorage.getItem('@SınavımAI_UserId');
+      if (!userId) return false;
 
-    // add fonksiyonuna user_id'yi de gönderiyoruz
-    const success = await analizService.add(ad, net, parseInt(userId));
-    if (success) refreshAnaliz();
-    return success;
+      const success = await analizService.add(ad, net, userId);
+      if (success) await refreshAnaliz();
+      return success;
+    } catch (e) {
+      return false;
+    }
   };
 
   const deleteAnaliz = async (id: number) => {
-    const success = await analizService.delete(id);
-    if (success) refreshAnaliz();
-    return success;
+    try {
+      const success = await analizService.delete(id);
+      if (success) await refreshAnaliz();
+      return success;
+    } catch (e) {
+      return false;
+    }
   };
 
   return { analizler, aiYorum, loading, refreshAnaliz, addAnaliz, deleteAnaliz };
