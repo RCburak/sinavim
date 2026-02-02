@@ -1,44 +1,58 @@
-const API_URL = 'https://sam-unsublimed-unoptimistically.ngrok-free.dev';
-const headers = {
-  'Content-Type': 'application/json',
-  'ngrok-skip-browser-warning': 'true'
-};
+const API_URL = "https://sam-unsublimed-unoptimistically.ngrok-free.dev";
 
 export const analizService = {
-  // Tüm analizleri getir
-  getAll: async () => {
-    const res = await fetch(`${API_URL}/analizler`, { headers });
-    return await res.json();
+  // 1. Kullanıcıya özel analizleri çeker
+  // Eskiden argüman almıyordu, şimdi userId alıyor
+  getAll: async (userId: number) => {
+    try {
+      const response = await fetch(`${API_URL}/analizler/${userId}`);
+      return await response.json();
+    } catch (e) {
+      console.error("Analizler çekilemedi:", e);
+      return [];
+    }
   },
 
-  // Yeni analiz ekle
-  add: async (ad: string, net: string) => {
-    const yeni = { 
-      ad, 
-      net: parseFloat(net), 
-      tarih: new Date().toLocaleDateString('tr-TR') 
-    };
-    const res = await fetch(`${API_URL}/analiz-ekle`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(yeni),
-    });
-    return res.ok;
+  // 2. Kullanıcıya özel AI yorumunu çeker
+  getAIYorum: async (userId: number) => {
+    try {
+      const response = await fetch(`${API_URL}/ai-yorumla/${userId}`);
+      const data = await response.json();
+      return data.yorum;
+    } catch (e) {
+      return "Analiz şu an yapılamıyor.";
+    }
   },
 
-  // Analiz sil
+  // 3. Yeni analiz ekler (user_id ile birlikte)
+  // Eskiden 2 argüman alıyordu, şimdi userId ile 3 oldu
+  add: async (ad: string, net: string, userId: number) => {
+    try {
+      const response = await fetch(`${API_URL}/analiz-ekle`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: userId, // Backend bu ismi bekliyor
+          ad: ad,
+          net: parseFloat(net),
+          tarih: new Date().toLocaleDateString('tr-TR')
+        }),
+      });
+      return response.ok;
+    } catch (e) {
+      return false;
+    }
+  },
+
+  // 4. Analiz siler
   delete: async (id: number) => {
-    const res = await fetch(`${API_URL}/analiz-sil/${id}`, { 
-      method: 'DELETE', 
-      headers 
-    });
-    return res.ok;
-  },
-
-  // AI Yorumu al
-  getAIYorum: async () => {
-    const res = await fetch(`${API_URL}/ai-yorumla`, { headers });
-    const data = await res.json();
-    return data.yorum;
+    try {
+      const response = await fetch(`${API_URL}/analiz-sil/${id}`, {
+        method: 'DELETE',
+      });
+      return response.ok;
+    } catch (e) {
+      return false;
+    }
   }
 };

@@ -1,28 +1,37 @@
 import { useState } from 'react';
-import { Alert } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { analizService } from '../services/analizService';
 
 export const useAnaliz = () => {
   const [analizler, setAnalizler] = useState<any[]>([]);
-  const [aiYorum, setAiYorum] = useState('Analiz ediliyor...');
+  const [aiYorum, setAiYorum] = useState('Verileriniz analiz ediliyor...');
   const [loading, setLoading] = useState(false);
 
   const refreshAnaliz = async () => {
     setLoading(true);
     try {
-      const data = await analizService.getAll();
+      const userId = await AsyncStorage.getItem('@SınavımAI_UserId');
+      if (!userId) return;
+
+      // getAll ve getAIYorum artık userId parametresi almalı
+      const data = await analizService.getAll(parseInt(userId));
       setAnalizler(data);
-      const yorum = await analizService.getAIYorum();
+      
+      const yorum = await analizService.getAIYorum(parseInt(userId));
       setAiYorum(yorum);
     } catch (e) {
-      console.error(e);
+      console.error("Analiz yükleme hatası:", e);
     } finally {
       setLoading(false);
     }
   };
 
   const addAnaliz = async (ad: string, net: string) => {
-    const success = await analizService.add(ad, net);
+    const userId = await AsyncStorage.getItem('@SınavımAI_UserId');
+    if (!userId) return false;
+
+    // add fonksiyonuna user_id'yi de gönderiyoruz
+    const success = await analizService.add(ad, net, parseInt(userId));
     if (success) refreshAnaliz();
     return success;
   };
