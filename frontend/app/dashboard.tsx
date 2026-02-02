@@ -5,6 +5,7 @@ import { COLORS } from '../src/constants/theme';
 import { DashboardHeader } from '../src/components/Dashboard/Header';
 import { MenuCard } from '../src/components/Dashboard/MenuCard';
 
+// Bileşeni tanımlıyoruz
 export const DashboardView = ({ username, progress, onLogout, setView, schedule, analiz, pomodoro }: any) => (
   <View style={styles.container}>
     <StatusBar barStyle="light-content" />
@@ -52,3 +53,6 @@ const styles = StyleSheet.create({
     paddingTop: 30 
   },
 });
+
+// KRİTİK: Expo Router için default export şart!
+export default DashboardView;
