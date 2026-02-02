@@ -17,13 +17,12 @@ import { Ionicons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
 
-// Header Bileşeni: theme prop'u üzerinden renkler dinamikleşti
+// --- Header Bileşeni ---
 const DashboardHeader = ({ username, onLogout, progress, setView, theme }: any) => {
   const [menuVisible, setMenuVisible] = useState(false);
 
   return (
     <View style={[styles.headerWrapper, { backgroundColor: theme.background }]}>
-      {/* Header ana rengi temadan geliyor */}
       <View style={[styles.blueHeader, { backgroundColor: theme.primary }]}>
         <View style={styles.topRow}>
           <View style={styles.logoBox}>
@@ -44,7 +43,6 @@ const DashboardHeader = ({ username, onLogout, progress, setView, theme }: any) 
           </TouchableOpacity>
         </View>
 
-        {/* Karşılama Metni - Mor üzerinde her zaman beyaz kalması okunurluk için iyidir */}
         <Text style={styles.greetingText}>Merhaba {username || 'Burak'}! 👋</Text>
 
         <View style={styles.progressSection}>
@@ -52,14 +50,12 @@ const DashboardHeader = ({ username, onLogout, progress, setView, theme }: any) 
             <Text style={styles.progressLabel}>Günün Tamamlanma Oranı</Text>
             <Text style={styles.progressPercent}>%{progress || 11}</Text>
           </View>
-          {/* Progress bar arka planı temaya göre değişir */}
           <View style={[styles.progressBarBg, { backgroundColor: theme.overlay }]}>
             <View style={[styles.progressBarFill, { width: `${progress || 11}%` }]} />
           </View>
         </View>
       </View>
 
-      {/* Profil Menüsü (Modal) */}
       <Modal visible={menuVisible} transparent animationType="fade" onRequestClose={() => setMenuVisible(false)}>
         <Pressable style={styles.modalOverlay} onPress={() => setMenuVisible(false)}>
           <View style={[styles.menuContent, { backgroundColor: theme.surface }]}>
@@ -87,9 +83,9 @@ const DashboardHeader = ({ username, onLogout, progress, setView, theme }: any) 
   );
 };
 
+// --- Ana Dashboard Görünümü ---
 export const DashboardView = ({ username, progress, onLogout, setView, schedule, analiz, pomodoro, theme }: any) => (
   <View style={[styles.container, { backgroundColor: theme.background }]}>
-    {/* StatusBar rengi temaya göre otomatik değişir */}
     <StatusBar barStyle={theme.background === '#121212' ? "light-content" : "dark-content"} />
     
     <DashboardHeader 
@@ -101,7 +97,7 @@ export const DashboardView = ({ username, progress, onLogout, setView, schedule,
     />
 
     <ScrollView contentContainerStyle={styles.menuGrid}>
-      {/* MenuCard'lara theme prop'u mutlaka geçilmeli */}
+      {/* 1. KART: Programım */}
       <MenuCard 
         title="Programım" 
         emoji="📅" 
@@ -109,13 +105,17 @@ export const DashboardView = ({ username, progress, onLogout, setView, schedule,
         onPress={() => setView('program')} 
         theme={theme}
       />
+
+      {/* 2. KART: AI Programım (Yer Değişti) */}
       <MenuCard 
-        title="Pomodoro" 
-        emoji="⏱️" 
-        subText={pomodoro.formatTime(pomodoro.timer)} 
-        onPress={() => setView('pomodoro')} 
+        title="AI Programım" 
+        emoji="🤖" 
+        subText="Yapay zeka ile planla" 
+        onPress={() => setView('setup')} 
         theme={theme}
       />
+
+      {/* 3. KART: Analizler */}
       <MenuCard 
         title="Analizler" 
         emoji="📈" 
@@ -126,11 +126,13 @@ export const DashboardView = ({ username, progress, onLogout, setView, schedule,
         }} 
         theme={theme}
       />
+
+      {/* 4. KART: Pomodoro (Yer Değişti) */}
       <MenuCard 
-        title="Ayarlar" 
-        emoji="⚙️" 
-        subText="Programı güncelle" 
-        onPress={() => setView('setup')} 
+        title="Pomodoro" 
+        emoji="⏱️" 
+        subText={pomodoro.formatTime(pomodoro.timer)} 
+        onPress={() => setView('pomodoro')} 
         theme={theme}
       />
     </ScrollView>

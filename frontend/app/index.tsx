@@ -4,10 +4,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { onAuthStateChanged } from "firebase/auth"; 
 import { auth } from '../src/services/firebaseConfig'; 
 
-import { COLORS } from '../src/constants/theme'; // Temayı import ettik
+import { COLORS } from '../src/constants/theme'; 
 import LoginScreen from './login'; 
 import RegisterScreen from './register'; 
-import SetupScreen from './setup';
+import AIProgramScreen from './setup'; // Bileşen ismini 'AIProgramScreen' olarak import ediyoruz
 import { DashboardView } from './dashboard';
 import { ProfileView } from './ProfileView'; 
 import { ProgramView } from '../src/components/ProgramView';
@@ -24,26 +24,28 @@ export default function Index() {
   const [userName, setUserName] = useState('Öğrenci');
   const [schedule, setSchedule] = useState<any[]>([]); 
   
-  // GECE MODU STATE'İ
+  // --- GECE MODU YÖNETİMİ ---
   const [isDarkMode, setIsDarkMode] = useState(false);
   const theme = isDarkMode ? COLORS.dark : COLORS.light;
 
   const pomodoro = usePomodoro();
   const analiz = useAnaliz();
 
-  // --- 1. Firebase Dinleyicisi ---
+  // --- 1. Uygulama Yükleme ve Firebase Dinleyicisi ---
   useEffect(() => {
-    const loadSettings = async () => {
+    const initApp = async () => {
+      // Kayıtlı tema tercihini yükle
       const savedTheme = await AsyncStorage.getItem('@RCSinavim_DarkMode');
       if (savedTheme !== null) setIsDarkMode(savedTheme === 'true');
     };
-    loadSettings();
+    initApp();
 
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user && user.emailVerified) {
         const savedName = await AsyncStorage.getItem('@SınavımAI_UserName');
         const finalName = user.displayName || savedName || user.email?.split('@')[0] || 'Öğrenci';
         setUserName(finalName);
+        
         await loadProgram(user.uid);
         setAuthState('authenticated');
       } else {
@@ -60,6 +62,7 @@ export default function Index() {
     await AsyncStorage.setItem('@RCSinavim_DarkMode', String(newValue));
   };
 
+  // --- 2. Program Yükleme ---
   const loadProgram = async (uid: string) => {
     try {
       const response = await fetch(`${API_URL}/get-program/${uid}`, {
@@ -91,22 +94,37 @@ export default function Index() {
           await auth.signOut(); 
           await AsyncStorage.multiRemove(['@SınavımAI_UserId', '@SınavımAI_UserName', '@SınavımAI_UserLoggedIn']);
           setAuthState('login');
+          setSchedule([]);
           setView('dashboard');
       }}
     ]);
   };
 
+  // --- RENDER ---
   if (authState === 'loading') return null;
 
+  // Login ve Register ekranlarına theme prop'u eklendi
   if (authState === 'login') {
-    return <LoginScreen onLogin={() => {}} onGoToRegister={() => setAuthState('register')} />;
+    return <LoginScreen theme={theme} onLogin={() => {}} onGoToRegister={() => setAuthState('register')} />;
+  }
+
+  if (authState === 'register') {
+    return <RegisterScreen theme={theme} onBack={() => setAuthState('login')} onRegisterSuccess={() => setAuthState('login')} />;
   }
 
   // --- GÖRÜNÜM YÖNETİMİ ---
-  // Tüm view'lara 'theme' ve 'isDarkMode' proplarını ekledik
   switch (view) {
     case 'setup': 
-      return <SetupScreen theme={theme} onComplete={(newProg: any) => { setSchedule(newProg); setView('dashboard'); }} onBack={() => setView('dashboard')} />;
+      return (
+        <AIProgramScreen 
+          theme={theme} 
+          onComplete={(newProg: any) => { 
+            setSchedule(newProg); 
+            setView('dashboard'); 
+          }} 
+          onBack={() => setView('dashboard')} 
+        />
+      );
     case 'pomodoro': 
       return <PomodoroView {...pomodoro} theme={theme} onBack={() => setView('dashboard')} />;
     case 'program': 
@@ -114,9 +132,31 @@ export default function Index() {
     case 'analiz': 
       return <AnalizView analizler={analiz.analizler} theme={theme} aiYorum={analiz.aiYorum} loadingYorum={analiz.loading} onAdd={analiz.addAnaliz} onSil={analiz.deleteAnaliz} onBack={() => setView('dashboard')} />;
     case 'profile': 
-      return <ProfileView username={userName} theme={theme} isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} schedule={schedule} totalTime={pomodoro.formatTime(pomodoro.timer)} onBack={() => setView('dashboard')} />;
+      return (
+        <ProfileView 
+          username={userName} 
+          theme={theme} 
+          isDarkMode={isDarkMode} 
+          toggleDarkMode={toggleDarkMode} 
+          schedule={schedule} 
+          totalTime={pomodoro.formatTime(pomodoro.timer)} 
+          onBack={() => setView('dashboard')} 
+        />
+      );
     default: 
       const progress = schedule.length > 0 ? Math.round((schedule.filter((t: any) => t.completed).length / schedule.length) * 100) : 0;
-      return <DashboardView username={userName} progress={progress} theme={theme} isDarkMode={isDarkMode} onLogout={handleLogout} setView={setView} schedule={schedule} analiz={analiz} pomodoro={pomodoro} />;
+      return (
+        <DashboardView 
+          username={userName} 
+          progress={progress} 
+          theme={theme} 
+          isDarkMode={isDarkMode} 
+          onLogout={handleLogout} 
+          setView={setView} 
+          schedule={schedule} 
+          analiz={analiz} 
+          pomodoro={pomodoro} 
+        />
+      );
   }
 }

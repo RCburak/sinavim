@@ -8,11 +8,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { programService } from '../src/services/programService';
 import { COLORS } from '../src/constants/theme';
 
-// DİKKAT: Ngrok linkin her zaman güncel olmalı!
 const API_URL = "https://sam-unsublimed-unoptimistically.ngrok-free.dev";
 
-// theme prop'u eklendi
-export default function SetupScreen({ onComplete, onBack, theme = COLORS.light }: any) {
+// Bileşen ismi ve içeriği "AI Program" olarak güncellendi
+export default function AIProgramScreen({ onComplete, onBack, theme = COLORS.light }: any) {
   const [goal, setGoal] = useState('');
   const [hours, setHours] = useState('');
   const [loading, setLoading] = useState(false);
@@ -49,11 +48,11 @@ export default function SetupScreen({ onComplete, onBack, theme = COLORS.light }
         if (!saveResponse.ok) throw new Error("Program sunucuya kaydedilemedi.");
       }
 
-      Alert.alert("Başarılı", "Programın hazırlandı ve buluta kaydedildi! 🚀");
+      Alert.alert("Başarılı", "AI Programın hazırlandı ve buluta kaydedildi! 🚀");
       onComplete(enrichedProgram); 
     } catch (e: any) {
-      console.error("Setup Hatası:", e);
-      Alert.alert("Program Oluşturulamadı", "Bir sorun çıktı: " + e.message);
+      console.error("AI Program Hatası:", e);
+      Alert.alert("Hata", "Program oluşturulurken bir sorun çıktı: " + e.message);
     } finally {
       setLoading(false);
     }
@@ -73,25 +72,25 @@ export default function SetupScreen({ onComplete, onBack, theme = COLORS.light }
             </TouchableOpacity>
             
             <View style={styles.headerArea}>
-              <Text style={[styles.title, { color: theme.text }]}>Programını Hazırla 🎯</Text>
+              <Text style={[styles.title, { color: theme.text }]}>AI Programını Hazırla 🤖</Text>
               <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-                Yapay zeka, hedeflerine uygun en verimli planı senin için hazırlayacak.
+                Hedeflerine en kısa sürede ulaşman için yapay zeka seninle birlikte planlama yapar.
               </Text>
             </View>
             
             <View style={styles.form}>
-              <Text style={[styles.label, { color: theme.text }]}>Hedefin Nedir?</Text>
+              <Text style={[styles.label, { color: theme.text }]}>Odaklanmak İstediğin Hedef</Text>
               <TextInput 
                 style={[styles.input, { backgroundColor: theme.surface, color: theme.text, borderColor: theme.border }]} 
-                placeholder="Örn: TYT Matematik netlerimi artırmak" 
+                placeholder="Örn: AYT Edebiyat konularını bitirmek" 
                 onChangeText={setGoal}
                 placeholderTextColor={theme.textSecondary}
               />
               
-              <Text style={[styles.label, { color: theme.text }]}>Günlük Çalışma Saati</Text>
+              <Text style={[styles.label, { color: theme.text }]}>Günlük Ayırabileceğin Süre (Saat)</Text>
               <TextInput 
                 style={[styles.input, { backgroundColor: theme.surface, color: theme.text, borderColor: theme.border }]} 
-                placeholder="Örn: 4" 
+                placeholder="Örn: 5" 
                 keyboardType="numeric" 
                 onChangeText={setHours}
                 placeholderTextColor={theme.textSecondary}
@@ -125,10 +124,10 @@ const styles = StyleSheet.create({
   backBtn: { marginTop: 50, marginBottom: 20 },
   backText: { fontWeight: 'bold', fontSize: 16 },
   headerArea: { marginBottom: 30 },
-  title: { fontSize: 32, fontWeight: 'bold' },
-  subtitle: { fontSize: 16, marginTop: 10, lineHeight: 22 },
+  title: { fontSize: 28, fontWeight: 'bold' },
+  subtitle: { fontSize: 15, marginTop: 10, lineHeight: 22 },
   form: { flex: 1 },
-  label: { fontSize: 14, fontWeight: '600', marginBottom: 8, marginLeft: 5 },
+  label: { fontSize: 14, fontWeight: '600', marginBottom: 10, marginLeft: 5 },
   input: { 
     padding: 18, 
     borderRadius: 15, 
@@ -140,7 +139,7 @@ const styles = StyleSheet.create({
     padding: 20, 
     borderRadius: 15, 
     alignItems: 'center', 
-    marginTop: 10, 
+    marginTop: 15, 
     elevation: 5,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
