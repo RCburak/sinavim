@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, StatusBar, StyleSheet, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ScrollView } from 'react-native-gesture-handler';
 
 // --- Sabitler ve Temalar ---
 import { COLORS } from '../src/constants/theme';
@@ -10,30 +11,33 @@ import { usePomodoro } from '../src/hooks/usePomodoro';
 import { useAnaliz } from '../src/hooks/useAnaliz';
 
 // --- Ekranlar ve Görünümler ---
+import LoginScreen from './login'; 
+import RegisterScreen from './register'; 
 import SetupScreen from './setup';
 import { DashboardHeader } from '../src/components/Dashboard/Header';
 import { MenuCard } from '../src/components/Dashboard/MenuCard';
 import { ProgramView } from '../src/components/ProgramView';
 import { PomodoroView } from '../src/components/PomodoroView';
 import { AnalizView } from '../src/components/AnalizView';
-import { ScrollView } from 'react-native-gesture-handler'; // Kaydırma için
 
 export default function Index() {
-  // 1. Durum Yönetimi (Routing & Data)
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [authView, setAuthView] = useState<'login' | 'register'>('login');
   const [view, setView] = useState<'dashboard' | 'setup' | 'pomodoro' | 'program' | 'analiz'>('dashboard');
   const [schedule, setSchedule] = useState<any[] | null>(null);
 
-  // 2. Custom Hooklar (Mantık Katmanı)
   const pomodoro = usePomodoro();
   const analiz = useAnaliz();
 
-  // 3. Veri Yükleme
   useEffect(() => {
     loadInitialData();
   }, []);
 
   const loadInitialData = async () => {
     try {
+      const userStatus = await AsyncStorage.getItem('@SınavımAI_UserLoggedIn');
+      if (userStatus === 'true') setIsLoggedIn(true);
+
       const savedProg = await AsyncStorage.getItem('@SınavımAI_Program');
       if (savedProg) setSchedule(JSON.parse(savedProg));
     } catch (e) {
@@ -41,7 +45,31 @@ export default function Index() {
     }
   };
 
-  // 4. Görev Tamamlama Mantığı
+  const handleLogin = async () => {
+    await AsyncStorage.setItem('@SınavımAI_UserLoggedIn', 'true');
+    setIsLoggedIn(true);
+  };
+
+  const handleLogout = () => {
+    Alert.alert(
+      "Çıkış Yap",
+      "Oturumu kapatmak istediğine emin misin?",
+      [
+        { text: "Vazgeç", style: "cancel" },
+        { 
+          text: "Evet, Çık", 
+          onPress: async () => {
+            await AsyncStorage.removeItem('@SınavımAI_UserLoggedIn');
+            setIsLoggedIn(false);
+            setView('dashboard');
+            setAuthView('login');
+          },
+          style: "destructive"
+        }
+      ]
+    );
+  };
+
   const toggleTask = async (index: number) => {
     if (!schedule) return;
     const updated = [...schedule];
@@ -55,7 +83,12 @@ export default function Index() {
     setView('dashboard');
   };
 
-  // --- GÖRÜNÜM YÖNETİMİ (ROUTING) ---
+  if (!isLoggedIn) {
+    if (authView === 'register') {
+      return <RegisterScreen onBack={() => setAuthView('login')} onRegisterSuccess={() => setAuthView('login')} />;
+    }
+    return <LoginScreen onLogin={handleLogin} onGoToRegister={() => setAuthView('register')} />;
+  }
 
   if (view === 'setup') {
     return <SetupScreen onComplete={handleSetupComplete} onBack={() => setView('dashboard')} />;
@@ -66,13 +99,7 @@ export default function Index() {
   }
 
   if (view === 'program') {
-    return (
-      <ProgramView 
-        tasks={schedule || []} 
-        toggleTask={toggleTask} 
-        onBack={() => setView('dashboard')} 
-      />
-    );
+    return <ProgramView tasks={schedule || []} toggleTask={toggleTask} onBack={() => setView('dashboard')} />;
   }
 
   if (view === 'analiz') {
@@ -88,7 +115,6 @@ export default function Index() {
     );
   }
 
-  // Varsayılan: Dashboard
   const progress = schedule && schedule.length > 0 
     ? Math.round((schedule.filter((t: any) => t.completed).length / schedule.length) * 100) 
     : 0;
@@ -97,7 +123,12 @@ export default function Index() {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
       
-      <DashboardHeader username="Burak" progress={progress} />
+      {/* DashboardHeader içine onLogout eklendi */}
+      <DashboardHeader 
+        username="Burak" 
+        progress={progress} 
+        onLogout={handleLogout} 
+      />
 
       <ScrollView contentContainerStyle={styles.menuGrid}>
         <MenuCard 
@@ -119,7 +150,7 @@ export default function Index() {
           color={COLORS.warning}
           onPress={() => {
             setView('analiz');
-            analiz.refreshAnaliz(); // Sayfa açılırken verileri tazele
+            analiz.refreshAnaliz();
           }} 
         />
         <MenuCard 

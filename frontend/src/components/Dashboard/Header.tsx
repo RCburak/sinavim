@@ -1,17 +1,34 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, Image, SafeAreaView, TouchableOpacity } from 'react-native';
 import { COLORS } from '../../constants/theme';
 
-export const DashboardHeader = ({ username, progress }: { username: string, progress: number }) => (
+interface HeaderProps {
+  username: string;
+  progress: number;
+  onLogout: () => void; // Çıkış fonksiyonu eklendi
+}
+
+export const DashboardHeader = ({ username, progress, onLogout }: HeaderProps) => (
   <View style={styles.hero}>
     <SafeAreaView>
-      <Image 
-        source={require('../../../assets/images/icon.png')} 
-        style={styles.logo} 
-      />
+      <View style={styles.topRow}>
+        <Image 
+          source={require('../../../assets/images/icon.png')} 
+          style={styles.logo} 
+        />
+        {/* Hizalanmış Çıkış Yap Butonu */}
+        <TouchableOpacity style={styles.logoutBtn} onPress={onLogout}>
+          <Text style={styles.logoutText}>Çıkış 🚪</Text>
+        </TouchableOpacity>
+      </View>
+
       <Text style={styles.greeting}>Merhaba {username}! 👋</Text>
+      
       <View style={styles.progressBox}>
-        <Text style={styles.progressText}>Genel Başarı: %{progress}</Text>
+        <View style={styles.progressHeader}>
+          <Text style={styles.progressText}>Günün Tamamlanma Oranı</Text>
+          <Text style={styles.progressPercentage}>%{progress}</Text>
+        </View>
         <View style={styles.progressBar}>
           <View style={[styles.progressFill, { width: `${progress}%` }]} />
         </View>
@@ -22,17 +39,46 @@ export const DashboardHeader = ({ username, progress }: { username: string, prog
 
 const styles = StyleSheet.create({
   hero: { 
-    padding: 30, 
-    paddingBottom: 40, 
+    padding: 25, 
+    paddingBottom: 35, 
     backgroundColor: COLORS.primary, 
     borderBottomLeftRadius: 40, 
     borderBottomRightRadius: 40,
-    elevation: 5
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5
   },
-  logo: { width: 50, height: 50, borderRadius: 15, marginBottom: 15, borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)' },
-  greeting: { fontSize: 26, fontWeight: 'bold', color: '#fff' },
+  topRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15
+  },
+  logo: { 
+    width: 45, 
+    height: 45, 
+    borderRadius: 12, 
+    borderWidth: 2, 
+    borderColor: 'rgba(255,255,255,0.4)' 
+  },
+  logoutBtn: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 10,
+  },
+  logoutText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  greeting: { fontSize: 24, fontWeight: 'bold', color: '#fff' },
   progressBox: { marginTop: 20 },
-  progressText: { color: '#fff', marginBottom: 8, fontSize: 13, opacity: 0.9 },
-  progressBar: { height: 8, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.2)' },
-  progressFill: { height: '100%', borderRadius: 4, backgroundColor: COLORS.secondary },
+  progressHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
+  progressText: { color: '#fff', fontSize: 13, opacity: 0.9 },
+  progressPercentage: { color: '#fff', fontWeight: 'bold', fontSize: 13 },
+  progressBar: { height: 10, borderRadius: 5, backgroundColor: 'rgba(255,255,255,0.2)', overflow: 'hidden' },
+  progressFill: { height: '100%', borderRadius: 5, backgroundColor: '#fff' }, // Beyaz dolgu daha şık durur
 });
