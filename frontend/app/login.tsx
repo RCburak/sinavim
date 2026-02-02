@@ -92,7 +92,7 @@ export default function LoginScreen({ onLogin, onGoToRegister }: { onLogin: () =
           <SafeAreaView style={styles.container}>
             <View style={styles.header}>
               <Text style={styles.logoText}>RC</Text>
-              <Text style={styles.title}>Sınavım AI</Text>
+              <Text style={styles.title}>Sınavım</Text>
               <Text style={styles.subtitle}>Başarıya giden yolda asistanın.</Text>
             </View>
 

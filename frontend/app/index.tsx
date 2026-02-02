@@ -8,6 +8,7 @@ import LoginScreen from './login';
 import RegisterScreen from './register'; 
 import SetupScreen from './setup';
 import { DashboardView } from './dashboard';
+import { ProfileView } from './ProfileView'; // Yeni eklenen profil sayfası
 import { ProgramView } from '../src/components/ProgramView';
 import { PomodoroView } from '../src/components/PomodoroView';
 import { AnalizView } from '../src/components/AnalizView';
@@ -18,29 +19,27 @@ const API_URL = "https://sam-unsublimed-unoptimistically.ngrok-free.dev";
 
 export default function Index() {
   const [authState, setAuthState] = useState<'loading' | 'login' | 'register' | 'authenticated'>('loading');
-  const [view, setView] = useState<'dashboard' | 'setup' | 'pomodoro' | 'program' | 'analiz'>('dashboard');
+  // 'profile' tipi buraya eklendi
+  const [view, setView] = useState<'dashboard' | 'setup' | 'pomodoro' | 'program' | 'analiz' | 'profile'>('dashboard');
   const [userName, setUserName] = useState('Öğrenci');
   const [schedule, setSchedule] = useState<any[]>([]); 
 
   const pomodoro = usePomodoro();
   const analiz = useAnaliz();
 
-  // --- 1. Firebase Dinleyicisi (Ana Motor) ---
+  // --- 1. Firebase Dinleyicisi ---
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user && user.emailVerified) {
-        // İsim Belirleme
         const savedName = await AsyncStorage.getItem('@SınavımAI_UserName');
         const finalName = user.displayName || savedName || user.email?.split('@')[0] || 'Öğrenci';
         
         setUserName(finalName);
         
-        // Verileri Hafızaya Çak
         await AsyncStorage.setItem('@SınavımAI_UserId', user.uid);
         await AsyncStorage.setItem('@SınavımAI_UserName', finalName);
         await AsyncStorage.setItem('@SınavımAI_UserLoggedIn', 'true');
         
-        // Programı Yükle ve Dashboard'a Al
         await loadProgram(user.uid);
         setAuthState('authenticated');
       } else {
@@ -58,7 +57,6 @@ export default function Index() {
         headers: { 'ngrok-skip-browser-warning': 'true' }
       });
       
-      // Eğer backend 404 verirse (kullanıcının henüz programı yoksa) boş dizi dön
       if (response.status === 404) {
         setSchedule([]);
         return;
@@ -77,7 +75,7 @@ export default function Index() {
       }
     } catch (e) { 
       console.error("Program yükleme hatası:", e);
-      setSchedule([]); // Hata durumunda boş liste göster, uygulamayı kilitleme
+      setSchedule([]);
     }
   };
 
@@ -121,6 +119,7 @@ export default function Index() {
     return <RegisterScreen onBack={() => setAuthState('login')} onRegisterSuccess={() => setAuthState('login')} />;
   }
 
+  // --- GÖRÜNÜM YÖNETİMİ ---
   switch (view) {
     case 'setup': 
       return (
@@ -135,8 +134,30 @@ export default function Index() {
     case 'pomodoro': return <PomodoroView {...pomodoro} onBack={() => setView('dashboard')} />;
     case 'program': return <ProgramView tasks={schedule} toggleTask={toggleTask} onBack={() => setView('dashboard')} />;
     case 'analiz': return <AnalizView analizler={analiz.analizler} aiYorum={analiz.aiYorum} loadingYorum={analiz.loading} onAdd={analiz.addAnaliz} onSil={analiz.deleteAnaliz} onBack={() => setView('dashboard')} />;
+    
+    // YENİ: Profil Sayfası Case'i
+    case 'profile': 
+      return (
+        <ProfileView 
+          username={userName} 
+          schedule={schedule}
+          totalTime={pomodoro.formatTime(pomodoro.timer)} // Pomodoro'dan gelen zamanı profil ile paylaşıyoruz
+          onBack={() => setView('dashboard')} 
+        />
+      );
+
     default: 
       const progress = schedule.length > 0 ? Math.round((schedule.filter((t: any) => t.completed).length / schedule.length) * 100) : 0;
-      return <DashboardView username={userName} progress={progress} onLogout={handleLogout} setView={setView} schedule={schedule} analiz={analiz} pomodoro={pomodoro} />;
+      return (
+        <DashboardView 
+          username={userName} 
+          progress={progress} 
+          onLogout={handleLogout} 
+          setView={setView} 
+          schedule={schedule} 
+          analiz={analiz} 
+          pomodoro={pomodoro} 
+        />
+      );
   }
 }
