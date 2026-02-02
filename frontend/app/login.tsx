@@ -1,32 +1,70 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Keyboard, TouchableWithoutFeedback, KeyboardAvoidingView, Platform, Alert, ActivityIndicator } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS } from '../src/constants/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { authService } from '../src/services/authService';
 
+// Mobil Google girişi için gerekli Expo kütüphaneleri
+import * as Google from 'expo-auth-session/providers/google';
+import * as WebBrowser from 'expo-web-browser';
+
+// Tarayıcı oturumunu tamamlamak için gerekli
+WebBrowser.maybeCompleteAuthSession();
+
 export default function LoginScreen({ onLogin, onGoToRegister }: { onLogin: () => void, onGoToRegister: () => void }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Ortak Kayıt Fonksiyonu (E-posta veya Sosyal Giriş Sonrası)
+  // Google Giriş Yapılandırması
+  const [request, response, promptAsync] = Google.useAuthRequest({
+    // NOT: Buradaki ID'leri Google Cloud Console'dan alman gerekir. 
+    // WebClientId genelde Firebase config'deki ile aynıdır.
+    webClientId: "292154739046-2ae45f3560de9e8b7860a7.apps.googleusercontent.com",
+    iosClientId: "IOS_CLIENT_ID_BURAYA",
+    androidClientId: "ANDROID_CLIENT_ID_BURAYA",
+  });
+
+  // Google'dan yanıt geldiğinde tetiklenir
+  useEffect(() => {
+    if (response?.type === 'success') {
+      const { id_token } = response.params; // Google'dan gelen kimlik token'ı
+      handleGoogleLoginSuccess(id_token);
+    }
+  }, [response]);
+
+  const handleGoogleLoginSuccess = async (token: string) => {
+    setLoading(true);
+    try {
+      // Servisimize token'ı gönderiyoruz
+      const result = await authService.loginWithGoogle(token);
+      if (result.status === "success") {
+        await saveUserDataAndLogin(result.user);
+      } else {
+        Alert.alert("Hata", result.message);
+      }
+    } catch (e) {
+      Alert.alert("Hata", "Google oturumu doğrulanırken bir sorun oluştu.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const saveUserDataAndLogin = async (user: any) => {
     try {
-      // KRİTİK DÜZELTME: Firebase'den gelen displayName bilgisini hafızaya alıyoruz
       const displayName = user.name || user.displayName || 'Öğrenci';
       
       await AsyncStorage.setItem('@SınavımAI_UserLoggedIn', 'true');
       await AsyncStorage.setItem('@SınavımAI_UserId', user.id || user.uid);
       await AsyncStorage.setItem('@SınavımAI_UserName', displayName);
       
-      onLogin(); // index.tsx'deki loadInitialData'yı tetikler
+      onLogin(); 
     } catch (e) {
       Alert.alert("Hata", "Giriş bilgileri kaydedilemedi.");
     }
   };
 
-  // 1. Klasik E-posta Girişi
   const handleLogin = async () => {
     if (email.length < 3 || password.length < 3) {
       return Alert.alert("Hata", "Lütfen bilgileri eksiksiz girin.");
@@ -42,23 +80,6 @@ export default function LoginScreen({ onLogin, onGoToRegister }: { onLogin: () =
       }
     } catch (e) {
       Alert.alert("Hata", "Giriş sırasında bir sorun oluştu.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // 2. Google ile Giriş
-  const handleGoogleLogin = async () => {
-    setLoading(true);
-    try {
-      const result = await authService.loginWithGoogle();
-      if (result.status === "success") {
-        await saveUserDataAndLogin(result.user);
-      } else {
-        Alert.alert("Hata", result.message);
-      }
-    } catch (e) {
-      Alert.alert("Hata", "Google girişi yapılamadı.");
     } finally {
       setLoading(false);
     }
@@ -83,7 +104,11 @@ export default function LoginScreen({ onLogin, onGoToRegister }: { onLogin: () =
                 {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.loginBtnText}>Giriş Yap</Text>}
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.googleBtn} onPress={handleGoogleLogin} disabled={loading}>
+              <TouchableOpacity 
+                style={styles.googleBtn} 
+                onPress={() => promptAsync()} // Google penceresini açar
+                disabled={!request || loading}
+              >
                 <Text style={styles.googleBtnText}>G   Google ile Devam Et</Text>
               </TouchableOpacity>
 

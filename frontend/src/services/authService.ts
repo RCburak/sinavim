@@ -6,40 +6,33 @@ import {
   signOut,
   GoogleAuthProvider,
   signInWithPopup,
-  signInWithRedirect,
-  getRedirectResult,
+  signInWithCredential, // Mobil giriş için eklendi
   updateProfile 
 } from "firebase/auth";
-import { Platform } from 'react-native';
+import { Platform, Alert } from 'react-native';
+import * as WebBrowser from 'expo-web-browser'; // Eklenen paket
+
+// Tarayıcı oturumlarını mobil cihazlarda yönetmek için gerekli
+WebBrowser.maybeCompleteAuthSession();
 
 const googleProvider = new GoogleAuthProvider();
 
 export const authService = {
-  // 1. Kayıt Olma: İsmi Firebase profiline ekler
+  // 1. Kayıt Olma
   register: async ({ name, email, password }: any) => { 
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      
-      // Kayıt anında ismi Firebase profiline yazıyoruz
-      await updateProfile(userCredential.user, {
-        displayName: name
-      });
-
+      await updateProfile(userCredential.user, { displayName: name });
       await sendEmailVerification(userCredential.user);
-      
-      return { 
-        status: "success", 
-        message: "Kayıt başarılı! Lütfen e-postanı onaylamak için gelen linke tıkla." 
-      };
+      return { status: "success", message: "Kayıt başarılı! Mail onay linkini kontrol et." };
     } catch (error: any) {
       let message = "Kayıt sırasında bir hata oluştu.";
       if (error.code === 'auth/email-already-in-use') message = "Bu e-posta zaten kullanımda!";
-      if (error.code === 'auth/weak-password') message = "Şifre çok zayıf (en az 6 karakter)!";
       return { status: "error", message };
     }
   },
 
-  // 2. Giriş Yapma: displayName bilgisini döndürür
+  // 2. Giriş Yapma
   login: async (email: string, password: string) => {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
@@ -52,7 +45,7 @@ export const authService = {
         user: { 
           id: userCredential.user.uid, 
           email: userCredential.user.email,
-          name: userCredential.user.displayName // İsim burada dönüyor
+          name: userCredential.user.displayName || userCredential.user.email?.split('@')[0]
         } 
       };
     } catch (error: any) {
@@ -60,7 +53,8 @@ export const authService = {
     }
   },
 
-  loginWithGoogle: async () => {
+  // 3. Google ile Giriş (Web & Mobil Tam Uyumlu)
+  loginWithGoogle: async (idToken?: string) => {
     try {
       if (Platform.OS === 'web') {
         const result = await signInWithPopup(auth, googleProvider);
@@ -69,20 +63,28 @@ export const authService = {
           user: { id: result.user.uid, email: result.user.email, name: result.user.displayName } 
         };
       } else {
-        await signInWithRedirect(auth, googleProvider);
-        return { status: "success", message: "Yönlendiriliyor..." };
+        // MOBİL TARAFI:
+        // Buraya login.tsx'ten gelen idToken ile giriş yapacağız.
+        if (idToken) {
+          const credential = GoogleAuthProvider.credential(idToken);
+          const result = await signInWithCredential(auth, credential);
+          return { status: "success", user: result.user };
+        }
+        return { status: "error", message: "Token alınamadı." };
       }
     } catch (error: any) {
-      return { status: "error", message: "Google girişi yapılamadı." };
+      console.error("Google Login Hatası:", error);
+      return { status: "error", message: "Google girişi başarısız oldu." };
     }
   },
 
+  // 4. Çıkış Yapma
   logout: async () => {
     try {
       await signOut(auth);
       return { status: "success" };
     } catch (e) {
-      return { status: "error" };
+      return { status: "error", message: "Çıkış yapılırken bir hata oluştu." };
     }
   }
 };
