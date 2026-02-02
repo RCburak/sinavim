@@ -1,40 +1,36 @@
 import React, { useState } from 'react';
 import { 
   View, Text, TextInput, TouchableOpacity, StyleSheet, Keyboard, 
-  TouchableWithoutFeedback, KeyboardAvoidingView, Platform, Alert, ActivityIndicator 
+  TouchableWithoutFeedback, KeyboardAvoidingView, Platform, Alert, ActivityIndicator, StatusBar
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS } from '../src/constants/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { authService } from '../src/services/authService';
 
-export default function RegisterScreen({ onBack, onRegisterSuccess }: { onBack: () => void, onRegisterSuccess: () => void }) {
-  // --- State Yönetimi ---
+// theme prop'u eklendi
+export default function RegisterScreen({ onBack, onRegisterSuccess, theme = COLORS.light }: any) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState(''); 
   const [loading, setLoading] = useState(false);
 
-  // --- Kayıt İşlemi ---
   const handleRegister = async () => {
-    // Boş alan kontrolü
     if (!name || !email || !password || !confirmPassword) {
       return Alert.alert("Hata", "Lütfen tüm alanları doldur!");
     }
     
-    // Şifre eşleşme kontrolü
     if (password !== confirmPassword) {
       return Alert.alert("Hata", "Şifreler birbiriyle uyuşmuyor!");
     }
 
-    // Şifre uzunluğu kontrolü (Firebase en az 6 karakter ister)
     if (password.length < 6) {
       return Alert.alert("Hata", "Şifre en az 6 karakter olmalıdır!");
     }
 
     setLoading(true);
     try {
-      // DÜZELTME: Firebase'e ismi de gönderiyoruz ki Dashboard'da "Öğrenci" yazmasın
       const result = await authService.register({ name, email, password });
       
       if (result.status === "success") {
@@ -55,62 +51,61 @@ export default function RegisterScreen({ onBack, onRegisterSuccess }: { onBack: 
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <View style={{ flex: 1, backgroundColor: COLORS.background }}>
+      {/* Arka plan temadan geliyor */}
+      <View style={{ flex: 1, backgroundColor: theme.background }}>
+        <StatusBar barStyle={theme.background === '#121212' ? "light-content" : "dark-content"} />
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
           <SafeAreaView style={styles.container}>
             
             <View style={styles.form}>
               <View style={styles.header}>
-                <Text style={styles.title}>Yeni Hesap 📝</Text>
-                <Text style={styles.subtitle}>RC Sınavım AI ailesine katıl.</Text>
+                <Text style={[styles.title, { color: theme.text }]}>Yeni Hesap 📝</Text>
+                <Text style={[styles.subtitle, { color: theme.textSecondary }]}>RC Sınavım AI ailesine katıl.</Text>
               </View>
 
-              {/* Girdi Alanları */}
               <TextInput 
-                style={styles.input} 
+                style={[styles.input, { backgroundColor: theme.surface, color: theme.text, borderColor: theme.border }]} 
                 placeholder="Ad Soyad" 
-                placeholderTextColor={COLORS.textSecondary} 
+                placeholderTextColor={theme.textSecondary} 
                 value={name} 
                 onChangeText={setName} 
               />
               <TextInput 
-                style={styles.input} 
+                style={[styles.input, { backgroundColor: theme.surface, color: theme.text, borderColor: theme.border }]} 
                 placeholder="E-posta" 
-                placeholderTextColor={COLORS.textSecondary} 
+                placeholderTextColor={theme.textSecondary} 
                 value={email} 
                 onChangeText={setEmail} 
                 autoCapitalize="none" 
                 keyboardType="email-address" 
               />
               <TextInput 
-                style={styles.input} 
+                style={[styles.input, { backgroundColor: theme.surface, color: theme.text, borderColor: theme.border }]} 
                 placeholder="Şifre" 
-                placeholderTextColor={COLORS.textSecondary} 
+                placeholderTextColor={theme.textSecondary} 
                 value={password} 
                 onChangeText={setPassword} 
                 secureTextEntry 
               />
               <TextInput 
-                style={styles.input} 
+                style={[styles.input, { backgroundColor: theme.surface, color: theme.text, borderColor: theme.border }]} 
                 placeholder="Şifre Tekrar" 
-                placeholderTextColor={COLORS.textSecondary} 
+                placeholderTextColor={theme.textSecondary} 
                 value={confirmPassword} 
                 onChangeText={setConfirmPassword} 
                 secureTextEntry 
               />
 
-              {/* Kayıt Butonu */}
               <TouchableOpacity 
-                style={[styles.regBtn, loading && { opacity: 0.7 }]} 
+                style={[styles.regBtn, { backgroundColor: theme.primary }, loading && { opacity: 0.7 }]} 
                 onPress={handleRegister} 
                 disabled={loading}
               >
-                {loading ? <ActivityIndicator color={COLORS.surface} /> : <Text style={styles.regBtnText}>Kaydı Tamamla</Text>}
+                {loading ? <ActivityIndicator color="#fff" /> : <Text style={[styles.regBtnText, { color: '#fff' }]}>Kaydı Tamamla</Text>}
               </TouchableOpacity>
 
-              {/* Geri Dön Butonu */}
               <TouchableOpacity style={styles.backBtn} onPress={onBack}>
-                <Text style={styles.backText}>Vazgeç ve Geri Dön</Text>
+                <Text style={[styles.backText, { color: theme.textSecondary }]}>Vazgeç ve Geri Dön</Text>
               </TouchableOpacity>
             </View>
 
@@ -124,12 +119,12 @@ export default function RegisterScreen({ onBack, onRegisterSuccess }: { onBack: 
 const styles = StyleSheet.create({
   container: { flex: 1, justifyContent: 'center', padding: 30 },
   header: { alignItems: 'center', marginBottom: 40 },
-  title: { fontSize: 32, fontWeight: 'bold', color: COLORS.text },
-  subtitle: { fontSize: 16, color: COLORS.textSecondary, textAlign: 'center', marginTop: 5 },
+  title: { fontSize: 32, fontWeight: 'bold' },
+  subtitle: { fontSize: 16, textAlign: 'center', marginTop: 5 },
   form: { width: '100%' },
-  input: { backgroundColor: COLORS.surface, padding: 18, borderRadius: 15, marginBottom: 15, color: COLORS.text, borderWidth: 1, borderColor: COLORS.border },
-  regBtn: { backgroundColor: COLORS.primary, padding: 18, borderRadius: 15, alignItems: 'center', marginTop: 10, height: 60, justifyContent: 'center' },
-  regBtnText: { color: COLORS.surface, fontWeight: 'bold', fontSize: 18 },
+  input: { padding: 18, borderRadius: 15, marginBottom: 15, borderWidth: 1 },
+  regBtn: { padding: 18, borderRadius: 15, alignItems: 'center', marginTop: 10, height: 60, justifyContent: 'center' },
+  regBtnText: { fontWeight: 'bold', fontSize: 18 },
   backBtn: { marginTop: 20, alignItems: 'center' },
-  backText: { color: COLORS.textSecondary, fontWeight: '600' }
+  backText: { fontWeight: '600' }
 });

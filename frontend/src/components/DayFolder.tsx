@@ -6,15 +6,13 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-export const DayFolder = ({ day, tasks, toggleTask }: any) => {
+// theme prop'u eklendi
+export const DayFolder = ({ day, tasks, toggleTask, theme = COLORS.light }: any) => {
   const [isOpen, setIsOpen] = useState(false);
   
-  // ESNEK FİLTRELEME: Harf ve kelime uyuşmazlıklarını çözer
   const dayTasks = tasks.filter((t: any) => {
     const itemDay = (t.gun || t.gün || t.day || "").toLowerCase();
     const currentDay = day.toLowerCase();
-    
-    // Ya tam eşleşmeli ya da gün ismi (pazar) dersin gün bilgisinde (pazartesi) geçmeli
     return itemDay === currentDay || itemDay.includes(currentDay) || currentDay.includes(itemDay);
   });
 
@@ -24,45 +22,68 @@ export const DayFolder = ({ day, tasks, toggleTask }: any) => {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.surface }]}>
       <TouchableOpacity 
-        style={[styles.folderHeader, isOpen && styles.activeHeader]} 
+        style={[
+          styles.folderHeader, 
+          { backgroundColor: isOpen ? theme.primary : theme.surface } // Aktiflik rengi dinamik
+        ]} 
         onPress={toggleOpen}
         activeOpacity={0.7}
       >
         <View style={styles.headerLeft}>
           <Text style={styles.folderEmoji}>{isOpen ? '📂' : '📁'}</Text>
-          <Text style={[styles.dayText, isOpen && { color: COLORS.surface }]}>{day}</Text>
+          <Text style={[
+            styles.dayText, 
+            { color: isOpen ? '#fff' : theme.text } // Yazı rengi dinamik
+          ]}>
+            {day}
+          </Text>
         </View>
-        <View style={styles.badge}>
-          <Text style={[styles.badgeText, isOpen && { color: COLORS.primary }]}>
+        <View style={[styles.badge, { backgroundColor: isOpen ? 'rgba(255,255,255,0.2)' : theme.border }]}>
+          <Text style={[
+            styles.badgeText, 
+            { color: isOpen ? '#fff' : theme.textSecondary }
+          ]}>
             {dayTasks.length} Ders
           </Text>
         </View>
       </TouchableOpacity>
 
       {isOpen && (
-        <View style={styles.content}>
+        <View style={[styles.content, { backgroundColor: theme.surface }]}>
           {dayTasks.length > 0 ? (
             dayTasks.map((task: any) => (
               <TouchableOpacity 
                 key={task.originalIndex} 
-                style={styles.taskRow}
+                style={[styles.taskRow, { borderBottomColor: theme.border }]}
                 onPress={() => toggleTask(task.originalIndex)}
               >
-                <View style={[styles.checkbox, task.completed && styles.checked]}>
+                <View style={[
+                  styles.checkbox, 
+                  { borderColor: theme.primary },
+                  task.completed && { backgroundColor: theme.primary }
+                ]}>
                   {task.completed && <Text style={styles.checkIcon}>✓</Text>}
                 </View>
                 <View style={styles.taskInfo}>
-                  <Text style={[styles.taskText, task.completed && styles.completedText]}>
+                  <Text style={[
+                    styles.taskText, 
+                    { color: theme.text },
+                    task.completed && [styles.completedText, { color: theme.textSecondary }]
+                  ]}>
                     {task.task}
                   </Text>
-                  <Text style={styles.durationText}>{task.duration}</Text>
+                  <Text style={[styles.durationText, { color: theme.textSecondary }]}>
+                    {task.duration}
+                  </Text>
                 </View>
               </TouchableOpacity>
             ))
           ) : (
-            <Text style={styles.emptyText}>Bu gün için planlanmış ders yok. Dinlenme vakti! ☕</Text>
+            <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
+              Bu gün için planlanmış ders yok. Dinlenme vakti! ☕
+            </Text>
           )}
         </View>
       )}
@@ -71,28 +92,27 @@ export const DayFolder = ({ day, tasks, toggleTask }: any) => {
 };
 
 const styles = StyleSheet.create({
-  container: { marginBottom: 15, borderRadius: 20, overflow: 'hidden', backgroundColor: COLORS.surface, elevation: 2 },
+  container: { marginBottom: 15, borderRadius: 20, overflow: 'hidden', elevation: 2 },
   folderHeader: { 
     flexDirection: 'row', 
     alignItems: 'center', 
     justifyContent: 'space-between', 
     padding: 18, 
-    backgroundColor: COLORS.surface 
   },
-  activeHeader: { backgroundColor: COLORS.primary },
   headerLeft: { flexDirection: 'row', alignItems: 'center' },
   folderEmoji: { fontSize: 20, marginRight: 12 },
-  dayText: { fontSize: 18, fontWeight: 'bold', color: COLORS.text },
-  badge: { backgroundColor: COLORS.border, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
-  badgeText: { fontSize: 12, fontWeight: 'bold', color: COLORS.textSecondary },
-  content: { padding: 10, backgroundColor: COLORS.surface },
-  taskRow: { flexDirection: 'row', alignItems: 'center', padding: 12, borderBottomWidth: 1, borderBottomColor: COLORS.border },
-  checkbox: { width: 24, height: 24, borderRadius: 6, borderWidth: 2, borderColor: COLORS.primary, marginRight: 12, justifyContent: 'center', alignItems: 'center' },
-  checked: { backgroundColor: COLORS.primary },
+  dayText: { fontSize: 18, fontWeight: 'bold' },
+  badge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
+  badgeText: { fontSize: 12, fontWeight: 'bold' },
+  content: { padding: 10 },
+  taskRow: { flexDirection: 'row', alignItems: 'center', padding: 12, borderBottomWidth: 1 },
+  checkbox: { width: 24, height: 24, borderRadius: 6, borderWidth: 2, marginRight: 12, justifyContent: 'center', alignItems: 'center' },
   checkIcon: { color: '#fff', fontSize: 14, fontWeight: 'bold' },
   taskInfo: { flex: 1 },
-  taskText: { fontSize: 15, color: COLORS.text, fontWeight: '500' },
-  durationText: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
-  completedText: { textDecorationLine: 'line-through', color: COLORS.textSecondary, opacity: 0.6 },
-  emptyText: { textAlign: 'center', padding: 20, color: COLORS.textSecondary, fontStyle: 'italic' }
+  taskText: { fontSize: 15, fontWeight: '500' },
+  durationText: { fontSize: 12, marginTop: 2 },
+  completedText: { textDecorationLine: 'line-through', opacity: 0.6 },
+  emptyText: { textAlign: 'center', padding: 20, fontStyle: 'italic' }
 });
+
+export default DayFolder;

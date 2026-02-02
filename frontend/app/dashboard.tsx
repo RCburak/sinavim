@@ -12,24 +12,23 @@ import {
   Image 
 } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
-import { COLORS } from '../src/constants/theme';
 import { MenuCard } from '../src/components/Dashboard/MenuCard';
 import { Ionicons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
 
-// Header Bileşeni: Profil Menüsü Entegre Edildi
-const DashboardHeader = ({ username, onLogout, progress, setView }: any) => {
+// Header Bileşeni: theme prop'u üzerinden renkler dinamikleşti
+const DashboardHeader = ({ username, onLogout, progress, setView, theme }: any) => {
   const [menuVisible, setMenuVisible] = useState(false);
 
   return (
-    <View style={styles.headerWrapper}>
-      <View style={styles.blueHeader}>
-        {/* Üst Satır: Logo ve Profil Butonu */}
+    <View style={[styles.headerWrapper, { backgroundColor: theme.background }]}>
+      {/* Header ana rengi temadan geliyor */}
+      <View style={[styles.blueHeader, { backgroundColor: theme.primary }]}>
         <View style={styles.topRow}>
           <View style={styles.logoBox}>
             <Image 
-              source={require('../assets/images/icon.png')} //
+              source={require('../assets/images/icon.png')} 
               style={styles.actualLogo}
               resizeMode="contain"
             />
@@ -45,16 +44,16 @@ const DashboardHeader = ({ username, onLogout, progress, setView }: any) => {
           </TouchableOpacity>
         </View>
 
-        {/* Karşılama Metni */}
+        {/* Karşılama Metni - Mor üzerinde her zaman beyaz kalması okunurluk için iyidir */}
         <Text style={styles.greetingText}>Merhaba {username || 'Burak'}! 👋</Text>
 
-        {/* İlerleme Çubuğu Alanı */}
         <View style={styles.progressSection}>
           <View style={styles.progressLabelRow}>
             <Text style={styles.progressLabel}>Günün Tamamlanma Oranı</Text>
             <Text style={styles.progressPercent}>%{progress || 11}</Text>
           </View>
-          <View style={styles.progressBarBg}>
+          {/* Progress bar arka planı temaya göre değişir */}
+          <View style={[styles.progressBarBg, { backgroundColor: theme.overlay }]}>
             <View style={[styles.progressBarFill, { width: `${progress || 11}%` }]} />
           </View>
         </View>
@@ -63,17 +62,16 @@ const DashboardHeader = ({ username, onLogout, progress, setView }: any) => {
       {/* Profil Menüsü (Modal) */}
       <Modal visible={menuVisible} transparent animationType="fade" onRequestClose={() => setMenuVisible(false)}>
         <Pressable style={styles.modalOverlay} onPress={() => setMenuVisible(false)}>
-          <View style={styles.menuContent}>
-            {/* Profilim Butonu: Artık ProfileView'a yönlendiriyor */}
+          <View style={[styles.menuContent, { backgroundColor: theme.surface }]}>
             <TouchableOpacity style={styles.menuItem} onPress={() => { 
               setMenuVisible(false); 
-              setView('profile'); // Profil sayfasına geçiş
+              setView('profile'); 
             }}>
-              <Ionicons name="person-outline" size={18} color={COLORS.text} />
-              <Text style={styles.menuItemText}>Profilim</Text>
+              <Ionicons name="person-outline" size={18} color={theme.text} />
+              <Text style={[styles.menuItemText, { color: theme.text }]}>Profilim</Text>
             </TouchableOpacity>
 
-            <View style={styles.divider} />
+            <View style={[styles.divider, { backgroundColor: theme.border }]} />
 
             <TouchableOpacity style={styles.menuItem} onPress={() => { 
               setMenuVisible(false); 
@@ -89,55 +87,60 @@ const DashboardHeader = ({ username, onLogout, progress, setView }: any) => {
   );
 };
 
-export const DashboardView = ({ username, progress, onLogout, setView, schedule, analiz, pomodoro }: any) => (
-  <View style={styles.container}>
-    <StatusBar barStyle="light-content" />
+export const DashboardView = ({ username, progress, onLogout, setView, schedule, analiz, pomodoro, theme }: any) => (
+  <View style={[styles.container, { backgroundColor: theme.background }]}>
+    {/* StatusBar rengi temaya göre otomatik değişir */}
+    <StatusBar barStyle={theme.background === '#121212' ? "light-content" : "dark-content"} />
     
     <DashboardHeader 
       username={username} 
       onLogout={onLogout} 
       progress={progress} 
       setView={setView} 
+      theme={theme}
     />
 
     <ScrollView contentContainerStyle={styles.menuGrid}>
+      {/* MenuCard'lara theme prop'u mutlaka geçilmeli */}
       <MenuCard 
         title="Programım" 
         emoji="📅" 
         subText={`${schedule?.length || 0} Ders Planlandı`} 
         onPress={() => setView('program')} 
+        theme={theme}
       />
       <MenuCard 
         title="Pomodoro" 
         emoji="⏱️" 
         subText={pomodoro.formatTime(pomodoro.timer)} 
         onPress={() => setView('pomodoro')} 
+        theme={theme}
       />
       <MenuCard 
         title="Analizler" 
         emoji="📈" 
         subText="Net takibi yap" 
-        color={COLORS.warning}
         onPress={() => {
           setView('analiz');
           analiz.refreshAnaliz();
         }} 
+        theme={theme}
       />
       <MenuCard 
         title="Ayarlar" 
         emoji="⚙️" 
         subText="Programı güncelle" 
         onPress={() => setView('setup')} 
+        theme={theme}
       />
     </ScrollView>
   </View>
 );
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8F9FB' },
-  headerWrapper: { backgroundColor: '#F8F9FB' },
+  container: { flex: 1 },
+  headerWrapper: { },
   blueHeader: {
-    backgroundColor: '#5D12D2', // Fotoğraftaki mor tonu
     paddingTop: 60,
     paddingHorizontal: 25,
     paddingBottom: 40,
@@ -168,7 +171,7 @@ const styles = StyleSheet.create({
   progressLabelRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
   progressLabel: { color: 'rgba(255,255,255,0.8)', fontSize: 13 },
   progressPercent: { color: '#fff', fontWeight: 'bold', fontSize: 13 },
-  progressBarBg: { height: 6, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 3 },
+  progressBarBg: { height: 6, borderRadius: 3 },
   progressBarFill: { height: 6, backgroundColor: '#fff', borderRadius: 3 },
   menuGrid: { 
     flexDirection: 'row', 
@@ -186,7 +189,6 @@ const styles = StyleSheet.create({
     paddingRight: 30 
   },
   menuContent: { 
-    backgroundColor: '#fff', 
     borderRadius: 15, 
     width: 160, 
     padding: 8, 
@@ -196,8 +198,8 @@ const styles = StyleSheet.create({
     shadowRadius: 10
   },
   menuItem: { flexDirection: 'row', alignItems: 'center', padding: 12 },
-  menuItemText: { marginLeft: 10, fontSize: 15, color: '#333' },
-  divider: { height: 1, backgroundColor: '#EEE', marginVertical: 4 }
+  menuItemText: { marginLeft: 10, fontSize: 15 },
+  divider: { height: 1, marginVertical: 4 }
 });
 
 export default DashboardView;
