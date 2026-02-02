@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Keyboard, TouchableWithoutFeedback, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Keyboard, TouchableWithoutFeedback, KeyboardAvoidingView, Platform, Alert, ActivityIndicator } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS } from '../src/constants/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -20,6 +20,7 @@ export default function LoginScreen({ onLogin, onGoToRegister }: { onLogin: () =
       const result = await authService.login(email, password);
       
       if (result.status === "success") {
+        // Backend'den gelen tüm kritik verileri kaydediyoruz
         await AsyncStorage.setItem('@SınavımAI_UserLoggedIn', 'true');
         await AsyncStorage.setItem('@SınavımAI_UserId', result.user.id.toString());
         await AsyncStorage.setItem('@SınavımAI_UserName', result.user.name);
@@ -28,7 +29,7 @@ export default function LoginScreen({ onLogin, onGoToRegister }: { onLogin: () =
         Alert.alert("Giriş Başarısız", result.message);
       }
     } catch (e) {
-      Alert.alert("Hata", "Sunucuya ulaşılamıyor.");
+      Alert.alert("Hata", "Sunucuya ulaşılamıyor. Ngrok açık mı?");
     } finally {
       setLoading(false);
     }
@@ -47,9 +48,15 @@ export default function LoginScreen({ onLogin, onGoToRegister }: { onLogin: () =
             <View style={styles.form}>
               <TextInput style={styles.input} placeholder="E-posta" placeholderTextColor={COLORS.textSecondary} value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" />
               <TextInput style={styles.input} placeholder="Şifre" placeholderTextColor={COLORS.textSecondary} value={password} onChangeText={setPassword} secureTextEntry onSubmitEditing={handleLogin} />
-              <TouchableOpacity style={[styles.loginBtn, loading && { opacity: 0.7 }]} onPress={handleLogin} disabled={loading}>
-                <Text style={styles.loginBtnText}>{loading ? "Giriş Yapılıyor..." : "Giriş Yap"}</Text>
+              
+              <TouchableOpacity 
+                style={[styles.loginBtn, loading && { opacity: 0.7 }]} 
+                onPress={handleLogin} 
+                disabled={loading}
+              >
+                {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.loginBtnText}>Giriş Yap</Text>}
               </TouchableOpacity>
+
               <TouchableOpacity style={styles.registerBtn} onPress={onGoToRegister}>
                 <Text style={styles.registerText}>Hesabın yok mu? <Text style={{fontWeight: 'bold', color: COLORS.primary}}>Kaydol</Text></Text>
               </TouchableOpacity>
