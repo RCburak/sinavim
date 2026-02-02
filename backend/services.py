@@ -1,36 +1,81 @@
 import os
+import json
+import logging
 from groq import Groq
 from dotenv import load_dotenv
-import json
+
+# Loglama ayarları: Hataları ve süreçleri takip etmek için
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 load_dotenv()
-client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+api_key = os.getenv("GROQ_API_KEY")
+client = Groq(api_key=api_key)
 
 def generate_ai_schedule(goal, hours):
     """
-    Kullanıcının hedefine göre haftalık program üretir.
+    Öğrencinin hedefine göre pedagojik ve sürdürülebilir bir program üretir.
     """
+    # Prompt Mühendisliği: AI'ya daha spesifik talimatlar veriyoruz.
     system_prompt = f"""
-    Sen Burak'ın profesyonel eğitim koçusun. Burak yazılım (Python, Unity) ve oyunlarla ilgileniyor.
-    Onun için haftalık bir ders programı hazırla.
+    Sen kıdemli bir akademik danışmansın. Kullanıcının hedefi: {goal}. 
+    Günlük çalışma kapasitesi: {hours} saat.
     
-    KURALLAR:
-    1. Yanıt sadece geçerli bir JSON listesi olmalıdır.
-    2. Format: [{{"gun": "Pazartesi", "ders": "Matematik", "konu": "Fonksiyonlar", "sure": "2 Saat"}}]
-    3. Günlük toplam süre {hours} saati aşmasın.
-    4. Hedefi: {goal}
-    5. Hafta sonuna mutlaka 'Yazılım Projesi' veya 'Oyun Vakti' gibi Burak'ın hobilerini de ekle.
+    GÖREVİN:
+    1. Haftalık dengeli bir program oluştur.
+    2. Konu anlatımı, soru çözümü ve tekrar günlerini mantıklı bir sıraya koy.
+    3. Yanıtı SADECE aşağıdaki JSON yapısında döndür:
+    {{
+        "program": [
+            {{"day": "Pazartesi", "task": "...", "duration": "..."}}
+        ]
+    }}
+    """
+
+    try:
+        # llama-3.1-8b-instant modeli güncel ve hızlıdır.
+        completion = client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            messages=[{"role": "system", "content": system_prompt}],
+            temperature=0.6, # Tutarlılığı artırmak için biraz düşürdük.
+            response_format={"type": "json_object"}
+        )
+        
+        response_data = json.loads(completion.choices[0].message.content)
+        # Frontend'in beklediği 'program' listesini güvenle döndürür.
+        return response_data.get("program", [])
+
+    except json.JSONDecodeError as e:
+        logger.error(f"❌ JSON Parse Hatası: {e}")
+        return None
+    except Exception as e:
+        logger.error(f"❌ AI Servis Hatası: {e}")
+        return None
+
+def get_performance_insight(analizler):
+    """
+    Deneme netlerini analiz ederek öğrenciye gelişim stratejisi sunar.
+    """
+    if not analizler:
+        return "Henüz veri girişi yapılmamış."
+
+    # Son 5 denemeyi özetle
+    ozet = "\n".join([f"{a['ad']}: {a['net']} Net" for a in analizler[:5]])
+    
+    prompt = f"""
+    Öğrencinin son deneme sonuçları:
+    {ozet}
+    
+    Bu verileri analiz et. Netlerde düşüş mü var, artış mı? 
+    Bir eğitim koçu olarak öğrenciye 'akademik' ve 'somut' bir tavsiye ver (Maks 100 karakter).
     """
 
     try:
         completion = client.chat.completions.create(
-            model="llama3-8b-8192",
-            messages=[{"role": "system", "content": system_prompt}],
-            response_format={"type": "json_object"}
+            model="llama-3.1-8b-instant",
+            messages=[{"role": "user", "content": prompt}]
         )
-        # JSON string'i Python listesine çevirip döndürüyoruz
-        result = json.loads(completion.choices[0].message.content)
-        return result.get("program", result) # Bazı modeller 'program' anahtarı altına koyabiliyor
+        return completion.choices[0].message.content
     except Exception as e:
-        print(f"AI Servis Hatası: {e}")
-        return None
+        logger.error(f"❌ Analiz Hatası: {e}")
+        return "Gelişimin istikrarlı, eksik konularına odaklanmaya devam et!"
