@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { analizService } from '../services/analizService';
 
@@ -20,7 +21,6 @@ export const useAnaliz = () => {
         return;
       }
 
-      // Artık userId direkt string olarak kabul ediliyor
       const data = await analizService.getAll(userId);
       setAnalizler(data || []);
       
@@ -48,10 +48,16 @@ export const useAnaliz = () => {
 
   const deleteAnaliz = async (id: number) => {
     try {
+      // Önce bir onay kutusu çıkaralım (isteğe bağlı ama güvenli)
       const success = await analizService.delete(id);
-      if (success) await refreshAnaliz();
-      return success;
+      if (success) {
+        // State'i anında güncelle (Sayfa yenilenmeden listeden silinsin)
+        setAnalizler(prev => prev.filter(item => item.id !== id));
+        return true;
+      }
+      return false;
     } catch (e) {
+      console.error("Silme hatası:", e);
       return false;
     }
   };

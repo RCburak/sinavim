@@ -106,7 +106,7 @@ export const DashboardView = ({ username, progress, onLogout, setView, schedule,
         theme={theme}
       />
 
-      {/* 2. KART: AI Programım (Yer Değişti) */}
+      {/* 2. KART: AI Programım */}
       <MenuCard 
         title="AI Programım" 
         emoji="🤖" 
@@ -127,12 +127,21 @@ export const DashboardView = ({ username, progress, onLogout, setView, schedule,
         theme={theme}
       />
 
-      {/* 4. KART: Pomodoro (Yer Değişti) */}
+      {/* 4. KART: Pomodoro */}
       <MenuCard 
         title="Pomodoro" 
         emoji="⏱️" 
         subText={pomodoro.formatTime(pomodoro.timer)} 
         onPress={() => setView('pomodoro')} 
+        theme={theme}
+      />
+
+      {/* 5. KART: Geçmişim (YENİ EKLENDİ) */}
+      <MenuCard 
+        title="Geçmişim" 
+        emoji="📚" 
+        subText="Eski haftaları incele" 
+        onPress={() => setView('history')} 
         theme={theme}
       />
     </ScrollView>

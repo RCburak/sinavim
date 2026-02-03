@@ -7,12 +7,13 @@ import { auth } from '../src/services/firebaseConfig';
 import { COLORS } from '../src/constants/theme'; 
 import LoginScreen from './login'; 
 import RegisterScreen from './register'; 
-import AIProgramScreen from './setup'; // Bileşen ismini 'AIProgramScreen' olarak import ediyoruz
+import AIProgramScreen from './setup'; 
 import { DashboardView } from './dashboard';
 import { ProfileView } from './ProfileView'; 
 import { ProgramView } from '../src/components/ProgramView';
 import { PomodoroView } from '../src/components/PomodoroView';
 import { AnalizView } from '../src/components/AnalizView';
+import { HistoryView } from './HistoryView'; // app/HistoryView.tsx olduğundan emin ol
 import { usePomodoro } from '../src/hooks/usePomodoro';
 import { useAnaliz } from '../src/hooks/useAnaliz';
 
@@ -20,21 +21,18 @@ const API_URL = "https://sam-unsublimed-unoptimistically.ngrok-free.dev";
 
 export default function Index() {
   const [authState, setAuthState] = useState<'loading' | 'login' | 'register' | 'authenticated'>('loading');
-  const [view, setView] = useState<'dashboard' | 'setup' | 'pomodoro' | 'program' | 'analiz' | 'profile'>('dashboard');
+  const [view, setView] = useState<'dashboard' | 'setup' | 'pomodoro' | 'program' | 'analiz' | 'profile' | 'history'>('dashboard');
   const [userName, setUserName] = useState('Öğrenci');
   const [schedule, setSchedule] = useState<any[]>([]); 
   
-  // --- GECE MODU YÖNETİMİ ---
   const [isDarkMode, setIsDarkMode] = useState(false);
   const theme = isDarkMode ? COLORS.dark : COLORS.light;
 
   const pomodoro = usePomodoro();
   const analiz = useAnaliz();
 
-  // --- 1. Uygulama Yükleme ve Firebase Dinleyicisi ---
   useEffect(() => {
     const initApp = async () => {
-      // Kayıtlı tema tercihini yükle
       const savedTheme = await AsyncStorage.getItem('@RCSinavim_DarkMode');
       if (savedTheme !== null) setIsDarkMode(savedTheme === 'true');
     };
@@ -55,14 +53,12 @@ export default function Index() {
     return unsubscribe;
   }, []);
 
-  // Gece Modu Değiştirme Fonksiyonu
   const toggleDarkMode = async () => {
     const newValue = !isDarkMode;
     setIsDarkMode(newValue);
     await AsyncStorage.setItem('@RCSinavim_DarkMode', String(newValue));
   };
 
-  // --- 2. Program Yükleme ---
   const loadProgram = async (uid: string) => {
     try {
       const response = await fetch(`${API_URL}/get-program/${uid}`, {
@@ -75,9 +71,9 @@ export default function Index() {
       const cloudProg = await response.json();
       if (cloudProg && Array.isArray(cloudProg)) {
         const mappedProg = cloudProg.map((item: any) => ({
-          gun: item.gun || item.gün || item.day || "Pazartesi",
-          task: item.task || item.görev || "Ders Çalışma",
-          duration: item.duration || item.süre || "1 Saat",
+          gun: item.gun || item.gün || "Pazartesi",
+          task: item.task || "Ders Çalışma",
+          duration: item.duration || "1 Saat",
           completed: item.completed === 1 || item.completed === true
         }));
         setSchedule(mappedProg);
@@ -85,6 +81,61 @@ export default function Index() {
     } catch (e) { 
       console.error("Program yükleme hatası:", e);
       setSchedule([]);
+    }
+  };
+
+  const archiveOldAndSetup = async () => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    if (schedule.length > 0) {
+      Alert.alert(
+        "Yeni Haftaya Başla",
+        "Mevcut programın arşive taşınacak ve yeni bir program oluşturulacak. Onaylıyor musun?",
+        [
+          { text: "Vazgeç", style: "cancel" },
+          { 
+            text: "Evet, Başla", 
+            onPress: async () => {
+              try {
+                await fetch(`${API_URL}/archive-program`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ user_id: user.uid })
+                });
+                setView('setup');
+              } catch (e) {
+                console.error("Arşivleme hatası:", e);
+                setView('setup'); 
+              }
+            }
+          }
+        ]
+      );
+    } else {
+      setView('setup');
+    }
+  };
+
+  const toggleTask = async (index: number) => {
+    const newSchedule = [...schedule];
+    newSchedule[index].completed = !newSchedule[index].completed;
+    setSchedule(newSchedule);
+
+    try {
+      const user = auth.currentUser;
+      if (user) {
+        await fetch(`${API_URL}/save-program`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: user.uid,
+            program: newSchedule
+          })
+        });
+      }
+    } catch (e) {
+      console.error("Görev güncellenirken bulut hatası:", e);
     }
   };
 
@@ -100,10 +151,8 @@ export default function Index() {
     ]);
   };
 
-  // --- RENDER ---
   if (authState === 'loading') return null;
 
-  // Login ve Register ekranlarına theme prop'u eklendi
   if (authState === 'login') {
     return <LoginScreen theme={theme} onLogin={() => {}} onGoToRegister={() => setAuthState('register')} />;
   }
@@ -112,37 +161,19 @@ export default function Index() {
     return <RegisterScreen theme={theme} onBack={() => setAuthState('login')} onRegisterSuccess={() => setAuthState('login')} />;
   }
 
-  // --- GÖRÜNÜM YÖNETİMİ ---
   switch (view) {
     case 'setup': 
-      return (
-        <AIProgramScreen 
-          theme={theme} 
-          onComplete={(newProg: any) => { 
-            setSchedule(newProg); 
-            setView('dashboard'); 
-          }} 
-          onBack={() => setView('dashboard')} 
-        />
-      );
+      return <AIProgramScreen theme={theme} onComplete={(newProg: any) => { setSchedule(newProg); setView('dashboard'); }} onBack={() => setView('dashboard')} />;
     case 'pomodoro': 
       return <PomodoroView {...pomodoro} theme={theme} onBack={() => setView('dashboard')} />;
     case 'program': 
-      return <ProgramView tasks={schedule} theme={theme} onBack={() => setView('dashboard')} />;
+      return <ProgramView tasks={schedule} toggleTask={toggleTask} theme={theme} onBack={() => setView('dashboard')} />;
     case 'analiz': 
       return <AnalizView analizler={analiz.analizler} theme={theme} aiYorum={analiz.aiYorum} loadingYorum={analiz.loading} onAdd={analiz.addAnaliz} onSil={analiz.deleteAnaliz} onBack={() => setView('dashboard')} />;
+    case 'history':
+      return <HistoryView theme={theme} onBack={() => setView('dashboard')} userId={auth.currentUser?.uid} />;
     case 'profile': 
-      return (
-        <ProfileView 
-          username={userName} 
-          theme={theme} 
-          isDarkMode={isDarkMode} 
-          toggleDarkMode={toggleDarkMode} 
-          schedule={schedule} 
-          totalTime={pomodoro.formatTime(pomodoro.timer)} 
-          onBack={() => setView('dashboard')} 
-        />
-      );
+      return <ProfileView username={userName} theme={theme} isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} schedule={schedule} totalTime={pomodoro.formatTime(pomodoro.timer)} onBack={() => setView('dashboard')} />;
     default: 
       const progress = schedule.length > 0 ? Math.round((schedule.filter((t: any) => t.completed).length / schedule.length) * 100) : 0;
       return (
@@ -150,9 +181,8 @@ export default function Index() {
           username={userName} 
           progress={progress} 
           theme={theme} 
-          isDarkMode={isDarkMode} 
           onLogout={handleLogout} 
-          setView={setView} 
+          setView={(v: any) => v === 'setup' ? archiveOldAndSetup() : setView(v)} 
           schedule={schedule} 
           analiz={analiz} 
           pomodoro={pomodoro} 

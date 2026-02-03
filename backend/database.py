@@ -16,18 +16,16 @@ def get_db_connection():
         conn.close()
 
 def init_db():
-    """Tabloları profesyonel standartlarda oluşturur."""
+    """Tabloları profesyonel standartlarda oluşturur veya günceller."""
     with get_db_connection() as conn:
         cursor = conn.cursor()
         
-        # 1. KULLANICILAR TABLOSU (Yeni eklendi)
-        # Şifreleri ileride hashleyerek saklamak en doğrusudur.
+        # 1. KULLANICILAR TABLOSU
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id TEXT PRIMARY KEY, 
                 name TEXT NOT NULL,
                 email TEXT UNIQUE NOT NULL,
-                password TEXT NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
@@ -36,7 +34,7 @@ def init_db():
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS analizler (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER, -- Hangi kullanıcıya ait olduğunu belirlemek için
+                user_id TEXT, 
                 deneme_ad TEXT NOT NULL,
                 net REAL NOT NULL,
                 tarih TEXT NOT NULL,
@@ -45,11 +43,11 @@ def init_db():
             )
         ''')
         
-        # 3. HAFTALIK PROGRAM TABLOSU
+        # 3. HAFTALIK PROGRAM TABLOSU (Aktif Program)
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS program (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER,
+                user_id TEXT,
                 gun TEXT NOT NULL,
                 task TEXT NOT NULL,
                 duration TEXT NOT NULL,
@@ -57,9 +55,22 @@ def init_db():
                 FOREIGN KEY (user_id) REFERENCES users (id)
             )
         ''')
+
+        # 4. PROGRAM GEÇMİŞİ TABLOSU
+        # SQLite'da tablo yoksa oluşturur
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS program_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT,
+                archive_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                completion_rate REAL, 
+                program_data TEXT,
+                FOREIGN KEY (user_id) REFERENCES users (id)
+            )
+        ''')
         
         conn.commit()
-    print("✅ Veritabanı mimarisi (Kullanıcılar dahil) güncellendi!")
+    print("✅ Veritabanı mimarisi (Geçmiş Programlar dahil) başarıyla güncellendi!")
 
 if __name__ == "__main__":
     init_db()

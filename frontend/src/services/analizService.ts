@@ -1,23 +1,21 @@
 const API_URL = "https://sam-unsublimed-unoptimistically.ngrok-free.dev";
 
-// Profesyonel Header Yapısı: Ngrok engellerini aşmak için
+// Ngrok ve Browser engellerini aşmak için profesyonel header yapısı
 const defaultHeaders = {
   'Content-Type': 'application/json',
   'ngrok-skip-browser-warning': 'true' 
 };
 
 export const analizService = {
-  // 1. Kullanıcıya özel analizleri çeker (userId artık string)
+  // 1. Kullanıcıya özel analizleri çeker
   getAll: async (userId: string) => {
     try {
-      // URL yollarını ve parametre tipini güncelledik
       const response = await fetch(`${API_URL}/analizler/${userId}`, {
         method: 'GET',
         headers: defaultHeaders
       });
       if (!response.ok) throw new Error("Veri çekilemedi");
       const data = await response.json();
-      // Backend'den direkt liste geliyorsa döndür, yoksa data.analizler'i kontrol et
       return Array.isArray(data) ? data : (data.analizler || []);
     } catch (e) {
       console.error("Analizler çekilemedi:", e);
@@ -25,7 +23,7 @@ export const analizService = {
     }
   },
 
-  // 2. Kullanıcıya özel AI yorumunu çeker (userId artık string)
+  // 2. Kullanıcıya özel AI yorumunu çeker
   getAIYorum: async (userId: string) => {
     try {
       const response = await fetch(`${API_URL}/ai-yorumla/${userId}`, {
@@ -39,14 +37,14 @@ export const analizService = {
     }
   },
 
-  // 3. Yeni analiz ekler (userId artık string)
+  // 3. Yeni analiz ekler
   add: async (ad: string, net: string, userId: string) => {
     try {
       const response = await fetch(`${API_URL}/analiz-ekle`, {
         method: 'POST',
         headers: defaultHeaders,
         body: JSON.stringify({
-          user_id: userId, // Firebase string UID gönderiliyor
+          user_id: userId,
           ad: ad,
           net: parseFloat(net),
           tarih: new Date().toLocaleDateString('tr-TR')
@@ -59,15 +57,25 @@ export const analizService = {
     }
   },
 
-  // 4. Analiz siler (Analiz ID'si hala sayı olabilir)
-  delete: async (id: number) => {
+  // 4. Analiz siler (DÜZELTİLDİ)
+  delete: async (id: number | string) => {
     try {
+      console.log(`Silme isteği gönderiliyor: ID = ${id}`);
+      
       const response = await fetch(`${API_URL}/analiz-sil/${id}`, {
-        method: 'DELETE',
+        method: 'DELETE', // Backend tarafında methods=['DELETE'] tanımlı olmalı
         headers: defaultHeaders
       });
+
+      // Eğer response 405 (Method Not Allowed) dönüyorsa backend'de DELETE kapalıdır
+      if (response.status === 405) {
+        console.error("Hata: Backend 'DELETE' metoduna izin vermiyor.");
+      }
+
+      console.log(`Silme yanıtı: ${response.status}`);
       return response.ok;
     } catch (e) {
+      console.error("Analiz silme servisinde teknik hata:", e);
       return false;
     }
   }
