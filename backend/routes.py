@@ -5,7 +5,7 @@ import json
 
 def setup_routes(app):
     
-    # --- 1. AUTH ROTALARI ---
+    # --- 1. AUTH VE PROFİL ROTALARI ---
     @app.route('/register', methods=['POST'])
     def register():
         data = request.get_json()
@@ -18,7 +18,20 @@ def setup_routes(app):
         except Exception as e:
             return jsonify({"status": "error", "message": str(e)}), 400
 
-    # --- 2. PROGRAM ROTALARI ---
+    @app.route('/update-profile', methods=['POST'])
+    def update_profile():
+        data = request.get_json()
+        user_id = data.get('user_id')
+        new_name = data.get('name')
+        try:
+            with get_db_connection() as conn:
+                conn.execute('UPDATE users SET name = ? WHERE id = ?', (new_name, user_id))
+                conn.commit()
+            return jsonify({"status": "success", "message": "Profil güncellendi"}), 200
+        except Exception as e:
+            return jsonify({"status": "error", "message": str(e)}), 500
+
+    # --- 2. PROGRAM VE ARŞİV ROTALARI ---
     @app.route('/get-program/<user_id>', methods=['GET'])
     def get_program(user_id):
         with get_db_connection() as conn:
@@ -38,7 +51,6 @@ def setup_routes(app):
             conn.commit()
         return jsonify({"status": "success"})
 
-    # --- PROGRAMI ARŞİVLEME ---
     @app.route('/archive-program', methods=['POST'])
     def archive_program():
         data = request.get_json()
@@ -66,42 +78,34 @@ def setup_routes(app):
                 conn.commit()
             return jsonify({"status": "success", "rate": rate}), 200
         except Exception as e:
-            print(f"ARŞİVLEME HATASI: {str(e)}")
             return jsonify({"status": "error", "message": str(e)}), 500
 
-    # --- GEÇMİŞ LİSTESİNİ GETİRME ---
     @app.route('/get-history/<user_id>', methods=['GET'])
     def get_history(user_id):
         try:
             with get_db_connection() as conn:
-                cursor = conn.execute(
+                rows = conn.execute(
                     'SELECT id, archive_date, completion_rate, program_data FROM program_history WHERE user_id = ? ORDER BY archive_date DESC',
                     (user_id,)
-                )
-                rows = cursor.fetchall()
-                
-                result = []
-                for row in rows:
-                    result.append({
-                        "id": row["id"],
-                        "archive_date": row["archive_date"],
-                        "completion_rate": row["completion_rate"],
-                        "program_data": json.loads(row["program_data"])
-                    })
+                ).fetchall()
+                result = [{
+                    "id": row["id"],
+                    "archive_date": row["archive_date"],
+                    "completion_rate": row["completion_rate"],
+                    "program_data": json.loads(row["program_data"])
+                } for row in rows]
             return jsonify(result), 200
         except Exception as e:
-            print(f"GEÇMİŞ ÇEKME HATASI: {str(e)}")
             return jsonify({"status": "error", "message": str(e)}), 500
 
-    # --- YENİ: KULLANICI İSTATİSTİKLERİNİ HESAPLAMA ---
+    # --- 3. İSTATİSTİK ROTALARI ---
     @app.route('/user-stats/<user_id>', methods=['GET'])
     def get_user_stats(user_id):
         try:
             total_minutes = 0
             total_tasks = 0
-            
             with get_db_connection() as conn:
-                # 1. Geçmişteki (arşivlenmiş) verileri topla
+                # Arşivden veriler
                 history = conn.execute('SELECT program_data FROM program_history WHERE user_id = ?', (user_id,)).fetchall()
                 for row in history:
                     tasks = json.loads(row['program_data'])
@@ -109,21 +113,19 @@ def setup_routes(app):
                         if t.get('completed') == 1 or t.get('completed') is True:
                             total_tasks += 1
                             d_str = str(t.get('duration', '0')).lower()
-                            if 'saat' in d_str or 'hour' in d_str:
-                                total_minutes += 60
+                            if 'saat' in d_str: total_minutes += 60
                             else:
                                 try:
                                     num = int(''.join(filter(str.isdigit, d_str)))
                                     total_minutes += num
-                                except: total_minutes += 45 # Sayı yoksa varsayılan ders süresi
+                                except: total_minutes += 45
 
-                # 2. Aktif programdaki tamamlananları ekle
+                # Aktif programdan veriler
                 active = conn.execute('SELECT duration FROM program WHERE user_id = ? AND completed = 1', (user_id,)).fetchall()
                 for row in active:
                     total_tasks += 1
                     d_str = str(row['duration']).lower()
-                    if 'saat' in d_str: 
-                        total_minutes += 60
+                    if 'saat' in d_str: total_minutes += 60
                     else:
                         try:
                             num = int(''.join(filter(str.isdigit, d_str)))
@@ -132,23 +134,21 @@ def setup_routes(app):
             
             return jsonify({
                 "total_hours": round(total_minutes / 60, 1),
-                "total_tasks": total_tasks,
-                "total_minutes": total_minutes
+                "total_tasks": total_tasks
             }), 200
         except Exception as e:
             return jsonify({"error": str(e)}), 500
 
-    # --- 3. AI ROTALARI ---
+    # --- 4. ANALİZ VE AI ROTALARI ---
     @app.route('/generate-program', methods=['POST'])
     def generate_program_route():
         try:
             data = request.get_json()
-            program = generate_ai_schedule(data.get('goal', 'Genel Hedef'), data.get('hours', 4))
+            program = generate_ai_schedule(data.get('goal', 'Hedef'), data.get('hours', 4))
             return jsonify({"status": "success", "program": program}) if program else (jsonify({"status": "error"}), 500)
         except Exception as e:
             return jsonify({"status": "error", "message": str(e)}), 500
 
-    # --- 4. ANALİZ ROTALARI ---
     @app.route('/analizler/<user_id>', methods=['GET'])
     def get_analizler(user_id):
         with get_db_connection() as conn:
@@ -158,10 +158,9 @@ def setup_routes(app):
     @app.route('/analiz-ekle', methods=['POST'])
     def analiz_ekle():
         data = request.get_json()
-        user_id = data.get('user_id')
         with get_db_connection() as conn:
             conn.execute('INSERT INTO analizler (user_id, deneme_ad, net, tarih) VALUES (?, ?, ?, ?)',
-                        (user_id, data['ad'], data['net'], data['tarih']))
+                        (data.get('user_id'), data['ad'], data['net'], data['tarih']))
             conn.commit()
         return jsonify({"status": "success"}), 201
 
@@ -175,17 +174,16 @@ def setup_routes(app):
         except Exception as e:
             return jsonify({"status": "error"}), 500
 
-    # --- 5. AI ANALİZ YORUMU ---
     @app.route('/ai-yorumla/<user_id>', methods=['GET'])
     def ai_yorumla(user_id):
         try:
             with get_db_connection() as conn:
                 veriler = conn.execute('SELECT deneme_ad, net FROM analizler WHERE user_id = ? ORDER BY id DESC LIMIT 5', (user_id,)).fetchall()
-            if not veriler: return jsonify({"yorum": "Henüz veri yok."})
-            deneme_ozeti = ", ".join([f"{row['deneme_ad']}: {row['net']} net" for row in veriler])
+            if not veriler: return jsonify({"yorum": "Veri yok."})
+            summary = ", ".join([f"{r['deneme_ad']}: {r['net']} net" for r in veriler])
             completion = client.chat.completions.create(
                 model="llama-3.1-8b-instant",
-                messages=[{"role": "system", "content": f"Eğitim koçu olarak şu sonuçları yorumla: {deneme_ozeti}"}]
+                messages=[{"role": "system", "content": f"Öğrenci koçu olarak bu netleri yorumla: {summary}"}]
             )
             return jsonify({"yorum": completion.choices[0].message.content})
         except: return jsonify({"yorum": "Analiz şu an yapılamıyor."})

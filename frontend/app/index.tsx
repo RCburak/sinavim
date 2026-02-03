@@ -173,7 +173,23 @@ export default function Index() {
     case 'history':
       return <HistoryView theme={theme} onBack={() => setView('dashboard')} userId={auth.currentUser?.uid} />;
     case 'profile': 
-      return <ProfileView username={userName} theme={theme} isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} schedule={schedule} totalTime={pomodoro.formatTime(pomodoro.timer)} onBack={() => setView('dashboard')} />;
+      return (
+        <ProfileView 
+          username={userName} 
+          theme={theme} 
+          isDarkMode={isDarkMode} 
+          toggleDarkMode={toggleDarkMode} 
+          schedule={schedule} 
+          totalTime={pomodoro.formatTime(pomodoro.timer)} 
+          onBack={(updatedName?: string) => {
+            // Eğer yeni bir isim gönderilirse state'i güncelliyoruz
+            if (updatedName && typeof updatedName === 'string') {
+              setUserName(updatedName);
+            }
+            setView('dashboard');
+          }} 
+        />
+      );
     default: 
       const progress = schedule.length > 0 ? Math.round((schedule.filter((t: any) => t.completed).length / schedule.length) * 100) : 0;
       return (

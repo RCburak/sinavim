@@ -7,7 +7,6 @@ import {
   TouchableOpacity, 
   Modal, 
   Pressable, 
-  Alert,
   Dimensions,
   Image 
 } from 'react-native';
@@ -17,8 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
 
-// --- Header Bileşeni ---
-const DashboardHeader = ({ username, onLogout, progress, setView, theme }: any) => {
+const DashboardHeader = ({ username, onLogout, setView, theme }: any) => {
   const [menuVisible, setMenuVisible] = useState(false);
 
   return (
@@ -43,17 +41,8 @@ const DashboardHeader = ({ username, onLogout, progress, setView, theme }: any) 
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.greetingText}>Merhaba {username || 'Burak'}! 👋</Text>
-
-        <View style={styles.progressSection}>
-          <View style={styles.progressLabelRow}>
-            <Text style={styles.progressLabel}>Günün Tamamlanma Oranı</Text>
-            <Text style={styles.progressPercent}>%{progress || 11}</Text>
-          </View>
-          <View style={[styles.progressBarBg, { backgroundColor: theme.overlay }]}>
-            <View style={[styles.progressBarFill, { width: `${progress || 11}%` }]} />
-          </View>
-        </View>
+        {/* Alt başlık tamamen kaldırıldı */}
+        <Text style={styles.greetingText}>Merhaba {username || 'Öğrenci'}! 👋</Text>
       </View>
 
       <Modal visible={menuVisible} transparent animationType="fade" onRequestClose={() => setMenuVisible(false)}>
@@ -83,21 +72,18 @@ const DashboardHeader = ({ username, onLogout, progress, setView, theme }: any) 
   );
 };
 
-// --- Ana Dashboard Görünümü ---
-export const DashboardView = ({ username, progress, onLogout, setView, schedule, analiz, pomodoro, theme }: any) => (
+export const DashboardView = ({ username, onLogout, setView, schedule, analiz, pomodoro, theme }: any) => (
   <View style={[styles.container, { backgroundColor: theme.background }]}>
     <StatusBar barStyle={theme.background === '#121212' ? "light-content" : "dark-content"} />
     
     <DashboardHeader 
       username={username} 
       onLogout={onLogout} 
-      progress={progress} 
       setView={setView} 
       theme={theme}
     />
 
-    <ScrollView contentContainerStyle={styles.menuGrid}>
-      {/* 1. KART: Programım */}
+    <ScrollView contentContainerStyle={styles.menuGrid} showsVerticalScrollIndicator={false}>
       <MenuCard 
         title="Programım" 
         emoji="📅" 
@@ -105,8 +91,6 @@ export const DashboardView = ({ username, progress, onLogout, setView, schedule,
         onPress={() => setView('program')} 
         theme={theme}
       />
-
-      {/* 2. KART: AI Programım */}
       <MenuCard 
         title="AI Programım" 
         emoji="🤖" 
@@ -114,8 +98,6 @@ export const DashboardView = ({ username, progress, onLogout, setView, schedule,
         onPress={() => setView('setup')} 
         theme={theme}
       />
-
-      {/* 3. KART: Analizler */}
       <MenuCard 
         title="Analizler" 
         emoji="📈" 
@@ -126,8 +108,6 @@ export const DashboardView = ({ username, progress, onLogout, setView, schedule,
         }} 
         theme={theme}
       />
-
-      {/* 4. KART: Pomodoro */}
       <MenuCard 
         title="Pomodoro" 
         emoji="⏱️" 
@@ -135,8 +115,6 @@ export const DashboardView = ({ username, progress, onLogout, setView, schedule,
         onPress={() => setView('pomodoro')} 
         theme={theme}
       />
-
-      {/* 5. KART: Geçmişim (YENİ EKLENDİ) */}
       <MenuCard 
         title="Geçmişim" 
         emoji="📚" 
@@ -154,60 +132,19 @@ const styles = StyleSheet.create({
   blueHeader: {
     paddingTop: 60,
     paddingHorizontal: 25,
-    paddingBottom: 40,
+    paddingBottom: 30, // Biraz daha daraltıldı
     borderBottomLeftRadius: 40,
     borderBottomRightRadius: 40,
   },
   topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  logoBox: { 
-    width: 48, 
-    height: 48, 
-    borderRadius: 12, 
-    backgroundColor: 'rgba(255,255,255,0.1)', 
-    overflow: 'hidden' 
-  },
+  logoBox: { width: 48, height: 48, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.1)', overflow: 'hidden' },
   actualLogo: { width: '100%', height: '100%' },
-  profileCircle: { 
-    width: 45, 
-    height: 45, 
-    borderRadius: 22.5, 
-    borderWidth: 2, 
-    borderColor: '#fff', 
-    justifyContent: 'center', 
-    alignItems: 'center' 
-  },
+  profileCircle: { width: 45, height: 45, borderRadius: 22.5, borderWidth: 2, borderColor: '#fff', justifyContent: 'center', alignItems: 'center' },
   profileLetter: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
-  greetingText: { fontSize: 26, fontWeight: 'bold', color: '#fff', marginBottom: 25 },
-  progressSection: { marginTop: 10 },
-  progressLabelRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-  progressLabel: { color: 'rgba(255,255,255,0.8)', fontSize: 13 },
-  progressPercent: { color: '#fff', fontWeight: 'bold', fontSize: 13 },
-  progressBarBg: { height: 6, borderRadius: 3 },
-  progressBarFill: { height: 6, backgroundColor: '#fff', borderRadius: 3 },
-  menuGrid: { 
-    flexDirection: 'row', 
-    flexWrap: 'wrap', 
-    padding: 20, 
-    justifyContent: 'space-between', 
-    paddingTop: 20 
-  },
-  modalOverlay: { 
-    flex: 1, 
-    backgroundColor: 'rgba(0,0,0,0.1)', 
-    justifyContent: 'flex-start', 
-    alignItems: 'flex-end', 
-    paddingTop: 110, 
-    paddingRight: 30 
-  },
-  menuContent: { 
-    borderRadius: 15, 
-    width: 160, 
-    padding: 8, 
-    elevation: 10,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 10
-  },
+  greetingText: { fontSize: 26, fontWeight: 'bold', color: '#fff' }, // Alt margin kaldırıldı
+  menuGrid: { flexDirection: 'row', flexWrap: 'wrap', padding: 20, justifyContent: 'space-between' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.1)', justifyContent: 'flex-start', alignItems: 'flex-end', paddingTop: 110, paddingRight: 30 },
+  menuContent: { borderRadius: 15, width: 160, padding: 8, elevation: 10 },
   menuItem: { flexDirection: 'row', alignItems: 'center', padding: 12 },
   menuItemText: { marginLeft: 10, fontSize: 15 },
   divider: { height: 1, marginVertical: 4 }
