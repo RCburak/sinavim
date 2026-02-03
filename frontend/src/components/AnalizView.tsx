@@ -18,7 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AnalizTablosu } from './AnalizTablosu';
 import { COLORS } from '../constants/theme';
 import { Ionicons } from '@expo/vector-icons';
-import { LineChart } from "react-native-chart-kit"; // Grafik kütüphanesi eklendi
+import { LineChart } from "react-native-chart-kit";
 
 const { width } = Dimensions.get('window');
 
@@ -28,6 +28,9 @@ export const AnalizView = ({
   const [denemeAd, setDenemeAd] = useState('');
   const [denemeNet, setDenemeNet] = useState('');
   const [showAI, setShowAI] = useState(false); 
+
+  // Tooltip için yeni state'ler
+  const [tooltip, setTooltip] = useState({ visible: false, value: 0, label: '' });
 
   const handleAdd = () => {
     if (!denemeAd || !denemeNet) return;
@@ -42,12 +45,9 @@ export const AnalizView = ({
   // Grafik verilerini hazırla (Son 6 deneme)
   const prepareChartData = () => {
     if (!analizler || analizler.length < 2) return null;
-    
-    // Son verileri ters çevirip grafiğe uygun hale getiriyoruz
     const lastData = [...analizler].slice(0, 6).reverse();
-    
     return {
-      labels: lastData.map((a: any) => a.ad.substring(0, 4)), // İsimlerin ilk 4 harfi
+      labels: lastData.map((a: any) => a.ad.substring(0, 4)),
       datasets: [{
         data: lastData.map((a: any) => parseFloat(a.net) || 0)
       }]
@@ -57,7 +57,10 @@ export const AnalizView = ({
   const chartData = prepareChartData();
 
   return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+    <TouchableWithoutFeedback onPress={() => {
+      Keyboard.dismiss();
+      setTooltip({ ...tooltip, visible: false }); // Ekrana basınca tooltip kapansın
+    }}>
       <View style={{ flex: 1, backgroundColor: theme.background }}>
         <StatusBar barStyle="light-content" />
         <KeyboardAvoidingView 
@@ -76,14 +79,32 @@ export const AnalizView = ({
 
             <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 20 }} showsVerticalScrollIndicator={false}>
               
-              {/* GRAFİK ALANI */}
+              {/* GRAFİK VE TOOLTIP ALANI */}
               {chartData ? (
-                <View style={styles.chartContainer}>
-                  <Text style={[styles.chartTitle, { color: theme.text }]}>Net Gelişim Grafiği</Text>
+                <View style={styles.chartWrapper}>
+                  <View style={styles.chartHeader}>
+                    <Text style={[styles.chartTitle, { color: theme.text }]}>Net Gelişim Grafiği</Text>
+                    
+                    {/* Dinamik Tooltip Baloncuğu */}
+                    {tooltip.visible && (
+                      <View style={[styles.tooltipContainer, { backgroundColor: COLORS.warning }]}>
+                        <Text style={styles.tooltipText}>{tooltip.label}: {tooltip.value} Net</Text>
+                      </View>
+                    )}
+                  </View>
+
                   <LineChart
                     data={chartData}
                     width={width - 40}
                     height={180}
+                    onDataPointClick={(data) => {
+                      // Noktaya basınca tooltip'i güncelle
+                      setTooltip({
+                        visible: true,
+                        value: data.value,
+                        label: chartData.labels[data.index]
+                      });
+                    }}
                     chartConfig={{
                       backgroundColor: theme.surface,
                       backgroundGradientFrom: theme.surface,
@@ -92,11 +113,14 @@ export const AnalizView = ({
                       color: (opacity = 1) => COLORS.warning,
                       labelColor: (opacity = 1) => theme.textSecondary,
                       style: { borderRadius: 16 },
-                      propsForDots: { r: "5", strokeWidth: "2", stroke: COLORS.warning }
+                      propsForDots: { r: "6", strokeWidth: "2", stroke: COLORS.warning }
                     }}
                     bezier
                     style={styles.chartStyle}
                   />
+                  <Text style={[styles.infoText, { color: theme.textSecondary }]}>
+                    Noktalara dokunarak net ayrıntılarını gör
+                  </Text>
                 </View>
               ) : (
                 <View style={[styles.emptyChart, { backgroundColor: theme.surface }]}>
@@ -185,9 +209,29 @@ const styles = StyleSheet.create({
   backBtn: { padding: 5 },
   headerTitle: { color: '#FFF', fontSize: 20, fontWeight: 'bold', marginLeft: 15 },
   headerTextWhite: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
-  chartContainer: { alignItems: 'center', marginTop: 15 },
-  chartTitle: { fontSize: 14, fontWeight: 'bold', marginBottom: 10, alignSelf: 'flex-start', marginLeft: 25 },
+  chartWrapper: { alignItems: 'center', marginTop: 15 },
+  chartHeader: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    width: width - 50, 
+    marginBottom: 10 
+  },
+  chartTitle: { fontSize: 14, fontWeight: 'bold' },
   chartStyle: { borderRadius: 20, elevation: 4 },
+  
+  // Tooltip Stilleri
+  tooltipContainer: { 
+    paddingHorizontal: 12, 
+    paddingVertical: 6, 
+    borderRadius: 10, 
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOpacity: 0.2
+  },
+  tooltipText: { color: '#FFF', fontSize: 12, fontWeight: 'bold' },
+  infoText: { fontSize: 11, marginTop: 5, fontStyle: 'italic' },
+
   emptyChart: { margin: 20, padding: 30, borderRadius: 25, alignItems: 'center', justifyContent: 'center', borderStyle: 'dashed', borderWidth: 1, borderColor: '#ccc' },
   aiToggleButton: {
     margin: 20,
@@ -211,9 +255,6 @@ const styles = StyleSheet.create({
     padding: 20, 
     borderRadius: 25, 
     elevation: 4,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 8
   },
   input: { 
     borderBottomWidth: 1.5, 
@@ -223,3 +264,5 @@ const styles = StyleSheet.create({
   },
   btn: { padding: 16, borderRadius: 15, alignItems: 'center', elevation: 2 },
 });
+
+export default AnalizView;
