@@ -16,11 +16,11 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-export const DayFolder = ({ day, tasks, toggleTask, theme = COLORS.light }: any) => {
+// updateQuestions prop'u eklendi
+export const DayFolder = ({ day, tasks, toggleTask, updateQuestions, theme = COLORS.light }: any) => {
   const [isOpen, setIsOpen] = useState(false);
-  // Soru sayılarını tutmak için local state (İleride backend'e bağlanabilir)
-  const [questionCounts, setQuestionCounts] = useState<{[key: string]: string}>({});
 
+  // Filtreleme mantığı
   const dayTasks = tasks.filter((t: any) => {
     const itemDay = (t.gun || t.gün || t.day || "").toLowerCase();
     const currentDay = day.toLowerCase();
@@ -33,10 +33,6 @@ export const DayFolder = ({ day, tasks, toggleTask, theme = COLORS.light }: any)
   const toggleOpen = () => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.spring);
     setIsOpen(!isOpen);
-  };
-
-  const handleQuestionChange = (index: number, val: string) => {
-    setQuestionCounts(prev => ({ ...prev, [index]: val }));
   };
 
   return (
@@ -109,8 +105,10 @@ export const DayFolder = ({ day, tasks, toggleTask, theme = COLORS.light }: any)
                       placeholder="0"
                       placeholderTextColor={theme.textSecondary}
                       keyboardType="numeric"
-                      value={questionCounts[taskKey] || ""}
-                      onChangeText={(val) => handleQuestionChange(taskKey, val)}
+                      // DİKKAT: Artık local state değil, direkt task içindeki veriyi okuyor
+                      value={task.questions !== undefined ? String(task.questions) : ""}
+                      // Her karakter yazıldığında state'i güncelle (UI'da anlık görsün)
+                      onChangeText={(val) => updateQuestions(task.originalIndex, val)}
                     />
                     <Text style={[styles.qUnit, { color: theme.textSecondary }]}>Soru</Text>
                   </View>
@@ -147,13 +145,10 @@ const styles = StyleSheet.create({
   durationText: { fontSize: 11, marginLeft: 4 },
   checkbox: { width: 24, height: 24, borderRadius: 8, borderWidth: 2, justifyContent: 'center', alignItems: 'center' },
   completedText: { textDecorationLine: 'line-through', opacity: 0.5 },
-  
-  // Soru Sayısı Alanı Stilleri
   qArea: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 10, borderTopWidth: 0.5 },
   qLabel: { fontSize: 12, fontWeight: '500' },
   qInput: { width: 50, height: 30, borderRadius: 6, marginHorizontal: 10, textAlign: 'center', fontSize: 13, fontWeight: 'bold', padding: 0 },
   qUnit: { fontSize: 12 },
-
   emptyState: { padding: 20, alignItems: 'center' },
   emptyText: { fontStyle: 'italic', fontSize: 13 }
 });

@@ -76,7 +76,7 @@ export default function Index() {
           task: item.task || "Ders",
           duration: item.duration || "1 Saat",
           completed: item.completed === 1 || item.completed === true,
-          questions: item.questions || 0 // Veritabanından gelen soru sayısı
+          questions: item.questions || 0 
         })));
       }
     } catch (e) { 
@@ -84,27 +84,37 @@ export default function Index() {
     }
   };
 
-  // YKS ÖZEL: Soru sayısı güncelleme fonksiyonu
+  // GÜNCELLENEN FONKSİYON: Soru sayısını daha güvenli kaydeder
   const updateQuestions = async (index: number, count: string) => {
+    if (index === undefined || index === null) return;
+
+    const qCount = parseInt(count) || 0;
+    
+    // State'i hemen güncelle ki UI akıcı olsun
     const newSchedule = [...schedule];
-    newSchedule[index].questions = parseInt(count) || 0;
+    newSchedule[index].questions = qCount;
     setSchedule(newSchedule);
 
-    // Veritabanına anlık kaydet
+    // Backend'e gönder
     try {
       const user = auth.currentUser;
       if (user) {
-        await fetch(`${API_URL}/save-program`, {
+        const response = await fetch(`${API_URL}/save-program`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             user_id: user.uid,
-            program: newSchedule
+            program: newSchedule // Güncel listeyi direkt gönderiyoruz
           })
         });
+        
+        const resData = await response.json();
+        if (resData.status !== 'success') {
+            console.warn("Soru sayısı sunucuda güncellenemedi.");
+        }
       }
     } catch (e) {
-      console.error("Soru sayısı kaydedilemedi:", e);
+      console.error("Soru sayısı kaydetme hatası:", e);
     }
   };
 
@@ -194,7 +204,7 @@ export default function Index() {
                 task: item.task || "Ders",
                 duration: item.duration || "1 Saat",
                 completed: item.completed === 1 || item.completed === true,
-                questions: 0 // Yeni programda soru sayısı 0 başlar
+                questions: 0 
             })) : [];
 
             setSchedule(safeProg); 
@@ -210,7 +220,7 @@ export default function Index() {
         <ProgramView 
           tasks={schedule} 
           toggleTask={toggleTask} 
-          updateQuestions={updateQuestions} // Yeni fonksiyonu gönderiyoruz
+          updateQuestions={updateQuestions} 
           theme={theme} 
           onBack={() => setView('dashboard')} 
         />
