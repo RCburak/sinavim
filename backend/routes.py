@@ -22,7 +22,6 @@ def setup_routes(app):
     @app.route('/get-program/<user_id>', methods=['GET'])
     def get_program(user_id):
         with get_db_connection() as conn:
-            # fetchall() sonucunu manuel olarak dict listesine çeviriyoruz
             veriler = conn.execute('SELECT gun, task, duration, completed FROM program WHERE user_id = ?', (user_id,)).fetchall()
             result = [dict(row) for row in veriler]
         return jsonify(result)
@@ -46,7 +45,6 @@ def setup_routes(app):
         user_id = data.get('user_id')
         try:
             with get_db_connection() as conn:
-                # 1. Mevcut programı çek ve manuel mapping yap
                 cursor = conn.execute('SELECT gun, task, duration, completed FROM program WHERE user_id = ?', (user_id,))
                 current_prog = [
                     {"gun": row["gun"], "task": row["task"], "duration": row["duration"], "completed": row["completed"]} 
@@ -56,23 +54,19 @@ def setup_routes(app):
                 if not current_prog:
                     return jsonify({"status": "error", "message": "Program bulunamadı"}), 404
                 
-                # 2. Başarı oranını hesapla
                 total = len(current_prog)
                 completed = len([t for t in current_prog if t['completed'] == 1])
                 rate = round((completed / total) * 100, 1) if total > 0 else 0
                 
-                # 3. Arşive JSON olarak ekle
                 conn.execute(
                     'INSERT INTO program_history (user_id, completion_rate, program_data) VALUES (?, ?, ?)',
                     (user_id, rate, json.dumps(current_prog, ensure_ascii=False))
                 )
-                
-                # 4. Aktif programı temizle
                 conn.execute('DELETE FROM program WHERE user_id = ?', (user_id,))
                 conn.commit()
             return jsonify({"status": "success", "rate": rate}), 200
         except Exception as e:
-            print(f"ARŞİVLEME HATASI: {str(e)}") # Python terminalinde hatayı yakalamak için
+            print(f"ARŞİVLEME HATASI: {str(e)}")
             return jsonify({"status": "error", "message": str(e)}), 500
 
     # --- GEÇMİŞ LİSTESİNİ GETİRME ---
@@ -88,7 +82,6 @@ def setup_routes(app):
                 
                 result = []
                 for row in rows:
-                    # Manuel veri dönüşümü hata payını azaltır
                     result.append({
                         "id": row["id"],
                         "archive_date": row["archive_date"],
@@ -99,6 +92,51 @@ def setup_routes(app):
         except Exception as e:
             print(f"GEÇMİŞ ÇEKME HATASI: {str(e)}")
             return jsonify({"status": "error", "message": str(e)}), 500
+
+    # --- YENİ: KULLANICI İSTATİSTİKLERİNİ HESAPLAMA ---
+    @app.route('/user-stats/<user_id>', methods=['GET'])
+    def get_user_stats(user_id):
+        try:
+            total_minutes = 0
+            total_tasks = 0
+            
+            with get_db_connection() as conn:
+                # 1. Geçmişteki (arşivlenmiş) verileri topla
+                history = conn.execute('SELECT program_data FROM program_history WHERE user_id = ?', (user_id,)).fetchall()
+                for row in history:
+                    tasks = json.loads(row['program_data'])
+                    for t in tasks:
+                        if t.get('completed') == 1 or t.get('completed') is True:
+                            total_tasks += 1
+                            d_str = str(t.get('duration', '0')).lower()
+                            if 'saat' in d_str or 'hour' in d_str:
+                                total_minutes += 60
+                            else:
+                                try:
+                                    num = int(''.join(filter(str.isdigit, d_str)))
+                                    total_minutes += num
+                                except: total_minutes += 45 # Sayı yoksa varsayılan ders süresi
+
+                # 2. Aktif programdaki tamamlananları ekle
+                active = conn.execute('SELECT duration FROM program WHERE user_id = ? AND completed = 1', (user_id,)).fetchall()
+                for row in active:
+                    total_tasks += 1
+                    d_str = str(row['duration']).lower()
+                    if 'saat' in d_str: 
+                        total_minutes += 60
+                    else:
+                        try:
+                            num = int(''.join(filter(str.isdigit, d_str)))
+                            total_minutes += num
+                        except: total_minutes += 45
+            
+            return jsonify({
+                "total_hours": round(total_minutes / 60, 1),
+                "total_tasks": total_tasks,
+                "total_minutes": total_minutes
+            }), 200
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
 
     # --- 3. AI ROTALARI ---
     @app.route('/generate-program', methods=['POST'])
@@ -137,7 +175,7 @@ def setup_routes(app):
         except Exception as e:
             return jsonify({"status": "error"}), 500
 
-    # --- AI ANALİZ YORUMU ---
+    # --- 5. AI ANALİZ YORUMU ---
     @app.route('/ai-yorumla/<user_id>', methods=['GET'])
     def ai_yorumla(user_id):
         try:
