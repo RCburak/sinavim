@@ -31,14 +31,15 @@ def setup_routes(app):
         except Exception as e:
             return jsonify({"status": "error", "message": str(e)}), 500
 
-    # --- 2. PROGRAM VE ARŞİV ROTALARI (YKS SIRALAMA DESTEKLİ) ---
+    # --- 2. PROGRAM VE ARŞİV ROTALARI (QUESTIONS DESTEKLİ) ---
     @app.route('/get-program/<user_id>', methods=['GET'])
     def get_program(user_id):
-        # YKS öğrencisi için gün sırası çok kritiktir, SQLite üzerinde sıralama mantığı ekliyoruz
+        # YKS sıralaması ve questions sütunu eklendi
         days_order = "CASE gun WHEN 'Pazartesi' THEN 1 WHEN 'Salı' THEN 2 WHEN 'Çarşamba' THEN 3 WHEN 'Perşembe' THEN 4 WHEN 'Cuma' THEN 5 WHEN 'Cumartesi' THEN 6 WHEN 'Pazar' THEN 7 END"
         
         with get_db_connection() as conn:
-            veriler = conn.execute(f'SELECT gun, task, duration, completed FROM program WHERE user_id = ? ORDER BY {days_order}, id ASC', (user_id,)).fetchall()
+            # SELECT kısmına questions eklendi
+            veriler = conn.execute(f'SELECT gun, task, duration, completed, questions FROM program WHERE user_id = ? ORDER BY {days_order}, id ASC', (user_id,)).fetchall()
             result = [dict(row) for row in veriler]
         return jsonify(result)
 
@@ -50,14 +51,15 @@ def setup_routes(app):
         
         try:
             with get_db_connection() as conn:
-                # Önce eski programı temizle
                 conn.execute('DELETE FROM program WHERE user_id = ?', (user_id,))
                 
-                # Yeni dersleri 'gun' bilgisini koruyarak ekle
                 for p in program_list:
+                    # questions verisi de kaydediliyor
                     conn.execute(
-                        'INSERT INTO program (user_id, gun, task, duration, completed) VALUES (?, ?, ?, ?, ?)',
-                        (user_id, p.get('gun', 'Pazartesi'), p['task'], p['duration'], 1 if p.get('completed') is True else 0)
+                        'INSERT INTO program (user_id, gun, task, duration, completed, questions) VALUES (?, ?, ?, ?, ?, ?)',
+                        (user_id, p.get('gun', 'Pazartesi'), p['task'], p['duration'], 
+                         1 if p.get('completed') is True or p.get('completed') == 1 else 0,
+                         int(p.get('questions', 0))) # Frontend'den gelen soru sayısı
                     )
                 conn.commit()
             return jsonify({"status": "success"}), 200
@@ -70,9 +72,16 @@ def setup_routes(app):
         user_id = data.get('user_id')
         try:
             with get_db_connection() as conn:
-                cursor = conn.execute('SELECT gun, task, duration, completed FROM program WHERE user_id = ?', (user_id,))
+                # Arşivlenirken questions verisi de alınıyor
+                cursor = conn.execute('SELECT gun, task, duration, completed, questions FROM program WHERE user_id = ?', (user_id,))
                 current_prog = [
-                    {"gun": row["gun"], "task": row["task"], "duration": row["duration"], "completed": row["completed"]} 
+                    {
+                        "gun": row["gun"], 
+                        "task": row["task"], 
+                        "duration": row["duration"], 
+                        "completed": row["completed"],
+                        "questions": row["questions"] # Arşive eklenen soru sayısı
+                    } 
                     for row in cursor.fetchall()
                 ]
                 
@@ -105,7 +114,7 @@ def setup_routes(app):
                     "id": row["id"],
                     "archive_date": row["archive_date"],
                     "completion_rate": row["completion_rate"],
-                    "program_data": json.loads(row["program_data"])
+                    "program_data": json.loads(row["program_data"]) # JSON içindeki questions verisi de burada dönüyor
                 } for row in rows]
             return jsonify(result), 200
         except Exception as e:
@@ -118,7 +127,6 @@ def setup_routes(app):
             total_minutes = 0
             total_tasks = 0
             with get_db_connection() as conn:
-                # Arşivden veriler
                 history = conn.execute('SELECT program_data FROM program_history WHERE user_id = ?', (user_id,)).fetchall()
                 for row in history:
                     tasks = json.loads(row['program_data'])
@@ -133,7 +141,6 @@ def setup_routes(app):
                                     total_minutes += num
                                 except: total_minutes += 45
 
-                # Aktif programdan veriler
                 active = conn.execute('SELECT duration FROM program WHERE user_id = ? AND completed = 1', (user_id,)).fetchall()
                 for row in active:
                     total_tasks += 1
@@ -157,7 +164,6 @@ def setup_routes(app):
     def generate_program_route():
         try:
             data = request.get_json()
-            # AI servisine gelen 'goal' ve 'hours' bilgilerini gönderiyoruz
             program = generate_ai_schedule(data.get('goal', 'Hedef'), data.get('hours', 4))
             return jsonify({"status": "success", "program": program}) if program else (jsonify({"status": "error"}), 500)
         except Exception as e:

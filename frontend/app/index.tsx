@@ -75,11 +75,36 @@ export default function Index() {
           gun: item.gun || "Pazartesi",
           task: item.task || "Ders",
           duration: item.duration || "1 Saat",
-          completed: item.completed === 1 || item.completed === true
+          completed: item.completed === 1 || item.completed === true,
+          questions: item.questions || 0 // Veritabanından gelen soru sayısı
         })));
       }
     } catch (e) { 
       setSchedule([]);
+    }
+  };
+
+  // YKS ÖZEL: Soru sayısı güncelleme fonksiyonu
+  const updateQuestions = async (index: number, count: string) => {
+    const newSchedule = [...schedule];
+    newSchedule[index].questions = parseInt(count) || 0;
+    setSchedule(newSchedule);
+
+    // Veritabanına anlık kaydet
+    try {
+      const user = auth.currentUser;
+      if (user) {
+        await fetch(`${API_URL}/save-program`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: user.uid,
+            program: newSchedule
+          })
+        });
+      }
+    } catch (e) {
+      console.error("Soru sayısı kaydedilemedi:", e);
     }
   };
 
@@ -164,12 +189,12 @@ export default function Index() {
         <AIProgramScreen 
           theme={theme} 
           onComplete={(newProg: any) => { 
-            // VERİ DOĞRULAMA: Gelen veriyi temizle ve dizi olduğundan emin ol
             const safeProg = Array.isArray(newProg) ? newProg.map((item: any) => ({
                 gun: item.gun || "Pazartesi",
                 task: item.task || "Ders",
                 duration: item.duration || "1 Saat",
-                completed: item.completed === 1 || item.completed === true
+                completed: item.completed === 1 || item.completed === true,
+                questions: 0 // Yeni programda soru sayısı 0 başlar
             })) : [];
 
             setSchedule(safeProg); 
@@ -181,7 +206,15 @@ export default function Index() {
     case 'pomodoro': 
       return <PomodoroView {...pomodoro} theme={theme} onBack={() => setView('dashboard')} />;
     case 'program': 
-      return <ProgramView tasks={schedule} toggleTask={toggleTask} theme={theme} onBack={() => setView('dashboard')} />;
+      return (
+        <ProgramView 
+          tasks={schedule} 
+          toggleTask={toggleTask} 
+          updateQuestions={updateQuestions} // Yeni fonksiyonu gönderiyoruz
+          theme={theme} 
+          onBack={() => setView('dashboard')} 
+        />
+      );
     case 'analiz': 
       return <AnalizView analizler={analiz.analizler} theme={theme} aiYorum={analiz.aiYorum} loadingYorum={analiz.loading} onAdd={analiz.addAnaliz} onSil={analiz.deleteAnaliz} onBack={() => setView('dashboard')} />;
     case 'history':

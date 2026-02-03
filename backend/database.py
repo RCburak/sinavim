@@ -43,7 +43,7 @@ def init_db():
             )
         ''')
         
-        # 3. HAFTALIK PROGRAM TABLOSU (Aktif Program)
+        # 3. HAFTALIK PROGRAM TABLOSU (questions sütunu eklendi)
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS program (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -52,12 +52,20 @@ def init_db():
                 task TEXT NOT NULL,
                 duration TEXT NOT NULL,
                 completed INTEGER DEFAULT 0,
+                questions INTEGER DEFAULT 0,
                 FOREIGN KEY (user_id) REFERENCES users (id)
             )
         ''')
 
+        # EĞER TABLO VARSA VE QUESTIONS SÜTUNU YOKSA EKLE (Migration)
+        try:
+            cursor.execute('ALTER TABLE program ADD COLUMN questions INTEGER DEFAULT 0')
+            print("ℹ️ 'program' tablosuna 'questions' sütunu eklendi.")
+        except sqlite3.OperationalError:
+            # Sütun zaten varsa hata verir, bunu görmezden geliyoruz
+            pass
+
         # 4. PROGRAM GEÇMİŞİ TABLOSU
-        # SQLite'da tablo yoksa oluşturur
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS program_history (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -70,7 +78,7 @@ def init_db():
         ''')
         
         conn.commit()
-    print("✅ Veritabanı mimarisi (Geçmiş Programlar dahil) başarıyla güncellendi!")
+    print("✅ Veritabanı mimarisi ve YKS Soru Takibi altyapısı başarıyla güncellendi!")
 
 if __name__ == "__main__":
     init_db()

@@ -16,16 +16,14 @@ import { Ionicons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
 
-export const ProgramView = ({ tasks, toggleTask, onBack, theme = COLORS.light }: any) => {
-  // Seçili gün state'i (Varsayılan olarak Pazartesi veya boş bırakıp "Hepsi" diyebiliriz)
+// updateQuestions prop olarak eklendi
+export const ProgramView = ({ tasks, toggleTask, updateQuestions, onBack, theme = COLORS.light }: any) => {
   const [selectedDay, setSelectedDay] = useState(GUNLER[0]);
 
-  // İstatistik Hesaplamaları
   const totalTasks = tasks.length;
   const completedTasks = tasks.filter((t: any) => t.completed).length;
   const weeklyProgress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
-  // Motivasyon Mesajı
   const getMotivationalNote = () => {
     if (weeklyProgress === 0) return "Haydi, ilk adımı at!";
     if (weeklyProgress < 40) return "Isınma turları bitti, tempoyu artır!";
@@ -37,7 +35,6 @@ export const ProgramView = ({ tasks, toggleTask, onBack, theme = COLORS.light }:
     <SafeAreaView style={[styles.fullScreen, { backgroundColor: theme.background }]}>
       <StatusBar barStyle={theme.background === '#121212' ? "light-content" : "dark-content"} />
       
-      {/* Premium Header */}
       <View style={[styles.header, { backgroundColor: theme.primary }]}>
         <TouchableOpacity onPress={onBack} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={28} color="#fff" />
@@ -48,7 +45,6 @@ export const ProgramView = ({ tasks, toggleTask, onBack, theme = COLORS.light }:
         </View>
       </View>
 
-      {/* GÜN SEÇİCİ (Horizontal Tab) */}
       <View style={[styles.tabContainer, { backgroundColor: theme.surface }]}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabScroll}>
           {GUNLER.map((gun) => (
@@ -77,7 +73,6 @@ export const ProgramView = ({ tasks, toggleTask, onBack, theme = COLORS.light }:
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* İlerleme Kartı */}
         <View style={[styles.statsCard, { backgroundColor: theme.surface }]}>
           <View style={styles.statsInfo}>
             <View>
@@ -95,7 +90,6 @@ export const ProgramView = ({ tasks, toggleTask, onBack, theme = COLORS.light }:
           </View>
         </View>
 
-        {/* Seçili Günün Klasörü */}
         <View style={styles.dayView}>
           <Text style={[styles.dayTitle, { color: theme.text }]}>{selectedDay} Programı</Text>
           {tasks
@@ -109,8 +103,9 @@ export const ProgramView = ({ tasks, toggleTask, onBack, theme = COLORS.light }:
                   <DayFolder 
                     key={task.originalIndex} 
                     day={selectedDay} 
-                    tasks={[task]} // Tekli görev gönderiyoruz çünkü filtreledik
+                    tasks={[task]} 
                     toggleTask={toggleTask}
+                    updateQuestions={updateQuestions} // DayFolder'a aktarıldı
                     theme={theme}
                   />
                 ))
@@ -141,16 +136,12 @@ const styles = StyleSheet.create({
   backBtn: { marginRight: 15 },
   headerTitle: { color: '#fff', fontSize: 22, fontWeight: 'bold' },
   headerSubTitle: { color: 'rgba(255,255,255,0.9)', fontSize: 13, marginTop: 2 },
-  
-  // Tab Stilleri
   tabContainer: { height: 60, elevation: 4, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 5 },
   tabScroll: { paddingHorizontal: 15, alignItems: 'center' },
   tabItem: { paddingHorizontal: 20, height: '100%', justifyContent: 'center' },
   tabText: { fontSize: 15 },
-
   scrollView: { flex: 1 },
   scrollContent: { padding: 20, paddingBottom: 40 },
-  
   statsCard: { padding: 20, borderRadius: 25, marginBottom: 25, elevation: 4 },
   statsInfo: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   statsTitle: { fontSize: 17, fontWeight: 'bold' },
@@ -159,7 +150,6 @@ const styles = StyleSheet.create({
   progressText: { fontWeight: 'bold', fontSize: 13 },
   progressTrack: { height: 6, borderRadius: 3, overflow: 'hidden' },
   progressFill: { height: '100%', borderRadius: 3 },
-
   dayView: { marginTop: 10 },
   dayTitle: { fontSize: 19, fontWeight: 'bold', marginBottom: 15, marginLeft: 5 },
   emptyState: { alignItems: 'center', marginTop: 40, paddingHorizontal: 40 },
