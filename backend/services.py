@@ -4,7 +4,7 @@ import logging
 from groq import Groq
 from dotenv import load_dotenv
 
-# Loglama ayarları: Hataları ve süreçleri takip etmek için
+# Loglama ayarları
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -14,40 +14,64 @@ client = Groq(api_key=api_key)
 
 def generate_ai_schedule(goal, hours):
     """
-    Öğrencinin hedefine göre pedagojik ve sürdürülebilir bir program üretir.
+    Öğrencinin YKS hedefine göre branş bazlı, haftalık ve detaylı bir program üretir.
     """
-    # Prompt Mühendisliği: AI'ya daha spesifik talimatlar veriyoruz.
-    system_prompt = f"""
-    Sen kıdemli bir akademik danışmansın. Kullanıcının hedefi: {goal}. 
-    Günlük çalışma kapasitesi: {hours} saat.
     
+    # Branş kontrolü yaparak AI'ya ekstra uzmanlık bilgisi ekliyoruz
+    branch_note = ""
+    if "Sayısal" in goal:
+        branch_note = "Sayısal öğrencisi olduğu için Matematik, Fizik, Kimya ve Biyoloji ağırlıklı, spesifik YKS konuları seç."
+    elif "Sözel" in goal:
+        branch_note = "Sözel öğrencisi olduğu için Edebiyat, Tarih ve Coğrafya ağırlıklı, spesifik YKS konuları seç."
+    elif "TYT" in goal:
+        branch_note = "TYT odaklı bir program yap; Problem, Paragraf ve temel bilimleri her güne yay."
+
+    system_prompt = f"""
+    Sen kıdemli bir YKS Eğitim Koçusun. 
+    Öğrencinin Hedefi: {goal}. 
+    Günlük Çalışma Süresi: {hours} saat.
+    Uzmanlık Notu: {branch_note}
+
     GÖREVİN:
-    1. Haftalık dengeli bir program oluştur.
-    2. Konu anlatımı, soru çözümü ve tekrar günlerini mantıklı bir sıraya koy.
-    3. Yanıtı SADECE aşağıdaki JSON yapısında döndür:
+    1. 7 günlük (Pazartesi'den Pazar'a) tam bir haftalık program oluştur.
+    2. Dersleri günlere dengeli dağıt. Tüm dersleri aynı güne yığma.
+    3. 'task' kısmında sadece ders adı değil, spesifik YKS konusu yaz (Örn: 'Matematik - Logaritma Soru Çözümü').
+    4. Her günün toplam süresi {hours} saati geçmesin.
+    5. Yanıtı SADECE aşağıdaki JSON yapısında döndür, metin ekleme:
     {{
         "program": [
-            {{"day": "Pazartesi", "task": "...", "duration": "..."}}
+            {{"gun": "Pazartesi", "task": "...", "duration": "1 Saat"}},
+            {{"gun": "Pazartesi", "task": "...", "duration": "2 Saat"}},
+            {{"gun": "Salı", "task": "...", "duration": "..."}}
         ]
     }}
     """
 
     try:
-        # llama-3.1-8b-instant modeli güncel ve hızlıdır.
         completion = client.chat.completions.create(
             model="llama-3.1-8b-instant",
             messages=[{"role": "system", "content": system_prompt}],
-            temperature=0.6, # Tutarlılığı artırmak için biraz düşürdük.
+            temperature=0.5, # YKS konularında daha tutarlı olması için düşürdük
             response_format={"type": "json_object"}
         )
         
-        response_data = json.loads(completion.choices[0].message.content)
-        # Frontend'in beklediği 'program' listesini güvenle döndürür.
-        return response_data.get("program", [])
+        content = completion.choices[0].message.content
+        response_data = json.loads(content)
+        
+        # Frontend 'gun' anahtarını beklediği için AI'nın 'day' demesine karşı önlem alıyoruz
+        raw_list = response_data.get("program", [])
+        final_list = []
+        for item in raw_list:
+            final_list.append({
+                "gun": item.get("gun", item.get("day", "Pazartesi")),
+                "task": item.get("task", "Ders Çalışma"),
+                "duration": item.get("duration", "1 Saat"),
+                "completed": False
+            })
+            
+        logger.info(f"✅ AI Programı başarıyla üretildi: {len(final_list)} görev.")
+        return final_list
 
-    except json.JSONDecodeError as e:
-        logger.error(f"❌ JSON Parse Hatası: {e}")
-        return None
     except Exception as e:
         logger.error(f"❌ AI Servis Hatası: {e}")
         return None
@@ -57,25 +81,25 @@ def get_performance_insight(analizler):
     Deneme netlerini analiz ederek öğrenciye gelişim stratejisi sunar.
     """
     if not analizler:
-        return "Henüz veri girişi yapılmamış."
+        return "Henüz yeterli deneme verisi yok. İlk denemeni ekle, gelişimi beraber izleyelim!"
 
-    # Son 5 denemeyi özetle
     ozet = "\n".join([f"{a['ad']}: {a['net']} Net" for a in analizler[:5]])
     
     prompt = f"""
-    Öğrencinin son deneme sonuçları:
+    Bir YKS Eğitim Koçusun. Öğrencinin son deneme netleri:
     {ozet}
     
-    Bu verileri analiz et. Netlerde düşüş mü var, artış mı? 
-    Bir eğitim koçu olarak öğrenciye 'akademik' ve 'somut' bir tavsiye ver (Maks 100 karakter).
+    Bu sonuçları analiz et. Gelişimi yorumla ve öğrenciyi motive edecek, 
+    aynı zamanda eksik kapatmaya yönelik profesyonel bir koç tavsiyesi ver (Maks 120 karakter).
     """
 
     try:
         completion = client.chat.completions.create(
             model="llama-3.1-8b-instant",
-            messages=[{"role": "user", "content": prompt}]
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.7
         )
         return completion.choices[0].message.content
     except Exception as e:
         logger.error(f"❌ Analiz Hatası: {e}")
-        return "Gelişimin istikrarlı, eksik konularına odaklanmaya devam et!"
+        return "Gelişimin istikrarlı, TYT eksiklerini kapatmaya ve deneme analizlerine odaklan!"

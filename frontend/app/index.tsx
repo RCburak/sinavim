@@ -13,7 +13,7 @@ import { ProfileView } from './ProfileView';
 import { ProgramView } from '../src/components/ProgramView';
 import { PomodoroView } from '../src/components/PomodoroView';
 import { AnalizView } from '../src/components/AnalizView';
-import { HistoryView } from './HistoryView'; // app/HistoryView.tsx olduğundan emin ol
+import { HistoryView } from './HistoryView'; 
 import { usePomodoro } from '../src/hooks/usePomodoro';
 import { useAnaliz } from '../src/hooks/useAnaliz';
 
@@ -60,6 +60,7 @@ export default function Index() {
   };
 
   const loadProgram = async (uid: string) => {
+    if (!uid) return;
     try {
       const response = await fetch(`${API_URL}/get-program/${uid}`, {
         headers: { 'ngrok-skip-browser-warning': 'true' }
@@ -70,16 +71,14 @@ export default function Index() {
       }
       const cloudProg = await response.json();
       if (cloudProg && Array.isArray(cloudProg)) {
-        const mappedProg = cloudProg.map((item: any) => ({
-          gun: item.gun || item.gün || "Pazartesi",
-          task: item.task || "Ders Çalışma",
+        setSchedule(cloudProg.map((item: any) => ({
+          gun: item.gun || "Pazartesi",
+          task: item.task || "Ders",
           duration: item.duration || "1 Saat",
           completed: item.completed === 1 || item.completed === true
-        }));
-        setSchedule(mappedProg);
+        })));
       }
     } catch (e) { 
-      console.error("Program yükleme hatası:", e);
       setSchedule([]);
     }
   };
@@ -91,11 +90,11 @@ export default function Index() {
     if (schedule.length > 0) {
       Alert.alert(
         "Yeni Haftaya Başla",
-        "Mevcut programın arşive taşınacak ve yeni bir program oluşturulacak. Onaylıyor musun?",
+        "Mevcut programın arşive taşınacak. Onaylıyor musun?",
         [
           { text: "Vazgeç", style: "cancel" },
           { 
-            text: "Evet, Başla", 
+            text: "Evet", 
             onPress: async () => {
               try {
                 await fetch(`${API_URL}/archive-program`, {
@@ -105,7 +104,6 @@ export default function Index() {
                 });
                 setView('setup');
               } catch (e) {
-                console.error("Arşivleme hatası:", e);
                 setView('setup'); 
               }
             }
@@ -135,7 +133,7 @@ export default function Index() {
         });
       }
     } catch (e) {
-      console.error("Görev güncellenirken bulut hatası:", e);
+      console.error(e);
     }
   };
 
@@ -143,7 +141,6 @@ export default function Index() {
     Alert.alert("Çıkış Yap", "Emin misin?", [
       { text: "Evet", onPress: async () => {
           await auth.signOut(); 
-          await AsyncStorage.multiRemove(['@SınavımAI_UserId', '@SınavımAI_UserName', '@SınavımAI_UserLoggedIn']);
           setAuthState('login');
           setSchedule([]);
           setView('dashboard');
@@ -163,7 +160,24 @@ export default function Index() {
 
   switch (view) {
     case 'setup': 
-      return <AIProgramScreen theme={theme} onComplete={(newProg: any) => { setSchedule(newProg); setView('dashboard'); }} onBack={() => setView('dashboard')} />;
+      return (
+        <AIProgramScreen 
+          theme={theme} 
+          onComplete={(newProg: any) => { 
+            // VERİ DOĞRULAMA: Gelen veriyi temizle ve dizi olduğundan emin ol
+            const safeProg = Array.isArray(newProg) ? newProg.map((item: any) => ({
+                gun: item.gun || "Pazartesi",
+                task: item.task || "Ders",
+                duration: item.duration || "1 Saat",
+                completed: item.completed === 1 || item.completed === true
+            })) : [];
+
+            setSchedule(safeProg); 
+            setView('dashboard'); 
+          }} 
+          onBack={() => setView('dashboard')} 
+        />
+      );
     case 'pomodoro': 
       return <PomodoroView {...pomodoro} theme={theme} onBack={() => setView('dashboard')} />;
     case 'program': 
@@ -179,10 +193,7 @@ export default function Index() {
           theme={theme} 
           isDarkMode={isDarkMode} 
           toggleDarkMode={toggleDarkMode} 
-          schedule={schedule} 
-          totalTime={pomodoro.formatTime(pomodoro.timer)} 
           onBack={(updatedName?: string) => {
-            // Eğer yeni bir isim gönderilirse state'i güncelliyoruz
             if (updatedName && typeof updatedName === 'string') {
               setUserName(updatedName);
             }

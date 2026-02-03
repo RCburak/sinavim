@@ -31,11 +31,14 @@ def setup_routes(app):
         except Exception as e:
             return jsonify({"status": "error", "message": str(e)}), 500
 
-    # --- 2. PROGRAM VE ARŞİV ROTALARI ---
+    # --- 2. PROGRAM VE ARŞİV ROTALARI (YKS SIRALAMA DESTEKLİ) ---
     @app.route('/get-program/<user_id>', methods=['GET'])
     def get_program(user_id):
+        # YKS öğrencisi için gün sırası çok kritiktir, SQLite üzerinde sıralama mantığı ekliyoruz
+        days_order = "CASE gun WHEN 'Pazartesi' THEN 1 WHEN 'Salı' THEN 2 WHEN 'Çarşamba' THEN 3 WHEN 'Perşembe' THEN 4 WHEN 'Cuma' THEN 5 WHEN 'Cumartesi' THEN 6 WHEN 'Pazar' THEN 7 END"
+        
         with get_db_connection() as conn:
-            veriler = conn.execute('SELECT gun, task, duration, completed FROM program WHERE user_id = ?', (user_id,)).fetchall()
+            veriler = conn.execute(f'SELECT gun, task, duration, completed FROM program WHERE user_id = ? ORDER BY {days_order}, id ASC', (user_id,)).fetchall()
             result = [dict(row) for row in veriler]
         return jsonify(result)
 
@@ -43,13 +46,23 @@ def setup_routes(app):
     def save_program():
         data = request.get_json()
         user_id = data.get('user_id')
-        with get_db_connection() as conn:
-            conn.execute('DELETE FROM program WHERE user_id = ?', (user_id,))
-            for p in data.get('program', []):
-                conn.execute('INSERT INTO program (user_id, gun, task, duration, completed) VALUES (?, ?, ?, ?, ?)',
-                            (user_id, p['gun'], p['task'], p['duration'], p.get('completed', 0)))
-            conn.commit()
-        return jsonify({"status": "success"})
+        program_list = data.get('program', [])
+        
+        try:
+            with get_db_connection() as conn:
+                # Önce eski programı temizle
+                conn.execute('DELETE FROM program WHERE user_id = ?', (user_id,))
+                
+                # Yeni dersleri 'gun' bilgisini koruyarak ekle
+                for p in program_list:
+                    conn.execute(
+                        'INSERT INTO program (user_id, gun, task, duration, completed) VALUES (?, ?, ?, ?, ?)',
+                        (user_id, p.get('gun', 'Pazartesi'), p['task'], p['duration'], 1 if p.get('completed') is True else 0)
+                    )
+                conn.commit()
+            return jsonify({"status": "success"}), 200
+        except Exception as e:
+            return jsonify({"status": "error", "message": str(e)}), 500
 
     @app.route('/archive-program', methods=['POST'])
     def archive_program():
@@ -144,6 +157,7 @@ def setup_routes(app):
     def generate_program_route():
         try:
             data = request.get_json()
+            # AI servisine gelen 'goal' ve 'hours' bilgilerini gönderiyoruz
             program = generate_ai_schedule(data.get('goal', 'Hedef'), data.get('hours', 4))
             return jsonify({"status": "success", "program": program}) if program else (jsonify({"status": "error"}), 500)
         except Exception as e:
