@@ -11,14 +11,17 @@ import {
   KeyboardAvoidingView, 
   Platform,
   ScrollView,
-  StatusBar
+  StatusBar,
+  Dimensions
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context'; 
 import { AnalizTablosu } from './AnalizTablosu';
 import { COLORS } from '../constants/theme';
 import { Ionicons } from '@expo/vector-icons';
+import { LineChart } from "react-native-chart-kit"; // Grafik kütüphanesi eklendi
 
-// theme prop'u eklendi
+const { width } = Dimensions.get('window');
+
 export const AnalizView = ({ 
   analizler, aiYorum, loadingYorum, onAdd, onSil, onBack, theme = COLORS.light 
 }: any) => {
@@ -36,6 +39,23 @@ export const AnalizView = ({
 
   const isDark = theme.background === '#121212';
 
+  // Grafik verilerini hazırla (Son 6 deneme)
+  const prepareChartData = () => {
+    if (!analizler || analizler.length < 2) return null;
+    
+    // Son verileri ters çevirip grafiğe uygun hale getiriyoruz
+    const lastData = [...analizler].slice(0, 6).reverse();
+    
+    return {
+      labels: lastData.map((a: any) => a.ad.substring(0, 4)), // İsimlerin ilk 4 harfi
+      datasets: [{
+        data: lastData.map((a: any) => parseFloat(a.net) || 0)
+      }]
+    };
+  };
+
+  const chartData = prepareChartData();
+
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <View style={{ flex: 1, backgroundColor: theme.background }}>
@@ -46,16 +66,45 @@ export const AnalizView = ({
         >
           <SafeAreaView style={{ flex: 1 }}>
             
-            {/* Header: Rengi sabit warning (turuncu) kalsa da içindeki surface (beyaz) propları düzeldi */}
+            {/* Header */}
             <View style={[styles.header, { backgroundColor: COLORS.warning }]}>
               <TouchableOpacity onPress={onBack} style={styles.backBtn}>
-                <Text style={styles.headerTextWhite}>← Geri</Text>
+                <Ionicons name="arrow-back" size={24} color="#FFF" />
               </TouchableOpacity>
               <Text style={styles.headerTitle}>Deneme Analizi</Text>
             </View>
 
-            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 20 }}>
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 20 }} showsVerticalScrollIndicator={false}>
               
+              {/* GRAFİK ALANI */}
+              {chartData ? (
+                <View style={styles.chartContainer}>
+                  <Text style={[styles.chartTitle, { color: theme.text }]}>Net Gelişim Grafiği</Text>
+                  <LineChart
+                    data={chartData}
+                    width={width - 40}
+                    height={180}
+                    chartConfig={{
+                      backgroundColor: theme.surface,
+                      backgroundGradientFrom: theme.surface,
+                      backgroundGradientTo: theme.surface,
+                      decimalPlaces: 1,
+                      color: (opacity = 1) => COLORS.warning,
+                      labelColor: (opacity = 1) => theme.textSecondary,
+                      style: { borderRadius: 16 },
+                      propsForDots: { r: "5", strokeWidth: "2", stroke: COLORS.warning }
+                    }}
+                    bezier
+                    style={styles.chartStyle}
+                  />
+                </View>
+              ) : (
+                <View style={[styles.emptyChart, { backgroundColor: theme.surface }]}>
+                  <Ionicons name="stats-chart" size={30} color={theme.textSecondary} />
+                  <Text style={{ color: theme.textSecondary, marginTop: 10 }}>Grafik için en az 2 veri gerekli</Text>
+                </View>
+              )}
+
               {/* AI Yorum Butonu */}
               <TouchableOpacity 
                 style={[styles.aiToggleButton, { backgroundColor: COLORS.warning }]} 
@@ -66,7 +115,7 @@ export const AnalizView = ({
                 </Text>
               </TouchableOpacity>
 
-              {/* AI Yorum Kartı - Dark Modda renkleri yumuşatıldı */}
+              {/* AI Yorum Kartı */}
               {showAI && (
                 <View style={[
                   styles.aiCard, 
@@ -84,7 +133,7 @@ export const AnalizView = ({
                 </View>
               )}
 
-              {/* Veri Giriş Formu - Kart rengi theme.surface oldu */}
+              {/* Veri Giriş Formu */}
               <View style={[styles.formCard, { backgroundColor: theme.surface }]}>
                 <TextInput 
                   style={[styles.input, { color: theme.text, borderBottomColor: theme.border }]} 
@@ -92,7 +141,6 @@ export const AnalizView = ({
                   value={denemeAd} 
                   onChangeText={setDenemeAd} 
                   placeholderTextColor={theme.textSecondary}
-                  returnKeyType="next"
                 />
                 <TextInput 
                   style={[styles.input, { color: theme.text, borderBottomColor: theme.border }]} 
@@ -101,7 +149,6 @@ export const AnalizView = ({
                   value={denemeNet} 
                   onChangeText={setDenemeNet} 
                   placeholderTextColor={theme.textSecondary}
-                  returnKeyType="done"
                   onSubmitEditing={handleAdd}
                 />
                 <TouchableOpacity 
@@ -114,7 +161,6 @@ export const AnalizView = ({
 
               {/* Tablo Alanı */}
               <View style={{ paddingHorizontal: 20 }}>
-                {/* AnalizTablosu içine de temayı gönderiyoruz */}
                 <AnalizTablosu veriler={analizler} onSil={onSil} theme={theme} />
               </View>
 
@@ -139,6 +185,10 @@ const styles = StyleSheet.create({
   backBtn: { padding: 5 },
   headerTitle: { color: '#FFF', fontSize: 20, fontWeight: 'bold', marginLeft: 15 },
   headerTextWhite: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+  chartContainer: { alignItems: 'center', marginTop: 15 },
+  chartTitle: { fontSize: 14, fontWeight: 'bold', marginBottom: 10, alignSelf: 'flex-start', marginLeft: 25 },
+  chartStyle: { borderRadius: 20, elevation: 4 },
+  emptyChart: { margin: 20, padding: 30, borderRadius: 25, alignItems: 'center', justifyContent: 'center', borderStyle: 'dashed', borderWidth: 1, borderColor: '#ccc' },
   aiToggleButton: {
     margin: 20,
     marginBottom: 10,
@@ -172,5 +222,4 @@ const styles = StyleSheet.create({
     fontSize: 16 
   },
   btn: { padding: 16, borderRadius: 15, alignItems: 'center', elevation: 2 },
-  btnText: { fontWeight: 'bold', fontSize: 16 }
 });
