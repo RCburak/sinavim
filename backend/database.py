@@ -43,7 +43,7 @@ def init_db():
             )
         ''')
         
-        # 3. HAFTALIK PROGRAM TABLOSU (questions sütunu eklendi)
+        # 3. HAFTALIK PROGRAM TABLOSU
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS program (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -57,15 +57,14 @@ def init_db():
             )
         ''')
 
-        # EĞER TABLO VARSA VE QUESTIONS SÜTUNU YOKSA EKLE (Migration)
+        # MIGRATION: 'program' tablosuna 'questions' sütunu ekleme kontrolü
         try:
             cursor.execute('ALTER TABLE program ADD COLUMN questions INTEGER DEFAULT 0')
             print("ℹ️ 'program' tablosuna 'questions' sütunu eklendi.")
         except sqlite3.OperationalError:
-            # Sütun zaten varsa hata verir, bunu görmezden geliyoruz
             pass
 
-        # 4. PROGRAM GEÇMİŞİ TABLOSU
+        # 4. PROGRAM GEÇMİŞİ TABLOSU (program_type sütunu eklendi)
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS program_history (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -73,12 +72,21 @@ def init_db():
                 archive_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 completion_rate REAL, 
                 program_data TEXT,
+                program_type TEXT DEFAULT 'ai', -- 'ai' veya 'manual' değerlerini alacak
                 FOREIGN KEY (user_id) REFERENCES users (id)
             )
         ''')
         
+        # MIGRATION: Eğer 'program_history' tablosu zaten varsa 'program_type' sütununu ekle
+        try:
+            cursor.execute("ALTER TABLE program_history ADD COLUMN program_type TEXT DEFAULT 'ai'")
+            print("ℹ️ 'program_history' tablosuna 'program_type' sütunu eklendi.")
+        except sqlite3.OperationalError:
+            # Sütun zaten varsa hata vermez, geçer
+            pass
+        
         conn.commit()
-    print("✅ Veritabanı mimarisi ve YKS Soru Takibi altyapısı başarıyla güncellendi!")
+    print("✅ Veritabanı mimarisi (AI/Manuel ayrımı dahil) başarıyla güncellendi!")
 
 if __name__ == "__main__":
     init_db()

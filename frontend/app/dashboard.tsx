@@ -41,7 +41,6 @@ const DashboardHeader = ({ username, onLogout, setView, theme }: any) => {
           </TouchableOpacity>
         </View>
 
-        {/* Alt başlık tamamen kaldırıldı */}
         <Text style={styles.greetingText}>Merhaba {username || 'Öğrenci'}! 👋</Text>
       </View>
 
@@ -84,13 +83,16 @@ export const DashboardView = ({ username, onLogout, setView, schedule, analiz, p
     />
 
     <ScrollView contentContainerStyle={styles.menuGrid} showsVerticalScrollIndicator={false}>
+      {/* 1. PROGRAMIM: Mevcut derslerin listesi */}
       <MenuCard 
         title="Programım" 
         emoji="📅" 
-        subText={`${schedule?.length || 0} Ders Planlandı`} 
+        subText={`${schedule?.length || 0} Ders Listeleniyor`} 
         onPress={() => setView('program')} 
         theme={theme}
       />
+
+      {/* 2. AI PROGRAMIM: Yapay zeka kurulumu */}
       <MenuCard 
         title="AI Programım" 
         emoji="🤖" 
@@ -98,6 +100,16 @@ export const DashboardView = ({ username, onLogout, setView, schedule, analiz, p
         onPress={() => setView('setup')} 
         theme={theme}
       />
+
+      {/* 3. KENDİ PLANIM: Manuel kurulum ekranı */}
+      <MenuCard 
+        title="Kendi Planım" 
+        emoji="✍️" 
+        subText="Haftanı kendin tasarla" 
+        onPress={() => setView('manual_setup')} 
+        theme={theme}
+      />
+
       <MenuCard 
         title="Analizler" 
         emoji="📈" 
@@ -132,7 +144,7 @@ const styles = StyleSheet.create({
   blueHeader: {
     paddingTop: 60,
     paddingHorizontal: 25,
-    paddingBottom: 30, // Biraz daha daraltıldı
+    paddingBottom: 30,
     borderBottomLeftRadius: 40,
     borderBottomRightRadius: 40,
   },
@@ -141,7 +153,7 @@ const styles = StyleSheet.create({
   actualLogo: { width: '100%', height: '100%' },
   profileCircle: { width: 45, height: 45, borderRadius: 22.5, borderWidth: 2, borderColor: '#fff', justifyContent: 'center', alignItems: 'center' },
   profileLetter: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
-  greetingText: { fontSize: 26, fontWeight: 'bold', color: '#fff' }, // Alt margin kaldırıldı
+  greetingText: { fontSize: 26, fontWeight: 'bold', color: '#fff' },
   menuGrid: { flexDirection: 'row', flexWrap: 'wrap', padding: 20, justifyContent: 'space-between' },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.1)', justifyContent: 'flex-start', alignItems: 'flex-end', paddingTop: 110, paddingRight: 30 },
   menuContent: { borderRadius: 15, width: 160, padding: 8, elevation: 10 },

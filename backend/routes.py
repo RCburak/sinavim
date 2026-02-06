@@ -4,7 +4,7 @@ from services import generate_ai_schedule, client
 import json
 import logging
 
-# Loglama nesnesini tanımlıyoruz (Undefined Variable hatasını çözer)
+# Loglama nesnesi
 logger = logging.getLogger(__name__)
 
 def setup_routes(app):
@@ -35,14 +35,11 @@ def setup_routes(app):
         except Exception as e:
             return jsonify({"status": "error", "message": str(e)}), 500
 
-    # --- 2. PROGRAM VE ARŞİV ROTALARI (QUESTIONS DESTEKLİ) ---
+    # --- 2. PROGRAM VE ARŞİV ROTALARI ---
     @app.route('/get-program/<user_id>', methods=['GET'])
     def get_program(user_id):
-        # YKS sıralaması ve questions sütunu eklendi
         days_order = "CASE gun WHEN 'Pazartesi' THEN 1 WHEN 'Salı' THEN 2 WHEN 'Çarşamba' THEN 3 WHEN 'Perşembe' THEN 4 WHEN 'Cuma' THEN 5 WHEN 'Cumartesi' THEN 6 WHEN 'Pazar' THEN 7 END"
-        
         with get_db_connection() as conn:
-            # SELECT kısmına questions eklendi
             veriler = conn.execute(f'SELECT gun, task, duration, completed, questions FROM program WHERE user_id = ? ORDER BY {days_order}, id ASC', (user_id,)).fetchall()
             result = [dict(row) for row in veriler]
         return jsonify(result)
@@ -52,13 +49,10 @@ def setup_routes(app):
         data = request.get_json()
         user_id = data.get('user_id')
         program_list = data.get('program', [])
-        
         try:
             with get_db_connection() as conn:
                 conn.execute('DELETE FROM program WHERE user_id = ?', (user_id,))
-                
                 for p in program_list:
-                    # questions verisi INTEGER tipinde kaydediliyor
                     conn.execute(
                         'INSERT INTO program (user_id, gun, task, duration, completed, questions) VALUES (?, ?, ?, ?, ?, ?)',
                         (user_id, p.get('gun', 'Pazartesi'), p['task'], p['duration'], 
@@ -72,37 +66,34 @@ def setup_routes(app):
 
     @app.route('/archive-program', methods=['POST'])
     def archive_program():
+        """
+        Programı arşive taşır. 
+        Eğer program boşsa 404 yerine 200 dönerek akışı bozmaz.
+        """
         data = request.get_json()
         user_id = data.get('user_id')
+        prog_type = data.get('type', 'ai') 
+
         try:
             with get_db_connection() as conn:
-                # Arşivlenirken questions verisi de alınıyor
                 cursor = conn.execute('SELECT gun, task, duration, completed, questions FROM program WHERE user_id = ?', (user_id,))
-                current_prog = [
-                    {
-                        "gun": row["gun"], 
-                        "task": row["task"], 
-                        "duration": row["duration"], 
-                        "completed": row["completed"],
-                        "questions": row["questions"]
-                    } 
-                    for row in cursor.fetchall()
-                ]
+                current_prog = [dict(row) for row in cursor.fetchall()]
                 
+                # --- DÜZELTME: Program boşsa hata verme, başarılı say ---
                 if not current_prog:
-                    return jsonify({"status": "error", "message": "Program bulunamadı"}), 404
+                    return jsonify({"status": "success", "message": "Arşivlenecek veri yoktu, temizlendi."}), 200
                 
                 total = len(current_prog)
                 completed = len([t for t in current_prog if t['completed'] == 1])
                 rate = round((completed / total) * 100, 1) if total > 0 else 0
                 
                 conn.execute(
-                    'INSERT INTO program_history (user_id, completion_rate, program_data) VALUES (?, ?, ?)',
-                    (user_id, rate, json.dumps(current_prog, ensure_ascii=False))
+                    'INSERT INTO program_history (user_id, completion_rate, program_data, program_type) VALUES (?, ?, ?, ?)',
+                    (user_id, rate, json.dumps(current_prog, ensure_ascii=False), prog_type)
                 )
                 conn.execute('DELETE FROM program WHERE user_id = ?', (user_id,))
                 conn.commit()
-            return jsonify({"status": "success", "rate": rate}), 200
+            return jsonify({"status": "success", "rate": rate, "type": prog_type}), 200
         except Exception as e:
             return jsonify({"status": "error", "message": str(e)}), 500
 
@@ -111,13 +102,14 @@ def setup_routes(app):
         try:
             with get_db_connection() as conn:
                 rows = conn.execute(
-                    'SELECT id, archive_date, completion_rate, program_data FROM program_history WHERE user_id = ? ORDER BY archive_date DESC',
+                    'SELECT id, archive_date, completion_rate, program_data, program_type FROM program_history WHERE user_id = ? ORDER BY archive_date DESC',
                     (user_id,)
                 ).fetchall()
                 result = [{
                     "id": row["id"],
                     "archive_date": row["archive_date"],
                     "completion_rate": row["completion_rate"],
+                    "program_type": row["program_type"],
                     "program_data": json.loads(row["program_data"])
                 } for row in rows]
             return jsonify(result), 200
@@ -166,20 +158,14 @@ def setup_routes(app):
     # --- 4. ANALİZ VE AI ROTALARI ---
     @app.route('/generate-program', methods=['POST'])
     def generate_program_route():
-        """
-        AI programı üretir ve otomatik olarak veritabanına kaydeder.
-        """
         try:
             data = request.get_json()
             user_id = data.get('user_id')
-            
-            # AI programı üretiyor
             program = generate_ai_schedule(data.get('goal', 'Hedef'), data.get('hours', 4))
             
             if not program:
                 return jsonify({"status": "error", "message": "AI yanıt vermedi"}), 500
 
-            # TestSprite standartlarına uygun kayıt işlemi
             with get_db_connection() as conn:
                 conn.execute('DELETE FROM program WHERE user_id = ?', (user_id,))
                 for p in program:
@@ -191,7 +177,6 @@ def setup_routes(app):
 
             return jsonify({"status": "success", "program": program})
         except Exception as e:
-            # logger artık tanımlı olduğu için hata vermez
             logger.error(f"❌ Program Üretme Hatası: {e}")
             return jsonify({"status": "error", "message": str(e)}), 500
 
