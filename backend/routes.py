@@ -2,6 +2,10 @@ from flask import request, jsonify
 from database import get_db_connection
 from services import generate_ai_schedule, client
 import json
+import logging
+
+# Loglama nesnesini tanımlıyoruz (Undefined Variable hatasını çözer)
+logger = logging.getLogger(__name__)
 
 def setup_routes(app):
     
@@ -54,12 +58,12 @@ def setup_routes(app):
                 conn.execute('DELETE FROM program WHERE user_id = ?', (user_id,))
                 
                 for p in program_list:
-                    # questions verisi de kaydediliyor
+                    # questions verisi INTEGER tipinde kaydediliyor
                     conn.execute(
                         'INSERT INTO program (user_id, gun, task, duration, completed, questions) VALUES (?, ?, ?, ?, ?, ?)',
                         (user_id, p.get('gun', 'Pazartesi'), p['task'], p['duration'], 
                          1 if p.get('completed') is True or p.get('completed') == 1 else 0,
-                         int(p.get('questions', 0))) # Frontend'den gelen soru sayısı
+                         int(p.get('questions', 0))) 
                     )
                 conn.commit()
             return jsonify({"status": "success"}), 200
@@ -80,7 +84,7 @@ def setup_routes(app):
                         "task": row["task"], 
                         "duration": row["duration"], 
                         "completed": row["completed"],
-                        "questions": row["questions"] # Arşive eklenen soru sayısı
+                        "questions": row["questions"]
                     } 
                     for row in cursor.fetchall()
                 ]
@@ -114,7 +118,7 @@ def setup_routes(app):
                     "id": row["id"],
                     "archive_date": row["archive_date"],
                     "completion_rate": row["completion_rate"],
-                    "program_data": json.loads(row["program_data"]) # JSON içindeki questions verisi de burada dönüyor
+                    "program_data": json.loads(row["program_data"])
                 } for row in rows]
             return jsonify(result), 200
         except Exception as e:
@@ -162,11 +166,33 @@ def setup_routes(app):
     # --- 4. ANALİZ VE AI ROTALARI ---
     @app.route('/generate-program', methods=['POST'])
     def generate_program_route():
+        """
+        AI programı üretir ve otomatik olarak veritabanına kaydeder.
+        """
         try:
             data = request.get_json()
+            user_id = data.get('user_id')
+            
+            # AI programı üretiyor
             program = generate_ai_schedule(data.get('goal', 'Hedef'), data.get('hours', 4))
-            return jsonify({"status": "success", "program": program}) if program else (jsonify({"status": "error"}), 500)
+            
+            if not program:
+                return jsonify({"status": "error", "message": "AI yanıt vermedi"}), 500
+
+            # TestSprite standartlarına uygun kayıt işlemi
+            with get_db_connection() as conn:
+                conn.execute('DELETE FROM program WHERE user_id = ?', (user_id,))
+                for p in program:
+                    conn.execute(
+                        'INSERT INTO program (user_id, gun, task, duration, completed, questions) VALUES (?, ?, ?, ?, ?, ?)',
+                        (user_id, p['gun'], p['task'], p['duration'], 0, int(p.get('questions', 0)))
+                    )
+                conn.commit()
+
+            return jsonify({"status": "success", "program": program})
         except Exception as e:
+            # logger artık tanımlı olduğu için hata vermez
+            logger.error(f"❌ Program Üretme Hatası: {e}")
             return jsonify({"status": "error", "message": str(e)}), 500
 
     @app.route('/analizler/<user_id>', methods=['GET'])
