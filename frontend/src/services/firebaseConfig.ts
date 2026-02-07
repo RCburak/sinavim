@@ -2,7 +2,7 @@ import { initializeApp, getApps, getApp } from "firebase/app";
 import { initializeAuth, getAuth } from "firebase/auth";
 // Persistence modülünü doğrudan alt dizinden çağırıyoruz
 // @ts-ignore: TS bazen bu alt modül deklarasyonunu göremeyebilir
-import { getReactNativePersistence } from "firebase/auth/react-native";
+import { getReactNativePersistence } from "@firebase/auth";
 import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
 
 const firebaseConfig = {
