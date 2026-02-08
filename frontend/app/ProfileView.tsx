@@ -18,7 +18,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { auth } from '../src/services/firebaseConfig';
-import { updateProfile } from 'firebase/auth';
+import { updateProfile, updatePassword } from 'firebase/auth'; // updatePassword eklendi
 
 const { width } = Dimensions.get('window');
 const API_URL = "https://sam-unsublimed-unoptimistically.ngrok-free.dev";
@@ -27,14 +27,24 @@ export const ProfileView = ({ username, onBack, theme, isDarkMode, toggleDarkMod
   const [stats, setStats] = useState({ total_hours: 0, total_tasks: 0 });
   const [loading, setLoading] = useState(true);
   
-  // Hesap Ayarları ve Modal State'leri
-  const [isSettingsVisible, setSettingsVisible] = useState(false);
-  const [newName, setNewName] = useState(username);
+  // MODAL STATE'LERİ
+  const [isSettingsMenuVisible, setSettingsMenuVisible] = useState(false); // Ana Ayarlar Menüsü
+  const [isEditNameVisible, setEditNameVisible] = useState(false); // İsim Değiştirme Modalı
+  const [isChangePasswordVisible, setChangePasswordVisible] = useState(false); // YENİ: Şifre Değiştirme Modalı
+  
+  const [newName, setNewName] = useState(username || '');
+  const [newPassword, setNewPassword] = useState(''); // YENİ: Şifre State
   const [updating, setUpdating] = useState(false);
 
   useEffect(() => {
     fetchUserStats();
   }, []);
+
+  // Modallar açıldığında inputları sıfırla/hazırla
+  useEffect(() => {
+    if (isEditNameVisible) setNewName(username || '');
+    if (isChangePasswordVisible) setNewPassword('');
+  }, [isEditNameVisible, isChangePasswordVisible, username]);
 
   const fetchUserStats = async () => {
     const user = auth.currentUser;
@@ -53,6 +63,7 @@ export const ProfileView = ({ username, onBack, theme, isDarkMode, toggleDarkMod
     }
   };
 
+  // İsim Güncelleme Fonksiyonu
   const handleUpdateProfile = async () => {
     const user = auth.currentUser;
     if (!user || !newName.trim()) {
@@ -62,10 +73,7 @@ export const ProfileView = ({ username, onBack, theme, isDarkMode, toggleDarkMod
 
     setUpdating(true);
     try {
-      // 1. Firebase Auth Güncelleme
       await updateProfile(user, { displayName: newName });
-
-      // 2. Kendi Backend (SQLite) Güncelleme
       const response = await fetch(`${API_URL}/update-profile`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -74,8 +82,7 @@ export const ProfileView = ({ username, onBack, theme, isDarkMode, toggleDarkMod
 
       if (response.ok) {
         Alert.alert("Başarılı", "Profil bilgileriniz güncellendi.");
-        setSettingsVisible(false);
-        // ÖNEMLİ: Dashboard'a yeni ismi göndererek geri dönüyoruz
+        setEditNameVisible(false);
         if (onBack) onBack(newName);
       } else {
         throw new Error("Sunucu hatası.");
@@ -83,6 +90,33 @@ export const ProfileView = ({ username, onBack, theme, isDarkMode, toggleDarkMod
     } catch (e) {
       console.error(e);
       Alert.alert("Hata", "Profil güncellenirken bir sorun oluştu.");
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  // YENİ: Şifre Güncelleme Fonksiyonu
+  const handleChangePassword = async () => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    if (newPassword.length < 6) {
+      Alert.alert("Hata", "Şifre en az 6 karakter olmalıdır.");
+      return;
+    }
+
+    setUpdating(true);
+    try {
+      await updatePassword(user, newPassword);
+      Alert.alert("Başarılı", "Şifreniz başarıyla güncellendi. Lütfen sonraki girişinizde yeni şifrenizi kullanın.");
+      setChangePasswordVisible(false);
+    } catch (error: any) {
+      console.error(error);
+      if (error.code === 'auth/requires-recent-login') {
+        Alert.alert("Güvenlik Uyarısı", "Güvenliğiniz için bu işlemi yapmadan önce uygulamadan çıkış yapıp tekrar giriş yapmalısınız.");
+      } else {
+        Alert.alert("Hata", "Şifre güncellenemedi: " + error.message);
+      }
     } finally {
       setUpdating(false);
     }
@@ -189,7 +223,7 @@ export const ProfileView = ({ username, onBack, theme, isDarkMode, toggleDarkMod
         <View style={[styles.section, { marginTop: 10, marginBottom: 20 }]}>
           <TouchableOpacity 
             style={[styles.bigSettingsBtn, { backgroundColor: theme.surface }]}
-            onPress={() => setSettingsVisible(true)}
+            onPress={() => setSettingsMenuVisible(true)}
           >
             <View style={styles.row}>
               <Ionicons name="settings-outline" size={22} color={theme.text} />
@@ -201,44 +235,159 @@ export const ProfileView = ({ username, onBack, theme, isDarkMode, toggleDarkMod
 
       </ScrollView>
 
-      {/* AD SOYAD DEĞİŞTİRME MODALI */}
+      {/* 1. ANA AYARLAR MENÜSÜ MODALI */}
       <Modal
-        visible={isSettingsVisible}
+        visible={isSettingsMenuVisible}
         animationType="slide"
         transparent={true}
-        onRequestClose={() => setSettingsVisible(false)}
+        onRequestClose={() => setSettingsMenuVisible(false)}
       >
-        <Pressable style={styles.modalOverlay} onPress={() => setSettingsVisible(false)}>
+        <Pressable style={styles.modalOverlay} onPress={() => setSettingsMenuVisible(false)}>
           <View style={[styles.modalContent, { backgroundColor: theme.surface }]}>
             <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: theme.text }]}>Hesap Ayarları</Text>
-              <TouchableOpacity onPress={() => setSettingsVisible(false)}>
+              <Text style={[styles.modalTitle, { color: theme.text }]}>Ayarlar</Text>
+              <TouchableOpacity onPress={() => setSettingsMenuVisible(false)}>
                 <Ionicons name="close-circle" size={32} color={theme.textSecondary} />
               </TouchableOpacity>
             </View>
 
-            <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>Ad Soyad Değiştir</Text>
+            {/* Menü Seçenekleri */}
+            <View>
+              {/* Ad Soyad Değiştir */}
+              <TouchableOpacity 
+                style={[styles.menuOptionBtn, { borderBottomColor: theme.border }]}
+                onPress={() => {
+                  setSettingsMenuVisible(false);
+                  setEditNameVisible(true);
+                }}
+              >
+                <View style={styles.row}>
+                  <View style={[styles.iconBox, { backgroundColor: theme.background }]}>
+                    <Ionicons name="create-outline" size={20} color={theme.text} />
+                  </View>
+                  <Text style={[styles.menuOptionText, { color: theme.text }]}>Ad Soyad Değiştir</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
+              </TouchableOpacity>
+
+              {/* YENİ: Şifre Değiştir */}
+              <TouchableOpacity 
+                style={[styles.menuOptionBtn, { borderBottomColor: theme.border, borderBottomWidth: 0 }]}
+                onPress={() => {
+                  setSettingsMenuVisible(false);
+                  setChangePasswordVisible(true);
+                }}
+              >
+                <View style={styles.row}>
+                  <View style={[styles.iconBox, { backgroundColor: theme.background }]}>
+                    <Ionicons name="lock-closed-outline" size={20} color={theme.text} />
+                  </View>
+                  <Text style={[styles.menuOptionText, { color: theme.text }]}>Şifreyi Değiştir</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+          </View>
+        </Pressable>
+      </Modal>
+
+      {/* 2. AD SOYAD DEĞİŞTİRME MODALI */}
+      <Modal
+        visible={isEditNameVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setEditNameVisible(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setEditNameVisible(false)}>
+          <View style={[styles.modalContent, { backgroundColor: theme.surface }]}>
+            <View style={styles.modalHeader}>
+              <TouchableOpacity onPress={() => {
+                  setEditNameVisible(false);
+                  setSettingsMenuVisible(true);
+                }}
+              >
+                 <Ionicons name="arrow-back" size={24} color={theme.text} />
+              </TouchableOpacity>
+              <Text style={[styles.modalTitle, { color: theme.text }]}>İsim Güncelle</Text>
+              <TouchableOpacity onPress={() => setEditNameVisible(false)}>
+                <Ionicons name="close-circle" size={32} color={theme.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>Yeni İsim</Text>
             <View style={[styles.modalInputGroup, { backgroundColor: theme.background, borderColor: theme.border }]}>
               <TextInput 
                 style={[styles.modalInput, { color: theme.text }]}
                 value={newName}
                 onChangeText={setNewName}
-                placeholder="Yeni isminizi yazın"
+                placeholder="İsminizi yazın"
                 placeholderTextColor={theme.textSecondary}
                 autoCapitalize="words"
+                maxLength={18}
               />
             </View>
+            <Text style={{ alignSelf: 'flex-end', color: theme.textSecondary, fontSize: 12, marginBottom: 20, marginTop: -15, marginRight: 5 }}>
+              {newName.length}/18
+            </Text>
 
             <TouchableOpacity 
               style={[styles.saveBtn, { backgroundColor: theme.primary }]} 
               onPress={handleUpdateProfile}
               disabled={updating}
             >
-              {updating ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveBtnText}>Güncelle</Text>}
+              {updating ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveBtnText}>Kaydet</Text>}
             </TouchableOpacity>
           </View>
         </Pressable>
       </Modal>
+
+      {/* 3. YENİ: ŞİFRE DEĞİŞTİRME MODALI */}
+      <Modal
+        visible={isChangePasswordVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setChangePasswordVisible(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setChangePasswordVisible(false)}>
+          <View style={[styles.modalContent, { backgroundColor: theme.surface }]}>
+            <View style={styles.modalHeader}>
+              <TouchableOpacity onPress={() => {
+                  setChangePasswordVisible(false);
+                  setSettingsMenuVisible(true);
+                }}
+              >
+                 <Ionicons name="arrow-back" size={24} color={theme.text} />
+              </TouchableOpacity>
+              <Text style={[styles.modalTitle, { color: theme.text }]}>Şifre Değiştir</Text>
+              <TouchableOpacity onPress={() => setChangePasswordVisible(false)}>
+                <Ionicons name="close-circle" size={32} color={theme.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>Yeni Şifre</Text>
+            <View style={[styles.modalInputGroup, { backgroundColor: theme.background, borderColor: theme.border }]}>
+              <TextInput 
+                style={[styles.modalInput, { color: theme.text }]}
+                value={newPassword}
+                onChangeText={setNewPassword}
+                placeholder="En az 6 karakter"
+                placeholderTextColor={theme.textSecondary}
+                secureTextEntry
+              />
+            </View>
+
+            <TouchableOpacity 
+              style={[styles.saveBtn, { backgroundColor: theme.primary }]} 
+              onPress={handleChangePassword}
+              disabled={updating}
+            >
+              {updating ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveBtnText}>Şifreyi Güncelle</Text>}
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Modal>
+
     </View>
   );
 };
@@ -335,7 +484,28 @@ const styles = StyleSheet.create({
   modalInputGroup: { borderRadius: 15, borderWidth: 1, marginBottom: 20 },
   modalInput: { padding: 15, fontSize: 16 },
   saveBtn: { padding: 16, borderRadius: 15, alignItems: 'center', elevation: 2 },
-  saveBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' }
+  saveBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  
+  // Menü Stilleri
+  menuOptionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+  },
+  menuOptionText: {
+    fontSize: 16,
+    marginLeft: 15,
+    fontWeight: '500'
+  },
+  iconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center'
+  }
 });
 
 export default ProfileView;

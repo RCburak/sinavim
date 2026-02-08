@@ -10,34 +10,37 @@ import {
   KeyboardAvoidingView, 
   Platform, 
   Alert, 
-  ActivityIndicator 
+  ActivityIndicator,
+  Modal, // Eklendi
+  Pressable // Eklendi
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS } from '../src/constants/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { authService } from '../src/services/authService';
-
-// Mobil Google girişi için gerekli Expo kütüphaneleri
 import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
+import { Ionicons } from '@expo/vector-icons'; // İkonlar için eklendi
 
-// Tarayıcı oturumunu tamamlamak için gerekli
 WebBrowser.maybeCompleteAuthSession();
 
-// Parametrelere 'theme' eklendi. Eğer dışarıdan gelmezse varsayılan olarak light kullanır.
 export default function LoginScreen({ onLogin, onGoToRegister, theme = COLORS.light }: any) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Google Giriş Yapılandırması
+  // Şifre Sıfırlama State'leri
+  const [resetModalVisible, setResetModalVisible] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
+
+  // Google Giriş
   const [request, response, promptAsync] = Google.useAuthRequest({
     webClientId: "292154739046-2ae45f3560de9e8b7860a7.apps.googleusercontent.com",
     iosClientId: "IOS_CLIENT_ID_BURAYA",
     androidClientId: "ANDROID_CLIENT_ID_BURAYA",
   });
 
-  // Google'dan yanıt geldiğinde tetiklenir
   useEffect(() => {
     if (response?.type === 'success') {
       const { id_token } = response.params; 
@@ -92,9 +95,31 @@ export default function LoginScreen({ onLogin, onGoToRegister, theme = COLORS.li
     }
   };
 
+  // Şifre Sıfırlama Fonksiyonu
+  const handlePasswordReset = async () => {
+    if (!resetEmail || !resetEmail.includes('@')) {
+      Alert.alert("Hata", "Lütfen geçerli bir e-posta adresi girin.");
+      return;
+    }
+    setResetLoading(true);
+    try {
+      const result = await authService.resetPassword(resetEmail);
+      if (result.status === 'success') {
+        Alert.alert("Başarılı", result.message);
+        setResetModalVisible(false);
+        setResetEmail('');
+      } else {
+        Alert.alert("Hata", result.message);
+      }
+    } catch (e) {
+      Alert.alert("Hata", "İşlem sırasında bir sorun oluştu.");
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      {/* Arka plan rengi temaya göre değişir */}
       <View style={{ flex: 1, backgroundColor: theme.background }}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
           <SafeAreaView style={styles.container}>
@@ -124,6 +149,11 @@ export default function LoginScreen({ onLogin, onGoToRegister, theme = COLORS.li
                 onSubmitEditing={handleLogin} 
               />
               
+              {/* Şifremi Unuttum Linki */}
+              <TouchableOpacity style={styles.forgotPassBtn} onPress={() => setResetModalVisible(true)}>
+                <Text style={[styles.forgotPassText, { color: theme.primary }]}>Şifremi Unuttum?</Text>
+              </TouchableOpacity>
+              
               <TouchableOpacity 
                 style={[styles.loginBtn, { backgroundColor: theme.primary }, loading && { opacity: 0.7 }]} 
                 onPress={handleLogin} 
@@ -137,7 +167,7 @@ export default function LoginScreen({ onLogin, onGoToRegister, theme = COLORS.li
                 onPress={() => promptAsync()} 
                 disabled={!request || loading}
               >
-                <Text style={[styles.googleBtnText, { color: theme.textSecondary }]}>G   Google ile Devam Et</Text>
+                <Text style={[styles.googleBtnText, { color: theme.textSecondary }]}>Google ile Devam Et</Text>
               </TouchableOpacity>
 
               <TouchableOpacity style={styles.registerBtn} onPress={onGoToRegister}>
@@ -146,6 +176,54 @@ export default function LoginScreen({ onLogin, onGoToRegister, theme = COLORS.li
                 </Text>
               </TouchableOpacity>
             </View>
+
+            {/* ŞİFRE SIFIRLAMA MODALI */}
+            <Modal
+              animationType="slide"
+              transparent={true}
+              visible={resetModalVisible}
+              onRequestClose={() => setResetModalVisible(false)}
+            >
+              <Pressable style={styles.modalOverlay} onPress={() => setResetModalVisible(false)}>
+                <TouchableWithoutFeedback>
+                  <View style={[styles.modalContent, { backgroundColor: theme.surface }]}>
+                    <View style={styles.modalHeader}>
+                      <Text style={[styles.modalTitle, { color: theme.text }]}>Şifre Sıfırlama</Text>
+                      <TouchableOpacity onPress={() => setResetModalVisible(false)}>
+                        <Ionicons name="close" size={24} color={theme.textSecondary} />
+                      </TouchableOpacity>
+                    </View>
+                    
+                    <Text style={[styles.modalDesc, { color: theme.textSecondary }]}>
+                      Kayıtlı e-posta adresinizi girin, size şifre sıfırlama bağlantısı gönderelim.
+                    </Text>
+
+                    <TextInput 
+                      style={[styles.input, { backgroundColor: theme.background, color: theme.text, borderColor: theme.border }]} 
+                      placeholder="E-posta adresiniz" 
+                      placeholderTextColor={theme.textSecondary} 
+                      value={resetEmail} 
+                      onChangeText={setResetEmail} 
+                      autoCapitalize="none" 
+                      keyboardType="email-address" 
+                    />
+
+                    <TouchableOpacity 
+                      style={[styles.loginBtn, { backgroundColor: theme.primary, marginTop: 10 }]} 
+                      onPress={handlePasswordReset}
+                      disabled={resetLoading}
+                    >
+                      {resetLoading ? (
+                        <ActivityIndicator color="#fff" />
+                      ) : (
+                        <Text style={[styles.loginBtnText, { color: '#fff' }]}>Bağlantı Gönder</Text>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                </TouchableWithoutFeedback>
+              </Pressable>
+            </Modal>
+
           </SafeAreaView>
         </KeyboardAvoidingView>
       </View>
@@ -166,5 +244,14 @@ const styles = StyleSheet.create({
   googleBtn: { padding: 18, borderRadius: 15, alignItems: 'center', marginTop: 15, borderWidth: 1, flexDirection: 'row', justifyContent: 'center' },
   googleBtnText: { fontWeight: 'bold', fontSize: 16 },
   registerBtn: { marginTop: 25, alignItems: 'center' },
-  registerText: { }
+  registerText: {},
+  
+  // YENİ EKLENEN STİLLER
+  forgotPassBtn: { alignSelf: 'flex-end', marginBottom: 20 },
+  forgotPassText: { fontWeight: '600', fontSize: 14 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+  modalContent: { width: '100%', borderRadius: 20, padding: 25, elevation: 5 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
+  modalTitle: { fontSize: 20, fontWeight: 'bold' },
+  modalDesc: { fontSize: 14, marginBottom: 20, lineHeight: 20 }
 });

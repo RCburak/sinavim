@@ -6,13 +6,13 @@ import {
   signOut,
   GoogleAuthProvider,
   signInWithPopup,
-  signInWithCredential, // Mobil giriş için eklendi
-  updateProfile 
+  signInWithCredential,
+  updateProfile,
+  sendPasswordResetEmail // EKLENDİ
 } from "firebase/auth";
 import { Platform, Alert } from 'react-native';
-import * as WebBrowser from 'expo-web-browser'; // Eklenen paket
+import * as WebBrowser from 'expo-web-browser';
 
-// Tarayıcı oturumlarını mobil cihazlarda yönetmek için gerekli
 WebBrowser.maybeCompleteAuthSession();
 
 const googleProvider = new GoogleAuthProvider();
@@ -53,7 +53,20 @@ export const authService = {
     }
   },
 
-  // 3. Google ile Giriş (Web & Mobil Tam Uyumlu)
+  // 3. ŞİFRE SIFIRLAMA (YENİ EKLENDİ)
+  resetPassword: async (email: string) => {
+    try {
+      await sendPasswordResetEmail(auth, email);
+      return { status: "success", message: "Şifre sıfırlama bağlantısı e-postana gönderildi." };
+    } catch (error: any) {
+      let msg = "E-posta gönderilemedi.";
+      if (error.code === 'auth/user-not-found') msg = "Bu e-posta adresiyle kayıtlı kullanıcı bulunamadı.";
+      if (error.code === 'auth/invalid-email') msg = "Geçersiz e-posta adresi.";
+      return { status: "error", message: msg };
+    }
+  },
+
+  // 4. Google ile Giriş
   loginWithGoogle: async (idToken?: string) => {
     try {
       if (Platform.OS === 'web') {
@@ -63,8 +76,6 @@ export const authService = {
           user: { id: result.user.uid, email: result.user.email, name: result.user.displayName } 
         };
       } else {
-        // MOBİL TARAFI:
-        // Buraya login.tsx'ten gelen idToken ile giriş yapacağız.
         if (idToken) {
           const credential = GoogleAuthProvider.credential(idToken);
           const result = await signInWithCredential(auth, credential);
@@ -78,7 +89,7 @@ export const authService = {
     }
   },
 
-  // 4. Çıkış Yapma
+  // 5. Çıkış Yapma
   logout: async () => {
     try {
       await signOut(auth);
