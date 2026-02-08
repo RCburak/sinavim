@@ -18,7 +18,12 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { auth } from '../src/services/firebaseConfig';
-import { updateProfile, updatePassword } from 'firebase/auth'; // updatePassword eklendi
+import { 
+  updateProfile, 
+  updatePassword, 
+  EmailAuthProvider, 
+  reauthenticateWithCredential 
+} from 'firebase/auth';
 
 const { width } = Dimensions.get('window');
 const API_URL = "https://sam-unsublimed-unoptimistically.ngrok-free.dev";
@@ -28,22 +33,31 @@ export const ProfileView = ({ username, onBack, theme, isDarkMode, toggleDarkMod
   const [loading, setLoading] = useState(true);
   
   // MODAL STATE'LERİ
-  const [isSettingsMenuVisible, setSettingsMenuVisible] = useState(false); // Ana Ayarlar Menüsü
-  const [isEditNameVisible, setEditNameVisible] = useState(false); // İsim Değiştirme Modalı
-  const [isChangePasswordVisible, setChangePasswordVisible] = useState(false); // YENİ: Şifre Değiştirme Modalı
+  const [isSettingsMenuVisible, setSettingsMenuVisible] = useState(false);
+  const [isEditNameVisible, setEditNameVisible] = useState(false);
+  const [isChangePasswordVisible, setChangePasswordVisible] = useState(false);
   
   const [newName, setNewName] = useState(username || '');
-  const [newPassword, setNewPassword] = useState(''); // YENİ: Şifre State
+  
+  // Şifre Değiştirme State'leri
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState(''); // YENİ: Şifre Tekrar State
+  
   const [updating, setUpdating] = useState(false);
 
   useEffect(() => {
     fetchUserStats();
   }, []);
 
-  // Modallar açıldığında inputları sıfırla/hazırla
+  // Modallar açıldığında inputları temizle
   useEffect(() => {
     if (isEditNameVisible) setNewName(username || '');
-    if (isChangePasswordVisible) setNewPassword('');
+    if (isChangePasswordVisible) {
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword(''); // Temizle
+    }
   }, [isEditNameVisible, isChangePasswordVisible, username]);
 
   const fetchUserStats = async () => {
@@ -63,7 +77,7 @@ export const ProfileView = ({ username, onBack, theme, isDarkMode, toggleDarkMod
     }
   };
 
-  // İsim Güncelleme Fonksiyonu
+  // İsim Güncelleme
   const handleUpdateProfile = async () => {
     const user = auth.currentUser;
     if (!user || !newName.trim()) {
@@ -95,25 +109,44 @@ export const ProfileView = ({ username, onBack, theme, isDarkMode, toggleDarkMod
     }
   };
 
-  // YENİ: Şifre Güncelleme Fonksiyonu
+  // Şifre Güncelleme (Re-Auth + Doğrulama ile)
   const handleChangePassword = async () => {
     const user = auth.currentUser;
-    if (!user) return;
+    if (!user || !user.email) return;
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      Alert.alert("Hata", "Lütfen tüm alanları doldurun.");
+      return;
+    }
 
     if (newPassword.length < 6) {
-      Alert.alert("Hata", "Şifre en az 6 karakter olmalıdır.");
+      Alert.alert("Hata", "Yeni şifre en az 6 karakter olmalıdır.");
+      return;
+    }
+
+    // YENİ: Şifre Eşleşme Kontrolü
+    if (newPassword !== confirmPassword) {
+      Alert.alert("Hata", "Yeni şifreler birbiriyle uyuşmuyor.");
       return;
     }
 
     setUpdating(true);
     try {
+      // 1. Mevcut şifre ile doğrulama
+      const credential = EmailAuthProvider.credential(user.email, currentPassword);
+      await reauthenticateWithCredential(user, credential);
+
+      // 2. Yeni şifreyi güncelle
       await updatePassword(user, newPassword);
-      Alert.alert("Başarılı", "Şifreniz başarıyla güncellendi. Lütfen sonraki girişinizde yeni şifrenizi kullanın.");
+      
+      Alert.alert("Başarılı", "Şifreniz başarıyla güncellendi.");
       setChangePasswordVisible(false);
     } catch (error: any) {
       console.error(error);
-      if (error.code === 'auth/requires-recent-login') {
-        Alert.alert("Güvenlik Uyarısı", "Güvenliğiniz için bu işlemi yapmadan önce uygulamadan çıkış yapıp tekrar giriş yapmalısınız.");
+      if (error.code === 'auth/wrong-password') {
+        Alert.alert("Hata", "Mevcut şifrenizi yanlış girdiniz.");
+      } else if (error.code === 'auth/too-many-requests') {
+        Alert.alert("Hata", "Çok fazla deneme yaptınız. Lütfen biraz bekleyin.");
       } else {
         Alert.alert("Hata", "Şifre güncellenemedi: " + error.message);
       }
@@ -235,7 +268,7 @@ export const ProfileView = ({ username, onBack, theme, isDarkMode, toggleDarkMod
 
       </ScrollView>
 
-      {/* 1. ANA AYARLAR MENÜSÜ MODALI */}
+      {/* 1. AYARLAR MENÜSÜ MODALI */}
       <Modal
         visible={isSettingsMenuVisible}
         animationType="slide"
@@ -251,7 +284,6 @@ export const ProfileView = ({ username, onBack, theme, isDarkMode, toggleDarkMod
               </TouchableOpacity>
             </View>
 
-            {/* Menü Seçenekleri */}
             <View>
               {/* Ad Soyad Değiştir */}
               <TouchableOpacity 
@@ -270,7 +302,7 @@ export const ProfileView = ({ username, onBack, theme, isDarkMode, toggleDarkMod
                 <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
               </TouchableOpacity>
 
-              {/* YENİ: Şifre Değiştir */}
+              {/* Şifre Değiştir */}
               <TouchableOpacity 
                 style={[styles.menuOptionBtn, { borderBottomColor: theme.border, borderBottomWidth: 0 }]}
                 onPress={() => {
@@ -287,7 +319,6 @@ export const ProfileView = ({ username, onBack, theme, isDarkMode, toggleDarkMod
                 <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
               </TouchableOpacity>
             </View>
-
           </View>
         </Pressable>
       </Modal>
@@ -302,11 +333,7 @@ export const ProfileView = ({ username, onBack, theme, isDarkMode, toggleDarkMod
         <Pressable style={styles.modalOverlay} onPress={() => setEditNameVisible(false)}>
           <View style={[styles.modalContent, { backgroundColor: theme.surface }]}>
             <View style={styles.modalHeader}>
-              <TouchableOpacity onPress={() => {
-                  setEditNameVisible(false);
-                  setSettingsMenuVisible(true);
-                }}
-              >
+              <TouchableOpacity onPress={() => { setEditNameVisible(false); setSettingsMenuVisible(true); }}>
                  <Ionicons name="arrow-back" size={24} color={theme.text} />
               </TouchableOpacity>
               <Text style={[styles.modalTitle, { color: theme.text }]}>İsim Güncelle</Text>
@@ -342,7 +369,7 @@ export const ProfileView = ({ username, onBack, theme, isDarkMode, toggleDarkMod
         </Pressable>
       </Modal>
 
-      {/* 3. YENİ: ŞİFRE DEĞİŞTİRME MODALI */}
+      {/* 3. ŞİFRE DEĞİŞTİRME MODALI (Güçlendirilmiş) */}
       <Modal
         visible={isChangePasswordVisible}
         animationType="slide"
@@ -352,11 +379,7 @@ export const ProfileView = ({ username, onBack, theme, isDarkMode, toggleDarkMod
         <Pressable style={styles.modalOverlay} onPress={() => setChangePasswordVisible(false)}>
           <View style={[styles.modalContent, { backgroundColor: theme.surface }]}>
             <View style={styles.modalHeader}>
-              <TouchableOpacity onPress={() => {
-                  setChangePasswordVisible(false);
-                  setSettingsMenuVisible(true);
-                }}
-              >
+              <TouchableOpacity onPress={() => { setChangePasswordVisible(false); setSettingsMenuVisible(true); }}>
                  <Ionicons name="arrow-back" size={24} color={theme.text} />
               </TouchableOpacity>
               <Text style={[styles.modalTitle, { color: theme.text }]}>Şifre Değiştir</Text>
@@ -365,13 +388,40 @@ export const ProfileView = ({ username, onBack, theme, isDarkMode, toggleDarkMod
               </TouchableOpacity>
             </View>
 
+            {/* Mevcut Şifre */}
+            <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>Mevcut Şifre</Text>
+            <View style={[styles.modalInputGroup, { backgroundColor: theme.background, borderColor: theme.border }]}>
+              <TextInput 
+                style={[styles.modalInput, { color: theme.text }]}
+                value={currentPassword}
+                onChangeText={setCurrentPassword}
+                placeholder="Şu anki şifreniz"
+                placeholderTextColor={theme.textSecondary}
+                secureTextEntry
+              />
+            </View>
+
+            {/* Yeni Şifre */}
             <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>Yeni Şifre</Text>
             <View style={[styles.modalInputGroup, { backgroundColor: theme.background, borderColor: theme.border }]}>
               <TextInput 
                 style={[styles.modalInput, { color: theme.text }]}
                 value={newPassword}
                 onChangeText={setNewPassword}
-                placeholder="En az 6 karakter"
+                placeholder="Yeni şifreniz (En az 6 karakter)"
+                placeholderTextColor={theme.textSecondary}
+                secureTextEntry
+              />
+            </View>
+
+            {/* YENİ: Şifre Tekrar */}
+            <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>Yeni Şifre (Tekrar)</Text>
+            <View style={[styles.modalInputGroup, { backgroundColor: theme.background, borderColor: theme.border }]}>
+              <TextInput 
+                style={[styles.modalInput, { color: theme.text }]}
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                placeholder="Şifrenizi tekrar girin"
                 placeholderTextColor={theme.textSecondary}
                 secureTextEntry
               />
@@ -486,7 +536,6 @@ const styles = StyleSheet.create({
   saveBtn: { padding: 16, borderRadius: 15, alignItems: 'center', elevation: 2 },
   saveBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
   
-  // Menü Stilleri
   menuOptionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
