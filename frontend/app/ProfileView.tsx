@@ -14,7 +14,8 @@ import {
   TextInput,
   Alert,
   Modal,
-  Pressable
+  Pressable,
+  KeyboardAvoidingView // Klavye engellemesini önlemek için
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { auth } from '../src/services/firebaseConfig';
@@ -25,7 +26,7 @@ import {
   reauthenticateWithCredential 
 } from 'firebase/auth';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window'); // Height eklendi
 const API_URL = "https://sam-unsublimed-unoptimistically.ngrok-free.dev";
 
 export const ProfileView = ({ username, onBack, theme, isDarkMode, toggleDarkMode }: any) => {
@@ -42,7 +43,7 @@ export const ProfileView = ({ username, onBack, theme, isDarkMode, toggleDarkMod
   // Şifre Değiştirme State'leri
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState(''); // YENİ: Şifre Tekrar State
+  const [confirmPassword, setConfirmPassword] = useState('');
   
   const [updating, setUpdating] = useState(false);
 
@@ -56,7 +57,7 @@ export const ProfileView = ({ username, onBack, theme, isDarkMode, toggleDarkMod
     if (isChangePasswordVisible) {
       setCurrentPassword('');
       setNewPassword('');
-      setConfirmPassword(''); // Temizle
+      setConfirmPassword('');
     }
   }, [isEditNameVisible, isChangePasswordVisible, username]);
 
@@ -109,7 +110,7 @@ export const ProfileView = ({ username, onBack, theme, isDarkMode, toggleDarkMod
     }
   };
 
-  // Şifre Güncelleme (Re-Auth + Doğrulama ile)
+  // Şifre Güncelleme
   const handleChangePassword = async () => {
     const user = auth.currentUser;
     if (!user || !user.email) return;
@@ -124,7 +125,6 @@ export const ProfileView = ({ username, onBack, theme, isDarkMode, toggleDarkMod
       return;
     }
 
-    // YENİ: Şifre Eşleşme Kontrolü
     if (newPassword !== confirmPassword) {
       Alert.alert("Hata", "Yeni şifreler birbiriyle uyuşmuyor.");
       return;
@@ -132,11 +132,8 @@ export const ProfileView = ({ username, onBack, theme, isDarkMode, toggleDarkMod
 
     setUpdating(true);
     try {
-      // 1. Mevcut şifre ile doğrulama
       const credential = EmailAuthProvider.credential(user.email, currentPassword);
       await reauthenticateWithCredential(user, credential);
-
-      // 2. Yeni şifreyi güncelle
       await updatePassword(user, newPassword);
       
       Alert.alert("Başarılı", "Şifreniz başarıyla güncellendi.");
@@ -268,7 +265,7 @@ export const ProfileView = ({ username, onBack, theme, isDarkMode, toggleDarkMod
 
       </ScrollView>
 
-      {/* 1. AYARLAR MENÜSÜ MODALI */}
+      {/* 1. AYARLAR MENÜSÜ MODALI (Küçük kalabilir) */}
       <Modal
         visible={isSettingsMenuVisible}
         animationType="slide"
@@ -285,12 +282,11 @@ export const ProfileView = ({ username, onBack, theme, isDarkMode, toggleDarkMod
             </View>
 
             <View>
-              {/* Ad Soyad Değiştir */}
               <TouchableOpacity 
                 style={[styles.menuOptionBtn, { borderBottomColor: theme.border }]}
                 onPress={() => {
                   setSettingsMenuVisible(false);
-                  setEditNameVisible(true);
+                  setTimeout(() => setEditNameVisible(true), 300); // Küçük bir gecikme ile açılmasını sağlar
                 }}
               >
                 <View style={styles.row}>
@@ -302,12 +298,11 @@ export const ProfileView = ({ username, onBack, theme, isDarkMode, toggleDarkMod
                 <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
               </TouchableOpacity>
 
-              {/* Şifre Değiştir */}
               <TouchableOpacity 
                 style={[styles.menuOptionBtn, { borderBottomColor: theme.border, borderBottomWidth: 0 }]}
                 onPress={() => {
                   setSettingsMenuVisible(false);
-                  setChangePasswordVisible(true);
+                  setTimeout(() => setChangePasswordVisible(true), 300);
                 }}
               >
                 <View style={styles.row}>
@@ -323,15 +318,16 @@ export const ProfileView = ({ username, onBack, theme, isDarkMode, toggleDarkMod
         </Pressable>
       </Modal>
 
-      {/* 2. AD SOYAD DEĞİŞTİRME MODALI */}
+      {/* 2. AD SOYAD DEĞİŞTİRME MODALI (TAM YUKARI AÇILIR) */}
       <Modal
         visible={isEditNameVisible}
         animationType="slide"
         transparent={true}
         onRequestClose={() => setEditNameVisible(false)}
       >
-        <Pressable style={styles.modalOverlay} onPress={() => setEditNameVisible(false)}>
-          <View style={[styles.modalContent, { backgroundColor: theme.surface }]}>
+        <View style={styles.modalOverlay}>
+          {/* YENİ: expandedModal stili uygulandı */}
+          <View style={[styles.modalContent, styles.expandedModal, { backgroundColor: theme.surface }]}>
             <View style={styles.modalHeader}>
               <TouchableOpacity onPress={() => { setEditNameVisible(false); setSettingsMenuVisible(true); }}>
                  <Ionicons name="arrow-back" size={24} color={theme.text} />
@@ -366,18 +362,19 @@ export const ProfileView = ({ username, onBack, theme, isDarkMode, toggleDarkMod
               {updating ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveBtnText}>Kaydet</Text>}
             </TouchableOpacity>
           </View>
-        </Pressable>
+        </View>
       </Modal>
 
-      {/* 3. ŞİFRE DEĞİŞTİRME MODALI (Güçlendirilmiş) */}
+      {/* 3. ŞİFRE DEĞİŞTİRME MODALI (TAM YUKARI AÇILIR) */}
       <Modal
         visible={isChangePasswordVisible}
         animationType="slide"
         transparent={true}
         onRequestClose={() => setChangePasswordVisible(false)}
       >
-        <Pressable style={styles.modalOverlay} onPress={() => setChangePasswordVisible(false)}>
-          <View style={[styles.modalContent, { backgroundColor: theme.surface }]}>
+        <View style={styles.modalOverlay}>
+          {/* YENİ: expandedModal stili uygulandı */}
+          <View style={[styles.modalContent, styles.expandedModal, { backgroundColor: theme.surface }]}>
             <View style={styles.modalHeader}>
               <TouchableOpacity onPress={() => { setChangePasswordVisible(false); setSettingsMenuVisible(true); }}>
                  <Ionicons name="arrow-back" size={24} color={theme.text} />
@@ -435,7 +432,7 @@ export const ProfileView = ({ username, onBack, theme, isDarkMode, toggleDarkMod
               {updating ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveBtnText}>Şifreyi Güncelle</Text>}
             </TouchableOpacity>
           </View>
-        </Pressable>
+        </View>
       </Modal>
 
     </View>
@@ -527,7 +524,21 @@ const styles = StyleSheet.create({
   },
   bigSettingsText: { marginLeft: 15, fontSize: 16, fontWeight: 'bold' },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalContent: { borderTopLeftRadius: 30, borderTopRightRadius: 30, padding: 25, minHeight: 320 },
+  
+  // Normal (Küçük) Modal İçeriği
+  modalContent: { 
+    borderTopLeftRadius: 30, 
+    borderTopRightRadius: 30, 
+    padding: 25, 
+    minHeight: 320 
+  },
+  
+  // YENİ: Genişletilmiş (Tam Yukarı) Modal Stili
+  expandedModal: {
+    height: '90%', // Ekranın %90'ı
+    minHeight: 500,
+  },
+
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   modalTitle: { fontSize: 20, fontWeight: 'bold' },
   inputLabel: { fontSize: 13, marginBottom: 8, marginLeft: 5 },
