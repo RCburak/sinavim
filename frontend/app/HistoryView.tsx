@@ -10,7 +10,8 @@ import {
   StatusBar,
   Platform,
   Modal,
-  Dimensions
+  Dimensions,
+  Alert // Alert bileşeni eklendi
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../src/constants/theme';
@@ -44,6 +45,38 @@ export const HistoryView = ({ theme, onBack, userId }: any) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // YENİ: Geçmiş silme fonksiyonu
+  const handleDelete = (id: number) => {
+    Alert.alert(
+      "Programı Sil",
+      "Bu geçmiş kaydını kalıcı olarak silmek istediğine emin misin?",
+      [
+        { text: "Vazgeç", style: "cancel" },
+        { 
+          text: "Sil", 
+          style: "destructive", 
+          onPress: async () => {
+            try {
+              const res = await fetch(`${API_URL}/delete-history/${id}`, {
+                method: 'DELETE',
+                headers: { 'ngrok-skip-browser-warning': 'true' }
+              });
+              const data = await res.json();
+              if (data.status === 'success') {
+                // Listeden silinen öğeyi çıkararak state'i güncelle
+                setHistory(prev => prev.filter(item => item.id !== id));
+              } else {
+                Alert.alert("Hata", "Kayıt silinemedi.");
+              }
+            } catch (e) {
+              Alert.alert("Hata", "Bağlantı hatası oluştu.");
+            }
+          }
+        }
+      ]
+    );
   };
 
   const openDetails = (week: any) => {
@@ -107,7 +140,7 @@ export const HistoryView = ({ theme, onBack, userId }: any) => {
                 style={[styles.historyCard, { backgroundColor: theme.surface }]}
               >
                 <View style={styles.cardHeader}>
-                  <View>
+                  <View style={{ flex: 1 }}>
                     <Text style={[styles.dateText, { color: theme.textSecondary }]}>
                       {new Date(item.archive_date).toLocaleDateString('tr-TR')}
                     </Text>
@@ -115,8 +148,20 @@ export const HistoryView = ({ theme, onBack, userId }: any) => {
                       {item.program_type === 'ai' ? 'AI Haftalık Analiz' : 'Manuel Haftalık Analiz'}
                     </Text>
                   </View>
-                  <View style={[styles.rateBadge, { backgroundColor: theme.primary + '20' }]}>
-                    <Text style={[styles.rateText, { color: theme.primary }]}>%{item.completion_rate}</Text>
+                  
+                  {/* --- ROZET VE SİLME BUTONU GRUBU --- */}
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <View style={[styles.rateBadge, { backgroundColor: theme.primary + '20', marginRight: 10 }]}>
+                      <Text style={[styles.rateText, { color: theme.primary }]}>%{item.completion_rate}</Text>
+                    </View>
+                    
+                    <TouchableOpacity 
+                      onPress={() => handleDelete(item.id)}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                      style={{ padding: 4 }}
+                    >
+                      <Ionicons name="trash-outline" size={22} color="#EF5350" />
+                    </TouchableOpacity>
                   </View>
                 </View>
 

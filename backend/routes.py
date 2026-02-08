@@ -116,6 +116,17 @@ def setup_routes(app):
         except Exception as e:
             return jsonify({"status": "error", "message": str(e)}), 500
 
+    # --- YENİ EKLENEN ROTA: GEÇMİŞ SİLME ---
+    @app.route('/delete-history/<int:id>', methods=['DELETE'])
+    def delete_history(id):
+        try:
+            with get_db_connection() as conn:
+                conn.execute('DELETE FROM program_history WHERE id = ?', (id,))
+                conn.commit()
+            return jsonify({"status": "success", "message": "Kayıt silindi"}), 200
+        except Exception as e:
+            return jsonify({"status": "error", "message": str(e)}), 500
+
     # --- 3. İSTATİSTİK ROTALARI ---
     @app.route('/user-stats/<user_id>', methods=['GET'])
     def get_user_stats(user_id):
