@@ -4,6 +4,7 @@ import { auth, storage } from '../services/firebaseConfig';
 import { updateProfile, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import * as ImagePicker from 'expo-image-picker';
+import AsyncStorage from '@react-native-async-storage/async-storage'; // EKLENDİ
 
 const API_URL = "https://sam-unsublimed-unoptimistically.ngrok-free.dev";
 
@@ -63,7 +64,7 @@ export const useProfile = (initialName: string) => {
     }
     
     let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images, // Düzeltildi
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.5,
@@ -140,12 +141,39 @@ export const useProfile = (initialName: string) => {
     }
   };
 
+  // YENİ: ÇIKIŞ YAP FONKSİYONU
+  const handleLogout = async (onLogoutCallback?: () => void) => {
+    Alert.alert(
+      "Çıkış Yap",
+      "Uygulamadan çıkmak istediğine emin misin?",
+      [
+        { text: "İptal", style: "cancel" },
+        { 
+          text: "Çıkış Yap", 
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await auth.signOut();
+              await AsyncStorage.removeItem('@SınavımAI_UserLoggedIn');
+              await AsyncStorage.removeItem('@SınavımAI_UserId');
+              await AsyncStorage.removeItem('@SınavımAI_UserName');
+              if (onLogoutCallback) onLogoutCallback();
+            } catch (error) {
+              console.error(error);
+            }
+          }
+        }
+      ]
+    );
+  };
+
   return {
     stats, loading, fetchUserStats,
     modals, toggleModal,
     newName, setNewName,
     passwords, setPasswords,
     updating, handleUpdateProfile, handleChangePassword,
-    avatarUrl, imageLoading, pickImage
+    avatarUrl, imageLoading, pickImage,
+    handleLogout // Hook'tan dışarı aktarıyoruz
   };
 };

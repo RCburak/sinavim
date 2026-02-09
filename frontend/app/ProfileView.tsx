@@ -6,7 +6,8 @@ import { ProfileModals } from '../src/components/profile/ProfileModals';
 
 const { width } = Dimensions.get('window');
 
-export const ProfileView = ({ username, onBack, theme, isDarkMode, toggleDarkMode }: any) => {
+// onLogout prop'unu ekledik
+export const ProfileView = ({ username, onBack, onLogout, theme, isDarkMode, toggleDarkMode }: any) => {
   const profile = useProfile(username);
 
   return (
@@ -74,7 +75,7 @@ export const ProfileView = ({ username, onBack, theme, isDarkMode, toggleDarkMod
           </View>
         </View>
 
-         {/* BAŞARILARIM (Bunu eksik bırakmıştım, şimdi ekledim) */}
+         {/* BAŞARILARIM */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>Başarılarım</Text>
           <View style={styles.badgeRow}>
@@ -95,14 +96,26 @@ export const ProfileView = ({ username, onBack, theme, isDarkMode, toggleDarkMod
           </View>
         </View>
 
-        {/* EN ALTTAKİ AYARLAR BUTONU */}
-        <View style={[styles.section, { marginTop: 10, marginBottom: 20 }]}>
+        {/* AYARLAR VE ÇIKIŞ YAP */}
+        <View style={[styles.section, { marginTop: 10, marginBottom: 40 }]}>
+          {/* Ayarlar Butonu */}
           <TouchableOpacity style={[styles.bigSettingsBtn, { backgroundColor: theme.surface }]} onPress={() => profile.toggleModal('settings', true)}>
             <View style={styles.row}>
               <Ionicons name="settings-outline" size={22} color={theme.text} />
               <Text style={[styles.bigSettingsText, { color: theme.text }]}>Ayarlar</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
+          </TouchableOpacity>
+          
+          {/* YENİ: Çıkış Yap Butonu */}
+          <TouchableOpacity 
+            style={[styles.bigSettingsBtn, { backgroundColor: theme.surface, marginTop: 15, borderColor: '#FF3B30', borderWidth: 1 }]} 
+            onPress={() => profile.handleLogout(onLogout)}
+          >
+            <View style={styles.row}>
+              <Ionicons name="log-out-outline" size={22} color="#FF3B30" />
+              <Text style={[styles.bigSettingsText, { color: "#FF3B30" }]}>Çıkış Yap</Text>
+            </View>
           </TouchableOpacity>
         </View>
       </ScrollView>
