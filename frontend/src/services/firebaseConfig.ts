@@ -1,5 +1,6 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { initializeAuth, getAuth } from "firebase/auth";
+import { getStorage } from "firebase/storage"; // Storage eklendi
 // Persistence modülünü doğrudan alt dizinden çağırıyoruz
 // @ts-ignore: TS bazen bu alt modül deklarasyonunu göremeyebilir
 import { getReactNativePersistence } from "@firebase/auth";
@@ -20,7 +21,6 @@ const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
 /**
  * Auth nesnesini güvenli bir şekilde başlatalım. 
- * initializeAuth bir kez çağrılabilir, bu yüzden try-catch ile koruyoruz.
  */
 let firebaseAuth;
 try {
@@ -31,4 +31,9 @@ try {
   firebaseAuth = getAuth(app);
 }
 
-export const auth = firebaseAuth;
+// DÜZELTME BURADA:
+const auth = firebaseAuth;      // firebaseAuth değişkenini 'auth' ismine atadık
+const storage = getStorage(app); // Storage servisini başlattık
+
+// Artık her ikisi de tanımlı olduğu için hatasız dışarı aktarabiliriz
+export { auth, storage };

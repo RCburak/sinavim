@@ -15,18 +15,20 @@ import {
   Alert,
   Modal,
   Pressable,
-  KeyboardAvoidingView // Klavye engellemesini önlemek için
+  Image // Resim göstermek için eklendi
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { auth } from '../src/services/firebaseConfig';
+import { auth, storage } from '../src/services/firebaseConfig'; // storage eklendi
 import { 
   updateProfile, 
   updatePassword, 
   EmailAuthProvider, 
   reauthenticateWithCredential 
 } from 'firebase/auth';
+import * as ImagePicker from 'expo-image-picker'; // Resim seçici eklendi
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage"; // Storage fonksiyonları
 
-const { width, height } = Dimensions.get('window'); // Height eklendi
+const { width } = Dimensions.get('window');
 const API_URL = "https://sam-unsublimed-unoptimistically.ngrok-free.dev";
 
 export const ProfileView = ({ username, onBack, theme, isDarkMode, toggleDarkMode }: any) => {
@@ -46,6 +48,10 @@ export const ProfileView = ({ username, onBack, theme, isDarkMode, toggleDarkMod
   const [confirmPassword, setConfirmPassword] = useState('');
   
   const [updating, setUpdating] = useState(false);
+  
+  // YENİ: Profil Fotoğrafı State'i
+  const [avatarUrl, setAvatarUrl] = useState(auth.currentUser?.photoURL || null);
+  const [imageLoading, setImageLoading] = useState(false);
 
   useEffect(() => {
     fetchUserStats();
@@ -75,6 +81,62 @@ export const ProfileView = ({ username, onBack, theme, isDarkMode, toggleDarkMod
       console.error("İstatistik hatası:", e);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // YENİ: Profil Resmi Seçme ve Yükleme
+  const pickImage = async () => {
+    // İzin iste
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('İzin Gerekli', 'Fotoğraf yüklemek için galeri izni vermelisiniz.');
+      return;
+    }
+
+    // Galeriyi aç
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1], // Kare kırpma
+      quality: 0.5,   // Performans için kaliteyi düşürdük
+    });
+
+    if (!result.canceled) {
+      handleUploadImage(result.assets[0].uri);
+    }
+  };
+
+  const handleUploadImage = async (uri: string) => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    setImageLoading(true);
+    try {
+      // 1. Resmi blob formatına çevir
+      const response = await fetch(uri);
+      const blob = await response.blob();
+
+      // 2. Firebase Storage referansı oluştur (users/USER_ID/profile.jpg)
+      const storageRef = ref(storage, `users/${user.uid}/profile.jpg`);
+
+      // 3. Yükle
+      await uploadBytes(storageRef, blob);
+
+      // 4. İndirme bağlantısını al
+      const downloadUrl = await getDownloadURL(storageRef);
+
+      // 5. Kullanıcı profilini güncelle (Firebase Auth)
+      await updateProfile(user, { photoURL: downloadUrl });
+      
+      // State'i güncelle
+      setAvatarUrl(downloadUrl);
+      Alert.alert("Harika!", "Profil fotoğrafın güncellendi.");
+      
+    } catch (error: any) {
+      console.error("Resim yükleme hatası:", error);
+      Alert.alert("Hata", "Resim yüklenirken bir sorun oluştu.");
+    } finally {
+      setImageLoading(false);
     }
   };
 
@@ -142,8 +204,6 @@ export const ProfileView = ({ username, onBack, theme, isDarkMode, toggleDarkMod
       console.error(error);
       if (error.code === 'auth/wrong-password') {
         Alert.alert("Hata", "Mevcut şifrenizi yanlış girdiniz.");
-      } else if (error.code === 'auth/too-many-requests') {
-        Alert.alert("Hata", "Çok fazla deneme yaptınız. Lütfen biraz bekleyin.");
       } else {
         Alert.alert("Hata", "Şifre güncellenemedi: " + error.message);
       }
@@ -175,9 +235,23 @@ export const ProfileView = ({ username, onBack, theme, isDarkMode, toggleDarkMod
       >
         {/* PROFiL KARTI */}
         <View style={[styles.profileCard, { backgroundColor: theme.surface }]}>
-          <View style={[styles.avatarCircle, { backgroundColor: theme.primary }]}>
-            <Text style={styles.avatarLetter}>{newName?.charAt(0).toUpperCase() || 'B'}</Text>
-          </View>
+          
+          {/* YENİ: Tıklanabilir Avatar */}
+          <TouchableOpacity onPress={pickImage} style={[styles.avatarCircle, { backgroundColor: theme.primary, borderColor: theme.surface }]}>
+            {imageLoading ? (
+              <ActivityIndicator color="#fff" />
+            ) : avatarUrl ? (
+              <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
+            ) : (
+              <Text style={styles.avatarLetter}>{newName?.charAt(0).toUpperCase() || 'B'}</Text>
+            )}
+            
+            {/* Kamera İkonu (Düzenleme olduğu belli olsun) */}
+            <View style={styles.editIconBadge}>
+              <Ionicons name="camera" size={14} color="#fff" />
+            </View>
+          </TouchableOpacity>
+
           <Text style={[styles.userName, { color: theme.text }]}>{newName || 'Öğrenci'}</Text>
           <Text style={[styles.userTitle, { color: theme.textSecondary }]}>RC Sınavım Üyesi</Text>
         </View>
@@ -249,7 +323,7 @@ export const ProfileView = ({ username, onBack, theme, isDarkMode, toggleDarkMod
           </View>
         </View>
 
-        {/* EN ALTTAKİ YATAY GENİŞ AYARLAR BUTONU */}
+        {/* EN ALTTAKİ AYARLAR BUTONU */}
         <View style={[styles.section, { marginTop: 10, marginBottom: 20 }]}>
           <TouchableOpacity 
             style={[styles.bigSettingsBtn, { backgroundColor: theme.surface }]}
@@ -265,7 +339,7 @@ export const ProfileView = ({ username, onBack, theme, isDarkMode, toggleDarkMod
 
       </ScrollView>
 
-      {/* 1. AYARLAR MENÜSÜ MODALI (Küçük kalabilir) */}
+      {/* 1. AYARLAR MENÜSÜ MODALI */}
       <Modal
         visible={isSettingsMenuVisible}
         animationType="slide"
@@ -286,7 +360,7 @@ export const ProfileView = ({ username, onBack, theme, isDarkMode, toggleDarkMod
                 style={[styles.menuOptionBtn, { borderBottomColor: theme.border }]}
                 onPress={() => {
                   setSettingsMenuVisible(false);
-                  setTimeout(() => setEditNameVisible(true), 300); // Küçük bir gecikme ile açılmasını sağlar
+                  setTimeout(() => setEditNameVisible(true), 300);
                 }}
               >
                 <View style={styles.row}>
@@ -318,7 +392,7 @@ export const ProfileView = ({ username, onBack, theme, isDarkMode, toggleDarkMod
         </Pressable>
       </Modal>
 
-      {/* 2. AD SOYAD DEĞİŞTİRME MODALI (TAM YUKARI AÇILIR) */}
+      {/* 2. AD SOYAD DEĞİŞTİRME MODALI */}
       <Modal
         visible={isEditNameVisible}
         animationType="slide"
@@ -326,7 +400,6 @@ export const ProfileView = ({ username, onBack, theme, isDarkMode, toggleDarkMod
         onRequestClose={() => setEditNameVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          {/* YENİ: expandedModal stili uygulandı */}
           <View style={[styles.modalContent, styles.expandedModal, { backgroundColor: theme.surface }]}>
             <View style={styles.modalHeader}>
               <TouchableOpacity onPress={() => { setEditNameVisible(false); setSettingsMenuVisible(true); }}>
@@ -365,7 +438,7 @@ export const ProfileView = ({ username, onBack, theme, isDarkMode, toggleDarkMod
         </View>
       </Modal>
 
-      {/* 3. ŞİFRE DEĞİŞTİRME MODALI (TAM YUKARI AÇILIR) */}
+      {/* 3. ŞİFRE DEĞİŞTİRME MODALI */}
       <Modal
         visible={isChangePasswordVisible}
         animationType="slide"
@@ -373,7 +446,6 @@ export const ProfileView = ({ username, onBack, theme, isDarkMode, toggleDarkMod
         onRequestClose={() => setChangePasswordVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          {/* YENİ: expandedModal stili uygulandı */}
           <View style={[styles.modalContent, styles.expandedModal, { backgroundColor: theme.surface }]}>
             <View style={styles.modalHeader}>
               <TouchableOpacity onPress={() => { setChangePasswordVisible(false); setSettingsMenuVisible(true); }}>
@@ -385,7 +457,6 @@ export const ProfileView = ({ username, onBack, theme, isDarkMode, toggleDarkMod
               </TouchableOpacity>
             </View>
 
-            {/* Mevcut Şifre */}
             <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>Mevcut Şifre</Text>
             <View style={[styles.modalInputGroup, { backgroundColor: theme.background, borderColor: theme.border }]}>
               <TextInput 
@@ -398,7 +469,6 @@ export const ProfileView = ({ username, onBack, theme, isDarkMode, toggleDarkMod
               />
             </View>
 
-            {/* Yeni Şifre */}
             <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>Yeni Şifre</Text>
             <View style={[styles.modalInputGroup, { backgroundColor: theme.background, borderColor: theme.border }]}>
               <TextInput 
@@ -411,7 +481,6 @@ export const ProfileView = ({ username, onBack, theme, isDarkMode, toggleDarkMod
               />
             </View>
 
-            {/* YENİ: Şifre Tekrar */}
             <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>Yeni Şifre (Tekrar)</Text>
             <View style={[styles.modalInputGroup, { backgroundColor: theme.background, borderColor: theme.border }]}>
               <TextInput 
@@ -468,17 +537,39 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1, 
     shadowRadius: 8 
   },
+  
+  // YENİ: Avatar Stilleri
   avatarCircle: { 
-    width: 80, 
-    height: 80, 
-    borderRadius: 40, 
+    width: 90, 
+    height: 90, 
+    borderRadius: 45, 
     justifyContent: 'center', 
     alignItems: 'center', 
     borderWidth: 4, 
-    borderColor: '#fff', 
-    marginBottom: 15 
+    marginBottom: 15,
+    position: 'relative', // Rozet için gerekli
+    overflow: 'visible'
   },
-  avatarLetter: { color: '#fff', fontSize: 32, fontWeight: 'bold' },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 45,
+  },
+  avatarLetter: { color: '#fff', fontSize: 36, fontWeight: 'bold' },
+  editIconBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: '#333',
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#fff'
+  },
+
   userName: { fontSize: 24, fontWeight: 'bold' },
   userTitle: { fontSize: 14, marginTop: 4 },
   section: { paddingHorizontal: 25, marginTop: 30 },
@@ -525,7 +616,7 @@ const styles = StyleSheet.create({
   bigSettingsText: { marginLeft: 15, fontSize: 16, fontWeight: 'bold' },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   
-  // Normal (Küçük) Modal İçeriği
+  // Küçük Modal
   modalContent: { 
     borderTopLeftRadius: 30, 
     borderTopRightRadius: 30, 
@@ -533,9 +624,9 @@ const styles = StyleSheet.create({
     minHeight: 320 
   },
   
-  // YENİ: Genişletilmiş (Tam Yukarı) Modal Stili
+  // YENİ: Geniş Modal
   expandedModal: {
-    height: '90%', // Ekranın %90'ı
+    height: '90%', 
     minHeight: 500,
   },
 

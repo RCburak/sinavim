@@ -11,8 +11,8 @@ import {
   Platform, 
   Alert, 
   ActivityIndicator,
-  Modal, // Eklendi
-  Pressable // Eklendi
+  Modal,
+  Pressable
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS } from '../src/constants/theme';
@@ -20,8 +20,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { authService } from '../src/services/authService';
 import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
-import { Ionicons } from '@expo/vector-icons'; // İkonlar için eklendi
+import { Ionicons } from '@expo/vector-icons';
 
+// Tarayıcı oturumunu tamamlamak için gerekli
 WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen({ onLogin, onGoToRegister, theme = COLORS.light }: any) {
@@ -34,17 +35,28 @@ export default function LoginScreen({ onLogin, onGoToRegister, theme = COLORS.li
   const [resetEmail, setResetEmail] = useState('');
   const [resetLoading, setResetLoading] = useState(false);
 
-  // Google Giriş
+  // --- GOOGLE GİRİŞ YAPILANDIRMASI ---
   const [request, response, promptAsync] = Google.useAuthRequest({
-    webClientId: "292154739046-2ae45f3560de9e8b7860a7.apps.googleusercontent.com",
-    iosClientId: "IOS_CLIENT_ID_BURAYA",
-    androidClientId: "ANDROID_CLIENT_ID_BURAYA",
+    // Google Cloud Console'daki Web Client ID
+    webClientId: "624675277189-liukvj1lrr8icrj0ko8h0s3dqug1klqt.apps.googleusercontent.com",
+    
+    // Expo Go'da hata almamak için Android/iOS'a da şimdilik aynısını ekliyoruz
+    androidClientId: "624675277189-liukvj1lrr8icrj0ko8h0s3dqug1klqt.apps.googleusercontent.com",
+    iosClientId: "624675277189-liukvj1lrr8icrj0ko8h0s3dqug1klqt.apps.googleusercontent.com",
+    
+    // ÖNEMLİ DÜZELTME:
+    // app.json dosyanızdaki "slug": "rc-sinavim" olduğu için adres tam olarak böyle olmalı.
+    // Google Cloud Console'da "Redirect URI" kısmına da bunu eklemelisiniz.
+    redirectUri: "https://auth.expo.io/@rcburak/rc-sinavim"
   });
 
   useEffect(() => {
     if (response?.type === 'success') {
       const { id_token } = response.params; 
       handleGoogleLoginSuccess(id_token);
+    } else if (response?.type === 'error') {
+      Alert.alert("Google Giriş Hatası", "Giriş işlemi sırasında bir hata oluştu.");
+      console.error("Google Auth Error:", response.error);
     }
   }, [response]);
 
@@ -59,6 +71,7 @@ export default function LoginScreen({ onLogin, onGoToRegister, theme = COLORS.li
       }
     } catch (e) {
       Alert.alert("Hata", "Google oturumu doğrulanırken bir sorun oluştu.");
+      console.log(e);
     } finally {
       setLoading(false);
     }
@@ -95,7 +108,6 @@ export default function LoginScreen({ onLogin, onGoToRegister, theme = COLORS.li
     }
   };
 
-  // Şifre Sıfırlama Fonksiyonu
   const handlePasswordReset = async () => {
     if (!resetEmail || !resetEmail.includes('@')) {
       Alert.alert("Hata", "Lütfen geçerli bir e-posta adresi girin.");
@@ -149,7 +161,6 @@ export default function LoginScreen({ onLogin, onGoToRegister, theme = COLORS.li
                 onSubmitEditing={handleLogin} 
               />
               
-              {/* Şifremi Unuttum Linki */}
               <TouchableOpacity style={styles.forgotPassBtn} onPress={() => setResetModalVisible(true)}>
                 <Text style={[styles.forgotPassText, { color: theme.primary }]}>Şifremi Unuttum?</Text>
               </TouchableOpacity>
@@ -245,8 +256,6 @@ const styles = StyleSheet.create({
   googleBtnText: { fontWeight: 'bold', fontSize: 16 },
   registerBtn: { marginTop: 25, alignItems: 'center' },
   registerText: {},
-  
-  // YENİ EKLENEN STİLLER
   forgotPassBtn: { alignSelf: 'flex-end', marginBottom: 20 },
   forgotPassText: { fontWeight: '600', fontSize: 14 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 },
