@@ -1,5 +1,5 @@
 import React from 'react';
-import { SafeAreaView, TouchableOpacity, Text, StyleSheet, View, StatusBar } from 'react-native';
+import { SafeAreaView, TouchableOpacity, StyleSheet, View, StatusBar } from 'react-native';
 import { PomodoroTimer } from './PomodoroTimer';
 import { Ionicons } from '@expo/vector-icons';
 import { PomodoroMode } from '../hooks/usePomodoro';
@@ -23,9 +23,9 @@ export const PomodoroView = ({
       <StatusBar barStyle="light-content" backgroundColor={currentTheme} />
       
       <View style={styles.container}>
+          {/* Geri Butonu: Sadece İkon */}
           <TouchableOpacity onPress={onBack} style={styles.backBtn}>
-            <Ionicons name="chevron-back" size={24} color="#fff" />
-            <Text style={styles.backBtnText}>Dashboard</Text>
+            <Ionicons name="chevron-back" size={28} color="#fff" />
           </TouchableOpacity>
           
           <PomodoroTimer 
@@ -44,20 +44,21 @@ export const PomodoroView = ({
 };
 
 const styles = StyleSheet.create({
-  // DÜZELTME: 'transition' özelliği kaldırıldı
   fullScreen: { flex: 1 }, 
   container: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  
+  // Geri butonu stili güncellendi: Yuvarlak ve sadece ikon
   backBtn: { 
     position: 'absolute', 
     top: 50, 
     left: 20, 
     zIndex: 10, 
-    flexDirection: 'row', 
-    alignItems: 'center',
+    width: 45, // Kare/Yuvarlak olması için sabit genişlik/yükseklik
+    height: 45,
+    justifyContent: 'center', // İkonu ortala
+    alignItems: 'center',     // İkonu ortala
     backgroundColor: 'rgba(0,0,0,0.2)',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 20
+    borderRadius: 22.5, // Tam yuvarlak
   },
-  backBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 16, marginLeft: 4 }
+  // backBtnText stili artık kullanılmadığı için kaldırıldı
 });
