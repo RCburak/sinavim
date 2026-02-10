@@ -82,7 +82,8 @@ export default function TeacherDashboard() {
           <Text style={styles.menuTextActive}>Öğrenciler</Text>
         </TouchableOpacity>
         
-        <TouchableOpacity style={styles.menuItem}>
+        <TouchableOpacity style={styles.menuItem}
+        onPress={() => router.push('/teacher/assignments')}>
           <Ionicons name="create" size={20} color="#bdc3c7" style={styles.menuIcon} />
           <Text style={styles.menuText}>Ödev Atama</Text>
         </TouchableOpacity>

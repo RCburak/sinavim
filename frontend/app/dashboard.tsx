@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -7,15 +7,19 @@ import {
   TouchableOpacity, 
   Dimensions,
   Image,
-  Platform
+  Platform,
+  RefreshControl
 } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
+// DÜZELTME: import yollarına 'src' eklendi
 import { MenuCard } from '../src/components/Dashboard/MenuCard';
+import { StudentTaskList } from '../src/components/StudentTaskList'; 
+import { auth } from '../src/services/firebaseConfig';
 import { Ionicons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
 
-// --- ALT NAVİGASYON ÇUBUĞU (YENİ) ---
+// --- ALT NAVİGASYON ÇUBUĞU ---
 const BottomTabBar = ({ setView, theme }: any) => {
   return (
     <View style={[styles.bottomBar, { backgroundColor: theme.surface }]}>
@@ -25,7 +29,7 @@ const BottomTabBar = ({ setView, theme }: any) => {
         <Text style={[styles.tabText, { color: theme.primary, fontWeight: '700' }]}>Anasayfa</Text>
       </TouchableOpacity>
 
-      {/* Profil Butonu (Pasif - Tıklayınca Profil Sayfasına Gider) */}
+      {/* Profil Butonu */}
       <TouchableOpacity 
         style={styles.tabItem} 
         onPress={() => setView('profile')}
@@ -71,7 +75,7 @@ const DashboardHeader = ({ username, theme }: any) => {
           </View>
         </View>
 
-        {/* Alt Satır: Sadece İsim ve Mesaj (Profil butonu kaldırıldı) */}
+        {/* Alt Satır: İsim ve Mesaj */}
         <View style={styles.greetingRow}>
           <View style={styles.nameContainer}>
             <Text style={styles.usernameText}>{username || 'Öğrenci'} 👋</Text>
@@ -83,77 +87,113 @@ const DashboardHeader = ({ username, theme }: any) => {
   );
 };
 
-export const DashboardView = ({ username, onLogout, setView, schedule, analiz, pomodoro, theme }: any) => (
-  <View style={[styles.container, { backgroundColor: theme.background }]}>
-    <StatusBar barStyle="light-content" backgroundColor={theme.primary} />
-    
-    <DashboardHeader 
-      username={username} 
-      theme={theme}
-    />
+// Bu bileşeni 'DashboardView' olarak dışa aktarıyoruz ki ana dosyada kullanılabilsin
+export const DashboardView = ({ username, onLogout, setView, schedule, analiz, pomodoro, theme }: any) => {
+  const [studentId, setStudentId] = useState<string>('');
+  const [refreshing, setRefreshing] = useState(false);
 
-    <ScrollView contentContainerStyle={styles.menuGrid} showsVerticalScrollIndicator={false}>
+  useEffect(() => {
+    if (auth.currentUser) {
+      setStudentId(auth.currentUser.uid);
+    }
+  }, []);
+
+  const onRefresh = React.useCallback(() => {
+    setRefreshing(true);
+    // Verileri yenileme işlemi burada yapılabilir
+    if(analiz && analiz.refreshAnaliz) analiz.refreshAnaliz();
+    setTimeout(() => setRefreshing(false), 1000);
+  }, [analiz]);
+
+  return (
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <StatusBar barStyle="light-content" backgroundColor={theme.primary} />
       
-      <MenuCard 
-        title="Programım" 
-        emoji="📅" 
-        subText={`${schedule?.length || 0} Ders Listeleniyor`} 
-        onPress={() => setView('program')} 
+      <DashboardHeader 
+        username={username} 
         theme={theme}
       />
 
-      <MenuCard 
-        title="AI Programım" 
-        emoji="🤖" 
-        subText="Yapay zeka ile planla" 
-        onPress={() => setView('setup')} 
-        theme={theme}
-      />
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />}
+      >
+        
+        {/* YENİ EKLENEN KISIM: ÖDEV LİSTESİ */}
+        {/* Sadece öğrenci ID'si varsa göster */}
+        {studentId ? (
+          <View style={{ marginTop: 20 }}>
+            <StudentTaskList studentId={studentId} />
+          </View>
+        ) : null}
 
-      <MenuCard 
-        title="Kendi Planım" 
-        emoji="✍️" 
-        subText="Haftanı kendin tasarla" 
-        onPress={() => setView('manual_setup')} 
-        theme={theme}
-      />
+        <View style={styles.menuGrid}>
+          <MenuCard 
+            title="Programım" 
+            emoji="📅" 
+            subText={`${schedule?.length || 0} Ders Listeleniyor`} 
+            onPress={() => setView('program')} 
+            theme={theme}
+          />
 
-      <MenuCard 
-        title="Geçmişim" 
-        emoji="📚" 
-        subText="Arşivlenen programlar" 
-        onPress={() => setView('history')} 
-        theme={theme}
-      />
+          <MenuCard 
+            title="AI Programım" 
+            emoji="🤖" 
+            subText="Yapay zeka ile planla" 
+            onPress={() => setView('setup')} 
+            theme={theme}
+          />
 
-      <MenuCard 
-        title="Analizler" 
-        emoji="📈" 
-        subText="Net takibi yap" 
-        onPress={() => {
-          setView('analiz');
-          analiz.refreshAnaliz();
-        }} 
-        theme={theme}
-      />
+          <MenuCard 
+            title="Kendi Planım" 
+            emoji="✍️" 
+            subText="Haftanı kendin tasarla" 
+            onPress={() => setView('manual_setup')} 
+            theme={theme}
+          />
 
-      <MenuCard 
-        title="Pomodoro" 
-        emoji="⏱️" 
-        subText={pomodoro.formatTime(pomodoro.timer)} 
-        onPress={() => setView('pomodoro')} 
-        theme={theme}
-      />
-      
-      {/* ScrollView altında boşluk bırakıyoruz ki bottom bar içeriği kapatmasın */}
-      <View style={{ height: 80 }} />
+          <MenuCard 
+            title="Geçmişim" 
+            emoji="📚" 
+            subText="Arşivlenen programlar" 
+            onPress={() => setView('history')} 
+            theme={theme}
+          />
 
-    </ScrollView>
+          <MenuCard 
+            title="Analizler" 
+            emoji="📈" 
+            subText="Net takibi yap" 
+            onPress={() => {
+              setView('analiz');
+              if(analiz && analiz.refreshAnaliz) analiz.refreshAnaliz();
+            }} 
+            theme={theme}
+          />
 
-    {/* Alt Navigasyon Çubuğu */}
-    <BottomTabBar setView={setView} theme={theme} />
-  </View>
-);
+          <MenuCard 
+            title="Pomodoro" 
+            emoji="⏱️" 
+            subText={pomodoro.formatTime(pomodoro.timer)} 
+            onPress={() => setView('pomodoro')} 
+            theme={theme}
+          />
+        </View>
+        
+        {/* Alt boşluk */}
+        <View style={{ height: 80 }} />
+
+      </ScrollView>
+
+      {/* Alt Navigasyon Çubuğu */}
+      <BottomTabBar setView={setView} theme={theme} />
+    </View>
+  );
+};
+
+// Eğer bu dosya doğrudan bir sayfa olarak kullanılıyorsa default export da ekleyelim
+export default DashboardView;
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
@@ -247,25 +287,28 @@ const styles = StyleSheet.create({
     fontWeight: '500'
   },
   
+  scrollContent: {
+    paddingBottom: 20
+  },
+
   menuGrid: { 
     flexDirection: 'row', 
     flexWrap: 'wrap', 
     padding: 20, 
     justifyContent: 'space-between',
-    paddingTop: 25
+    paddingTop: 5 
   },
 
-  // --- BOTTOM BAR STİLLERİ ---
   bottomBar: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
     flexDirection: 'row',
-    height: Platform.OS === 'ios' ? 85 : 70, // iOS için safe area payı
+    height: Platform.OS === 'ios' ? 85 : 70, 
     paddingBottom: Platform.OS === 'ios' ? 20 : 0,
-    elevation: 20, // Android gölge
-    shadowColor: '#000', // iOS gölge
+    elevation: 20, 
+    shadowColor: '#000', 
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.1,
     shadowRadius: 10,
@@ -286,5 +329,3 @@ const styles = StyleSheet.create({
     fontWeight: '500'
   }
 });
-
-export default DashboardView;
