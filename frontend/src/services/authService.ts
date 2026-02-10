@@ -8,14 +8,17 @@ import {
   signInWithPopup,
   signInWithCredential,
   updateProfile,
-  sendPasswordResetEmail // EKLENDİ
+  sendPasswordResetEmail
 } from "firebase/auth";
-import { Platform, Alert } from 'react-native';
+import { Platform } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 
 WebBrowser.maybeCompleteAuthSession();
 
 const googleProvider = new GoogleAuthProvider();
+
+// .env dosyasındaki API adresini alıyoruz
+const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 export const authService = {
   // 1. Kayıt Olma
@@ -32,20 +35,42 @@ export const authService = {
     }
   },
 
-  // 2. Giriş Yapma
+  // 2. Giriş Yapma (GÜNCELLENDİ: SYNC EKLENDİ)
   login: async (email: string, password: string) => {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      if (!userCredential.user.emailVerified) {
+      const user = userCredential.user;
+
+      if (!user.emailVerified) {
         await signOut(auth);
         return { status: "error", message: "Lütfen önce e-postanı doğrula!" };
       }
+
+      // --- BACKEND İLE EŞİTLEME (SYNC) ---
+      // Kullanıcı Firebase'de var ama PostgreSQL'de yoksa otomatik oluşturur.
+      if (API_URL) {
+        try {
+           await fetch(`${API_URL}/sync-user`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              uid: user.uid,
+              email: user.email,
+              name: user.displayName || user.email?.split('@')[0]
+            })
+          });
+        } catch (e) {
+          console.log("Backend eşitleme hatası (Önemsiz):", e);
+        }
+      }
+      // -----------------------------------
+
       return { 
         status: "success", 
         user: { 
-          id: userCredential.user.uid, 
-          email: userCredential.user.email,
-          name: userCredential.user.displayName || userCredential.user.email?.split('@')[0]
+          id: user.uid, 
+          email: user.email, 
+          name: user.displayName || user.email?.split('@')[0]
         } 
       };
     } catch (error: any) {
@@ -53,7 +78,7 @@ export const authService = {
     }
   },
 
-  // 3. ŞİFRE SIFIRLAMA (YENİ EKLENDİ)
+  // 3. Şifre Sıfırlama
   resetPassword: async (email: string) => {
     try {
       await sendPasswordResetEmail(auth, email);
@@ -96,6 +121,46 @@ export const authService = {
       return { status: "success" };
     } catch (e) {
       return { status: "error", message: "Çıkış yapılırken bir hata oluştu." };
+    }
+  },
+
+  // 6. Kuruma Katıl (Backend Bağlantısı)
+  joinClassroom: async (email: string, code: string) => {
+    try {
+      if (!API_URL) {
+        console.error("API URL eksik! .env dosyasını kontrol et.");
+        return { status: "error", message: "Sistem hatası: API URL bulunamadı." };
+      }
+
+      const response = await fetch(`${API_URL}/join-institution`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, code })
+      });
+
+      const result = await response.json();
+      return result; 
+    } catch (error: any) {
+      console.error("Kuruma katılma hatası:", error);
+      return { status: "error", message: "Sunucuya bağlanılamadı." };
+    }
+  },
+
+  // 7. YENİ EKLENEN: Öğretmen Girişi (Web Panel İçin)
+  loginTeacher: async (email: string, password: string) => {
+    try {
+      if (!API_URL) return { status: "error", message: "API URL eksik" };
+      
+      const response = await fetch(`${API_URL}/teacher/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      
+      return await response.json();
+    } catch (e) {
+      console.error(e);
+      return { status: "error", message: "Sunucuya bağlanılamadı." };
     }
   }
 };

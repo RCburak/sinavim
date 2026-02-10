@@ -1,14 +1,16 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, StatusBar, SafeAreaView, Switch, ActivityIndicator, Image, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useProfile } from '../src/hooks/useProfile';
 import { ProfileModals } from '../src/components/profile/ProfileModals';
+import { TeacherJoinModal } from '../src/components/profile/TeacherJoinModal'; // YENİ IMPORT
+import { auth } from '../src/services/firebaseConfig'; // Email almak için
 
 const { width } = Dimensions.get('window');
 
-// onLogout prop'unu ekledik
 export const ProfileView = ({ username, onBack, onLogout, theme, isDarkMode, toggleDarkMode }: any) => {
   const profile = useProfile(username);
+  const [teacherModalVisible, setTeacherModalVisible] = useState(false); // YENİ STATE
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -46,7 +48,27 @@ export const ProfileView = ({ username, onBack, onLogout, theme, isDarkMode, tog
           <Text style={[styles.userTitle, { color: theme.textSecondary }]}>RC Sınavım Üyesi</Text>
         </View>
 
-        {/* UYGULAMA AYARLARI (GECE MODU) */}
+        {/* YENİ BÖLÜM: EĞİTİM KURUMUM */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>Eğitim Kurumum</Text>
+          <TouchableOpacity 
+            style={[styles.actionButton, { backgroundColor: theme.surface }]}
+            onPress={() => setTeacherModalVisible(true)}
+          >
+            <View style={styles.row}>
+              <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: theme.primary + '20', justifyContent: 'center', alignItems: 'center', marginRight: 15 }}>
+                <Ionicons name="school" size={20} color={theme.primary} />
+              </View>
+              <View>
+                <Text style={[styles.actionText, { color: theme.text, marginLeft: 0 }]}>Öğretmenine Bağlan</Text>
+                <Text style={{ fontSize: 12, color: theme.textSecondary, marginTop: 2 }}>Kurum kodunu girerek sınıfına katıl</Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
+          </TouchableOpacity>
+        </View>
+
+        {/* UYGULAMA AYARLARI */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>Uygulama Ayarları</Text>
           <View style={[styles.actionButton, { backgroundColor: theme.surface }]}>
@@ -98,7 +120,6 @@ export const ProfileView = ({ username, onBack, onLogout, theme, isDarkMode, tog
 
         {/* AYARLAR VE ÇIKIŞ YAP */}
         <View style={[styles.section, { marginTop: 10, marginBottom: 40 }]}>
-          {/* Ayarlar Butonu */}
           <TouchableOpacity style={[styles.bigSettingsBtn, { backgroundColor: theme.surface }]} onPress={() => profile.toggleModal('settings', true)}>
             <View style={styles.row}>
               <Ionicons name="settings-outline" size={22} color={theme.text} />
@@ -107,7 +128,6 @@ export const ProfileView = ({ username, onBack, onLogout, theme, isDarkMode, tog
             <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
           </TouchableOpacity>
           
-          {/* YENİ: Çıkış Yap Butonu */}
           <TouchableOpacity 
             style={[styles.bigSettingsBtn, { backgroundColor: theme.surface, marginTop: 15, borderColor: '#FF3B30', borderWidth: 1 }]} 
             onPress={() => profile.handleLogout(onLogout)}
@@ -122,6 +142,18 @@ export const ProfileView = ({ username, onBack, onLogout, theme, isDarkMode, tog
 
       {/* MODALLAR BİLEŞENİ */}
       <ProfileModals theme={theme} hook={profile} />
+
+      {/* YENİ: ÖĞRETMEN BAĞLANMA MODALI */}
+      <TeacherJoinModal 
+        visible={teacherModalVisible} 
+        onClose={() => setTeacherModalVisible(false)}
+        theme={theme}
+        userEmail={auth.currentUser?.email || null}
+        onSuccess={(institutionName) => {
+           // Burada gerekirse profili yenileyebilirsin
+           profile.fetchUserStats(); 
+        }}
+      />
 
     </View>
   );
@@ -158,3 +190,5 @@ const styles = StyleSheet.create({
   bigSettingsBtn: { flexDirection: 'row', alignItems: 'center', padding: 18, borderRadius: 20, justifyContent: 'space-between', elevation: 2 },
   bigSettingsText: { marginLeft: 15, fontSize: 16, fontWeight: 'bold' },
 });
+
+export default ProfileView;
