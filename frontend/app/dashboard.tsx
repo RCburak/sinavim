@@ -87,7 +87,7 @@ export const DashboardView = ({ username, onLogout, setView, schedule, analiz, p
 
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
-    // Verileri yenileme işlemi burada yapılabilir
+    // Verileri yenileme işlemi
     if(analiz && analiz.refreshAnaliz) analiz.refreshAnaliz();
     setTimeout(() => setRefreshing(false), 1000);
   }, [analiz]);
@@ -107,8 +107,6 @@ export const DashboardView = ({ username, onLogout, setView, schedule, analiz, p
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />}
       >
         
-        {/* ÖDEV LİSTESİ TAMAMEN KALDIRILDI */}
-
         <View style={styles.menuGrid}>
           {/* 1. Kendi Planım */}
           <MenuCard 
@@ -158,14 +156,8 @@ export const DashboardView = ({ username, onLogout, setView, schedule, analiz, p
             theme={theme}
           />
 
-          {/* 6. AI Programım */}
-          <MenuCard 
-            title="AI Programım" 
-            emoji="🤖" 
-            subText="Yapay zeka ile planla" 
-            onPress={() => setView('setup')} 
-            theme={theme}
-          />
+          {/* AI PROGRAMIM KARTI SİLİNDİ */}
+
         </View>
         
         {/* Alt boşluk */}

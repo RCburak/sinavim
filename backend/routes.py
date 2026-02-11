@@ -1,6 +1,7 @@
 from flask import request, jsonify
 from database import get_db_connection
-from services import generate_ai_schedule, client, get_performance_insight
+# DÜZELTME: generate_ai_schedule importu kaldırıldı
+from services import client 
 import json
 import logging
 from psycopg2.extras import RealDictCursor
@@ -142,21 +143,20 @@ def setup_routes(app):
         finally:
             conn.close()
 
-    # --- 3. HAFTALIK PROGRAM ATAMA ROTALARI (YENİ) ---
+    # --- 3. HAFTALIK PROGRAM ATAMA ROTALARI ---
     
     @app.route('/teacher/assign-program', methods=['POST'])
     def assign_program():
         """Öğretmenin öğrenciye haftalık program atadığı rota"""
         data = request.get_json()
         student_id = data.get('student_id')
-        program_list = data.get('program', []) # Liste halinde gelecek: [{gun: 'Pazartesi', task: 'Mat', ...}]
+        program_list = data.get('program', []) 
 
         conn = get_db_connection()
         try:
             cur = conn.cursor()
             
             # 1. Önce öğrencinin mevcut programını temizleyelim
-            # Çünkü haftalık program atandığında eskisi geçersiz olur.
             cur.execute('DELETE FROM program WHERE user_id = %s', (student_id,))
             
             # 2. Yeni programı ekle
@@ -230,7 +230,7 @@ def setup_routes(app):
             if not prog: return jsonify({"status": "success", "message": "Boş"}), 200
             
             cur.execute('INSERT INTO program_history (user_id, completion_rate, program_data, program_type) VALUES (%s, %s, %s, %s)',
-                (data['user_id'], 0, json.dumps(prog, ensure_ascii=False), data.get('type', 'ai')))
+                (data['user_id'], 0, json.dumps(prog, ensure_ascii=False), data.get('type', 'manual')))
             cur.execute('DELETE FROM program WHERE user_id = %s', (data['user_id'],))
             conn.commit()
             return jsonify({"status": "success"}), 200
@@ -273,12 +273,7 @@ def setup_routes(app):
         finally:
             conn.close()
 
-    @app.route('/generate-program', methods=['POST'])
-    def generate_program_route():
-        data = request.get_json()
-        program = generate_ai_schedule(data.get('goal'), data.get('hours'))
-        if not program: return jsonify({"status": "error"}), 500
-        return jsonify({"status": "success", "program": program})
+    # --- AI GENERATE ROTASI SİLİNDİ ---
 
     @app.route('/analizler/<user_id>', methods=['GET'])
     def get_analizler(user_id):

@@ -7,9 +7,8 @@ import { auth } from '../src/services/firebaseConfig';
 import { COLORS } from '../src/constants/theme'; 
 import LoginScreen from './login'; 
 import RegisterScreen from './register'; 
-import AIProgramScreen from './setup'; 
+// DÜZELTME: AIProgramScreen importu kaldırıldı
 import { DashboardView } from './dashboard';
-// DİKKAT: Dosya isminin ProfileView.tsx ile tam eşleştiğinden emin olun
 import { ProfileView } from './ProfileView'; 
 import { ProgramView } from '../src/components/ProgramView';
 import { PomodoroView } from '../src/components/PomodoroView';
@@ -18,11 +17,13 @@ import { HistoryView } from './HistoryView';
 import { usePomodoro } from '../src/hooks/usePomodoro';
 import { useAnaliz } from '../src/hooks/useAnaliz';
 
-const API_URL = "https://sam-unsublimed-unoptimistically.ngrok-free.dev";
+// API URL'yi environment variable'dan almak daha iyi olur ama burada kalsın
+const API_URL = process.env.EXPO_PUBLIC_API_URL || "https://sam-unsublimed-unoptimistically.ngrok-free.dev";
 
 export default function Index() {
   const [authState, setAuthState] = useState<'loading' | 'login' | 'register' | 'authenticated'>('loading');
-  const [view, setView] = useState<'dashboard' | 'setup' | 'manual_setup' | 'pomodoro' | 'program' | 'analiz' | 'profile' | 'history'>('dashboard');
+  // DÜZELTME: 'setup' view seçeneği kaldırıldı
+  const [view, setView] = useState<'dashboard' | 'manual_setup' | 'pomodoro' | 'program' | 'analiz' | 'profile' | 'history'>('dashboard');
   const [userName, setUserName] = useState('Öğrenci');
   const [schedule, setSchedule] = useState<any[]>([]); 
   
@@ -142,7 +143,8 @@ export default function Index() {
     }
   };
 
-  const archiveOldAndSetup = async (targetView: 'setup' | 'manual_setup') => {
+  // DÜZELTME: Sadece 'manual_setup' için çalışacak şekilde güncellendi
+  const archiveOldAndSetup = async () => {
     const user = auth.currentUser;
     if (!user) return;
 
@@ -159,20 +161,20 @@ export default function Index() {
                 await fetch(`${API_URL}/archive-program`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ user_id: user.uid, type: 'ai' })
+                    body: JSON.stringify({ user_id: user.uid, type: 'manual' })
                 });
                 setSchedule([]); 
-                setView(targetView);
+                setView('manual_setup');
               } catch (e) {
                 setSchedule([]);
-                setView(targetView);
+                setView('manual_setup');
               }
             }
           }
         ]
       );
     } else {
-      setView(targetView);
+      setView('manual_setup');
     }
   };
 
@@ -201,17 +203,16 @@ export default function Index() {
   // Sayfa render mantığı
   const renderView = () => {
     switch (view) {
-      case 'setup': 
-        return <AIProgramScreen theme={theme} onComplete={(n: any) => { setSchedule(n); setView('dashboard'); }} onBack={() => setView('dashboard')} />;
+      // DÜZELTME: 'setup' case'i kaldırıldı
       case 'manual_setup':
         return <ProgramView tasks={schedule} isEditMode={true} toggleTask={toggleTask} updateQuestions={updateQuestions} onAddTask={(t: any) => setSchedule(prev => [...prev, t])} onFinalize={finalizeManualWeek} theme={theme} onBack={() => setView('dashboard')} />;
       case 'pomodoro': return <PomodoroView {...pomodoro} theme={theme} onBack={() => setView('dashboard')} />;
       case 'program': return <ProgramView tasks={schedule} toggleTask={toggleTask} updateQuestions={updateQuestions} theme={theme} onBack={() => setView('dashboard')} />;
-      case 'analiz': return <AnalizView analizler={analiz.analizler} theme={theme} aiYorum={analiz.aiYorum} loadingYorum={analiz.loading} onAdd={analiz.addAnaliz} onSil={analiz.deleteAnaliz} onBack={() => setView('dashboard')} />;
+      case 'analiz': return <AnalizView analizler={analiz.analizler} theme={theme} onAdd={analiz.addAnaliz} onSil={analiz.deleteAnaliz} onBack={() => setView('dashboard')} />;
       case 'history': return <HistoryView theme={theme} onBack={() => setView('dashboard')} userId={auth.currentUser?.uid} />;
       case 'profile': return <ProfileView username={userName} theme={theme} isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} onBack={(n:any)=>{if(n)setUserName(n);setView('dashboard')}} />;
       default: 
-        return <DashboardView username={userName} theme={theme} onLogout={handleLogout} setView={(v: any) => (v === 'setup' || v === 'manual_setup') ? archiveOldAndSetup(v) : setView(v)} schedule={schedule} analiz={analiz} pomodoro={pomodoro} />;
+        return <DashboardView username={userName} theme={theme} onLogout={handleLogout} setView={(v: any) => (v === 'manual_setup') ? archiveOldAndSetup() : setView(v)} schedule={schedule} analiz={analiz} pomodoro={pomodoro} />;
     }
   };
 

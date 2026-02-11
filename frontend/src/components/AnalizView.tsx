@@ -4,7 +4,6 @@ import {
   Text, 
   TextInput, 
   TouchableOpacity, 
-  ActivityIndicator, 
   StyleSheet, 
   Keyboard, 
   TouchableWithoutFeedback, 
@@ -24,8 +23,6 @@ const { width } = Dimensions.get('window');
 
 export const AnalizView = ({ 
   analizler = [], 
-  aiYorum, 
-  loadingYorum, 
   onAdd, 
   onSil, 
   onBack, 
@@ -33,7 +30,6 @@ export const AnalizView = ({
 }: any) => {
   const [denemeAd, setDenemeAd] = useState('');
   const [denemeNet, setDenemeNet] = useState('');
-  const [showAI, setShowAI] = useState(false); 
   const [tooltip, setTooltip] = useState({ visible: false, value: 0, label: '' });
 
   const handleAdd = () => {
@@ -53,8 +49,6 @@ export const AnalizView = ({
       { text: "Sil", style: "destructive", onPress: () => onSil(id) }
     ]);
   };
-
-  const isDark = theme.background === '#121212';
 
   // --- VERİ HAZIRLAMA VE TARİH DÜZELTME ---
   const islenmisVeriler = useMemo(() => {
@@ -86,14 +80,13 @@ export const AnalizView = ({
 
   const chartData = prepareChartData();
 
-  // --- TARİH FORMATLAYICI FONKSİYON ---
+  // --- TARİH FORMATLAYICI ---
   const formatTarih = (tarihString: string) => {
     try {
       const date = new Date(tarihString);
-      // 'tr-TR' kullanarak Türkçe format: 11.02.2026
       return date.toLocaleDateString('tr-TR', {
         day: 'numeric',
-        month: 'long', // 'numeric' yaparsan 02 yazar, 'long' yaparsan Şubat yazar
+        month: 'long', 
         year: 'numeric'
       });
     } catch (e) {
@@ -175,34 +168,7 @@ export const AnalizView = ({
                 )}
               </View>
 
-              {/* AI Yorum Butonu */}
-              <TouchableOpacity 
-                style={[styles.aiToggleButton, { backgroundColor: theme.surface, borderColor: theme.border }]} 
-                onPress={() => setShowAI(!showAI)}
-              >
-                <Text style={{ color: theme.primary, fontWeight: 'bold' }}>
-                  {showAI ? "Yorumu Gizle" : "🤖 RC AI Koç Yorumunu Gör"}
-                </Text>
-                <Ionicons name={showAI ? "chevron-up" : "chevron-down"} size={20} color={theme.primary} />
-              </TouchableOpacity>
-
-              {/* AI Yorum Kartı */}
-              {showAI && (
-                <View style={[
-                  styles.aiCard, 
-                  { 
-                    backgroundColor: isDark ? '#1F1B24' : '#FFF8E1',
-                    borderLeftColor: COLORS.warning 
-                  }
-                ]}>
-                  <Text style={[styles.aiTitle, { color: COLORS.warning }]}>Robot Koçun Tavsiyesi ✨</Text>
-                  {loadingYorum ? (
-                    <ActivityIndicator color={COLORS.warning} />
-                  ) : (
-                    <Text style={[styles.aiContent, { color: theme.text }]}>{aiYorum}</Text>
-                  )}
-                </View>
-              )}
+              {/* AI YORUM BÖLÜMÜ TAMAMEN KALDIRILDI */}
 
               {/* Veri Giriş Formu */}
               <View style={[styles.formCard, { backgroundColor: theme.surface }]}>
@@ -253,7 +219,6 @@ export const AnalizView = ({
                         <View style={{ marginLeft: 12 }}>
                           <Text style={[styles.listName, { color: theme.text }]}>{item.ad}</Text>
                           <Text style={{ fontSize: 12, color: theme.textSecondary }}>
-                            {/* DÜZELTİLEN TARİH FORMATI */}
                             <Ionicons name="calendar-outline" size={12} color={theme.textSecondary} /> {formatTarih(item.tarih)}
                           </Text>
                         </View>
@@ -293,7 +258,7 @@ const styles = StyleSheet.create({
   backBtn: { padding: 5 },
   headerTitle: { color: '#FFF', fontSize: 20, fontWeight: 'bold', marginLeft: 15 },
   headerTextWhite: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
-  chartWrapper: { alignItems: 'center', marginTop: 15 },
+  chartWrapper: { alignItems: 'center', marginTop: 15, marginBottom: 20 },
   chartHeader: { 
     flexDirection: 'row', 
     justifyContent: 'space-between', 
@@ -317,26 +282,6 @@ const styles = StyleSheet.create({
 
   emptyChart: { width: width - 40, padding: 30, borderRadius: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderStyle: 'dashed' },
   emptyText: { marginTop: 10, fontSize: 14 },
-
-  aiToggleButton: {
-    marginHorizontal: 20,
-    marginVertical: 10,
-    padding: 12,
-    borderRadius: 12,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderWidth: 1,
-  },
-  aiCard: { 
-    marginHorizontal: 20, 
-    marginBottom: 20, 
-    padding: 15, 
-    borderRadius: 16, 
-    borderLeftWidth: 4, 
-  },
-  aiTitle: { fontWeight: 'bold', marginBottom: 6, fontSize: 15 },
-  aiContent: { fontStyle: 'italic', lineHeight: 22, fontSize: 14 },
 
   formCard: { 
     marginHorizontal: 20, 
