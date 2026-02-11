@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   View, 
   Text, 
@@ -11,13 +11,8 @@ import {
   RefreshControl
 } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
-// DÜZELTME: import yollarına 'src' eklendi
 import { MenuCard } from '../src/components/Dashboard/MenuCard';
-import { StudentTaskList } from '../src/components/StudentTaskList'; 
-import { auth } from '../src/services/firebaseConfig';
 import { Ionicons } from '@expo/vector-icons';
-
-const { width } = Dimensions.get('window');
 
 // --- ALT NAVİGASYON ÇUBUĞU ---
 const BottomTabBar = ({ setView, theme }: any) => {
@@ -87,16 +82,8 @@ const DashboardHeader = ({ username, theme }: any) => {
   );
 };
 
-// Bu bileşeni 'DashboardView' olarak dışa aktarıyoruz ki ana dosyada kullanılabilsin
 export const DashboardView = ({ username, onLogout, setView, schedule, analiz, pomodoro, theme }: any) => {
-  const [studentId, setStudentId] = useState<string>('');
   const [refreshing, setRefreshing] = useState(false);
-
-  useEffect(() => {
-    if (auth.currentUser) {
-      setStudentId(auth.currentUser.uid);
-    }
-  }, []);
 
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
@@ -120,31 +107,10 @@ export const DashboardView = ({ username, onLogout, setView, schedule, analiz, p
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />}
       >
         
-        {/* YENİ EKLENEN KISIM: ÖDEV LİSTESİ */}
-        {/* Sadece öğrenci ID'si varsa göster */}
-        {studentId ? (
-          <View style={{ marginTop: 20 }}>
-            <StudentTaskList studentId={studentId} />
-          </View>
-        ) : null}
+        {/* ÖDEV LİSTESİ TAMAMEN KALDIRILDI */}
 
         <View style={styles.menuGrid}>
-          <MenuCard 
-            title="Programım" 
-            emoji="📅" 
-            subText={`${schedule?.length || 0} Ders Listeleniyor`} 
-            onPress={() => setView('program')} 
-            theme={theme}
-          />
-
-          <MenuCard 
-            title="AI Programım" 
-            emoji="🤖" 
-            subText="Yapay zeka ile planla" 
-            onPress={() => setView('setup')} 
-            theme={theme}
-          />
-
+          {/* 1. Kendi Planım */}
           <MenuCard 
             title="Kendi Planım" 
             emoji="✍️" 
@@ -153,6 +119,7 @@ export const DashboardView = ({ username, onLogout, setView, schedule, analiz, p
             theme={theme}
           />
 
+          {/* 2. Geçmişim */}
           <MenuCard 
             title="Geçmişim" 
             emoji="📚" 
@@ -161,6 +128,7 @@ export const DashboardView = ({ username, onLogout, setView, schedule, analiz, p
             theme={theme}
           />
 
+          {/* 3. Analizler */}
           <MenuCard 
             title="Analizler" 
             emoji="📈" 
@@ -172,11 +140,30 @@ export const DashboardView = ({ username, onLogout, setView, schedule, analiz, p
             theme={theme}
           />
 
+          {/* 4. Pomodoro */}
           <MenuCard 
             title="Pomodoro" 
             emoji="⏱️" 
             subText={pomodoro.formatTime(pomodoro.timer)} 
             onPress={() => setView('pomodoro')} 
+            theme={theme}
+          />
+
+          {/* 5. Programım */}
+          <MenuCard 
+            title="Programım" 
+            emoji="📅" 
+            subText={`${schedule?.length || 0} Ders Listeleniyor`} 
+            onPress={() => setView('program')} 
+            theme={theme}
+          />
+
+          {/* 6. AI Programım */}
+          <MenuCard 
+            title="AI Programım" 
+            emoji="🤖" 
+            subText="Yapay zeka ile planla" 
+            onPress={() => setView('setup')} 
             theme={theme}
           />
         </View>
@@ -192,14 +179,13 @@ export const DashboardView = ({ username, onLogout, setView, schedule, analiz, p
   );
 };
 
-// Eğer bu dosya doğrudan bir sayfa olarak kullanılıyorsa default export da ekleyelim
 export default DashboardView;
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
   headerWrapper: { zIndex: 10 },
   blueHeader: {
-    paddingTop: Platform.OS === 'android' ? 50 : 60,
+    paddingTop: Platform.OS === 'android' ? 60 : 70, 
     paddingHorizontal: 25,
     paddingBottom: 35,
     borderBottomLeftRadius: 36,
@@ -218,7 +204,7 @@ const styles = StyleSheet.create({
     marginBottom: 25 
   },
   logoContainer: {
-    flexDirection: 'row',
+    flexDirection: 'row', 
     alignItems: 'center',
     gap: 12
   },
@@ -288,7 +274,8 @@ const styles = StyleSheet.create({
   },
   
   scrollContent: {
-    paddingBottom: 20
+    paddingBottom: 20,
+    paddingTop: 20 
   },
 
   menuGrid: { 

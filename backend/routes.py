@@ -142,64 +142,60 @@ def setup_routes(app):
         finally:
             conn.close()
 
-    # --- 3. GÖREV / ÖDEV ROTALARI (GÜNCELLENMİŞ KISIM) ---
-    @app.route('/teacher/assign-task', methods=['POST'])
-    def assign_task():
+    # --- 3. HAFTALIK PROGRAM ATAMA ROTALARI (YENİ) ---
+    
+    @app.route('/teacher/assign-program', methods=['POST'])
+    def assign_program():
+        """Öğretmenin öğrenciye haftalık program atadığı rota"""
         data = request.get_json()
+        student_id = data.get('student_id')
+        program_list = data.get('program', []) # Liste halinde gelecek: [{gun: 'Pazartesi', task: 'Mat', ...}]
+
         conn = get_db_connection()
         try:
             cur = conn.cursor()
-            cur.execute("""
-                INSERT INTO tasks (institution_id, student_id, title, description, due_date)
-                VALUES (%s, %s, %s, %s, %s)
-            """, (data['institution_id'], data['student_id'], data['title'], data.get('description'), data.get('due_date')))
+            
+            # 1. Önce öğrencinin mevcut programını temizleyelim
+            # Çünkü haftalık program atandığında eskisi geçersiz olur.
+            cur.execute('DELETE FROM program WHERE user_id = %s', (student_id,))
+            
+            # 2. Yeni programı ekle
+            for p in program_list:
+                cur.execute(
+                    'INSERT INTO program (user_id, gun, task, duration, completed, questions) VALUES (%s, %s, %s, %s, %s, %s)',
+                    (student_id, p.get('gun', 'Pazartesi'), p['task'], p.get('duration', '45 dk'), False, int(p.get('questions', 0)))
+                )
+            
             conn.commit()
-            return jsonify({"status": "success", "message": "Görev başarıyla atandı"}), 201
+            return jsonify({"status": "success", "message": "Haftalık program başarıyla atandı!"}), 201
         except Exception as e:
             conn.rollback()
             return jsonify({"status": "error", "message": str(e)}), 500
         finally:
             conn.close()
 
-    @app.route('/student/tasks/<student_id>', methods=['GET'])
-    def get_student_tasks(student_id):
-        conn = get_db_connection()
-        try:
-            cur = conn.cursor(cursor_factory=RealDictCursor)
-            cur.execute("""
-                SELECT t.*, i.name as institution_name 
-                FROM tasks t
-                JOIN institutions i ON t.institution_id = i.id
-                WHERE t.student_id = %s
-                ORDER BY t.due_date ASC
-            """, (student_id,))
-            return jsonify(cur.fetchall())
-        finally:
-            conn.close()
-
-    @app.route('/teacher/tasks/<int:institution_id>', methods=['GET'])
-    def get_institution_tasks(institution_id):
-        conn = get_db_connection()
-        try:
-            cur = conn.cursor(cursor_factory=RealDictCursor)
-            cur.execute("""
-                SELECT t.*, u.name as student_name 
-                FROM tasks t
-                JOIN users u ON t.student_id = u.id
-                WHERE t.institution_id = %s
-                ORDER BY t.created_at DESC
-            """, (institution_id,))
-            return jsonify(cur.fetchall())
-        finally:
-            conn.close()
-
     # --- 4. PROGRAM, ANALİZ VE DİĞERLERİ ---
+    
     @app.route('/get-program/<user_id>', methods=['GET'])
     def get_program(user_id):
         conn = get_db_connection()
         try:
             cur = conn.cursor(cursor_factory=RealDictCursor)
-            cur.execute("SELECT * FROM program WHERE user_id = %s ORDER BY id ASC", (user_id,))
+            # Günleri sıralı getirmek için CASE yapısı
+            cur.execute("""
+                SELECT * FROM program 
+                WHERE user_id = %s 
+                ORDER BY 
+                    CASE gun 
+                        WHEN 'Pazartesi' THEN 1 
+                        WHEN 'Salı' THEN 2 
+                        WHEN 'Çarşamba' THEN 3 
+                        WHEN 'Perşembe' THEN 4 
+                        WHEN 'Cuma' THEN 5 
+                        WHEN 'Cumartesi' THEN 6 
+                        WHEN 'Pazar' THEN 7 
+                    END, id ASC
+            """, (user_id,))
             return jsonify(cur.fetchall())
         finally:
             conn.close()

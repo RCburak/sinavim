@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, Platform, Modal, FlatList } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, FlatList } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../src/constants/theme';
@@ -9,161 +9,240 @@ interface Student {
   name: string;
 }
 
-interface Task {
-  id: number;
-  title: string;
-  description: string;
-  student_name: string;
-  due_date: string;
+interface ProgramItem {
+  gun: string;
+  task: string;
+  duration: string;
+  questions: string;
 }
 
-export default function Assignments() {
+const GUNLER = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'];
+
+export default function AssignmentBuilder() {
   const router = useRouter();
   const [students, setStudents] = useState<Student[]>([]);
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const [selectedStudent, setSelectedStudent] = useState<string>('');
   
   // Form State
-  const [selectedStudent, setSelectedStudent] = useState<string>('');
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [date, setDate] = useState('');
-  
-  const TEACHER_INSTITUTION_ID = 1; // Sabit ID (Test için)
+  const [selectedDay, setSelectedDay] = useState('Pazartesi');
+  const [task, setTask] = useState('');
+  const [duration, setDuration] = useState('45 dk');
+  const [questions, setQuestions] = useState('20');
+
+  // Oluşturulan Program Listesi
+  const [programList, setProgramList] = useState<ProgramItem[]>([]);
+
+  const TEACHER_INSTITUTION_ID = 1;
 
   useEffect(() => {
     fetchStudents();
-    fetchTasks();
   }, []);
 
   const fetchStudents = async () => {
     try {
       const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/teacher/students/${TEACHER_INSTITUTION_ID}`);
       const data = await response.json();
-      setStudents(data);
+      if(Array.isArray(data)) setStudents(data);
     } catch (e) { console.error(e); }
   };
 
-  const fetchTasks = async () => {
-    try {
-      const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/teacher/tasks/${TEACHER_INSTITUTION_ID}`);
-      const data = await response.json();
-      setTasks(data);
-    } catch (e) { console.error(e); }
+  const addToProgram = () => {
+    if (!task) { Alert.alert("Hata", "Lütfen ders/konu giriniz."); return; }
+    
+    const newItem: ProgramItem = {
+      gun: selectedDay,
+      task,
+      duration,
+      questions
+    };
+
+    setProgramList([...programList, newItem]);
+    setTask(''); // Formu temizle ama günü değiştirme, seri ekleme için kolaylık olsun
   };
 
-  const handleAssign = async () => {
-    if (!selectedStudent || !title) {
-      Alert.alert("Uyarı", "Lütfen öğrenci ve başlık seçin.");
-      return;
-    }
+  const removeFromProgram = (index: number) => {
+    const newList = [...programList];
+    newList.splice(index, 1);
+    setProgramList(newList);
+  };
+
+  const sendProgram = async () => {
+    if (!selectedStudent) { Alert.alert("Hata", "Lütfen bir öğrenci seçin."); return; }
+    if (programList.length === 0) { Alert.alert("Hata", "Program listesi boş."); return; }
 
     try {
-      const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/teacher/assign-task`, {
+      const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/teacher/assign-program`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({
-          institution_id: TEACHER_INSTITUTION_ID,
           student_id: selectedStudent,
-          title,
-          description,
-          due_date: date || new Date().toISOString()
+          program: programList
         })
       });
       
       const res = await response.json();
       if (res.status === 'success') {
-        Alert.alert("Başarılı", "Ödev gönderildi!");
-        setTitle(''); setDescription(''); setDate('');
-        fetchTasks(); // Listeyi yenile
+        Alert.alert("Başarılı", "Program öğrenciye gönderildi!");
+        setProgramList([]);
       } else {
         Alert.alert("Hata", res.message);
       }
     } catch (e) {
-      Alert.alert("Hata", "Bağlantı hatası");
+      Alert.alert("Hata", "Sunucu hatası");
     }
   };
 
   return (
     <View style={styles.container}>
-      {/* Basit Sidebar (Navigasyon için) */}
+      {/* Sidebar (Basit) */}
       <View style={styles.sidebar}>
         <Text style={styles.logo}>RC PANEL</Text>
-        <TouchableOpacity onPress={() => router.replace('/teacher/dashboard')} style={styles.menuItem}>
+        <TouchableOpacity onPress={() => router.push('/teacher/dashboard')} style={styles.menuItem}>
+          <Ionicons name="people" size={20} color="#bdc3c7" />
           <Text style={styles.menuText}>Öğrenciler</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.menuItem, styles.activeMenu]}>
-          <Text style={styles.activeMenuText}>Ödev Atama</Text>
+        <TouchableOpacity style={styles.menuItemActive}>
+          <Ionicons name="calendar" size={20} color="#fff" />
+          <Text style={styles.menuTextActive}>Program Yaz</Text>
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.main}>
-        <Text style={styles.headerTitle}>Yeni Ödev Ata</Text>
-        
-        <View style={styles.card}>
-          <Text style={styles.label}>Öğrenci Seçin:</Text>
-          <View style={styles.studentList}>
-            {students.map(s => (
-              <TouchableOpacity 
-                key={s.id} 
-                style={[styles.chip, selectedStudent === s.id && styles.chipActive]}
-                onPress={() => setSelectedStudent(s.id)}
-              >
-                <Text style={[styles.chipText, selectedStudent === s.id && {color:'#fff'}]}>{s.name}</Text>
+      <View style={styles.main}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Haftalık Program Oluşturucu</Text>
+        </View>
+
+        <View style={styles.contentRow}>
+          {/* SOL: Form Alanı */}
+          <View style={styles.formPanel}>
+            <Text style={styles.sectionTitle}>1. Öğrenci Seç</Text>
+            <ScrollView horizontal style={styles.studentScroll} showsHorizontalScrollIndicator={false}>
+              {students.map(s => (
+                <TouchableOpacity 
+                  key={s.id} 
+                  style={[styles.chip, selectedStudent === s.id && styles.chipActive]}
+                  onPress={() => setSelectedStudent(s.id)}
+                >
+                  <Text style={[styles.chipText, selectedStudent === s.id && {color:'#fff'}]}>{s.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            <Text style={styles.sectionTitle}>2. Ders Ekle</Text>
+            
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Gün:</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{marginBottom: 10}}>
+                {GUNLER.map(g => (
+                  <TouchableOpacity key={g} onPress={() => setSelectedDay(g)} style={[styles.dayChip, selectedDay === g && styles.dayChipActive]}>
+                    <Text style={[styles.dayText, selectedDay === g && {color:'#fff'}]}>{g}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+
+              <Text style={styles.label}>Ders / Konu:</Text>
+              <TextInput style={styles.input} value={task} onChangeText={setTask} placeholder="Örn: Matematik - Türev Test 1" />
+
+              <View style={{flexDirection:'row', gap:10}}>
+                <View style={{flex:1}}>
+                  <Text style={styles.label}>Süre:</Text>
+                  <TextInput style={styles.input} value={duration} onChangeText={setDuration} placeholder="45 dk" />
+                </View>
+                <View style={{flex:1}}>
+                  <Text style={styles.label}>Soru Sayısı:</Text>
+                  <TextInput style={styles.input} value={questions} onChangeText={setQuestions} keyboardType="numeric" placeholder="20" />
+                </View>
+              </View>
+
+              <TouchableOpacity style={styles.addBtn} onPress={addToProgram}>
+                <Ionicons name="add-circle" size={20} color="#fff" />
+                <Text style={styles.addBtnText}>Listeye Ekle</Text>
               </TouchableOpacity>
-            ))}
+            </View>
           </View>
 
-          <Text style={styles.label}>Ödev Başlığı:</Text>
-          <TextInput style={styles.input} value={title} onChangeText={setTitle} placeholder="Örn: Limit Türev Fasikülü" />
-
-          <Text style={styles.label}>Açıklama / Not:</Text>
-          <TextInput style={[styles.input, {height: 80}]} value={description} onChangeText={setDescription} placeholder="Sayfa 10-20 arasını çöz" multiline />
-
-          <TouchableOpacity style={styles.btn} onPress={handleAssign}>
-            <Text style={styles.btnText}>Ödevi Gönder 🚀</Text>
-          </TouchableOpacity>
-        </View>
-
-        <Text style={[styles.headerTitle, {marginTop: 40}]}>Son Verilen Ödevler</Text>
-        <View style={styles.table}>
-          {tasks.map((t, index) => (
-            <View key={index} style={styles.row}>
-              <View style={{flex:1}}>
-                <Text style={styles.taskTitle}>{t.title}</Text>
-                <Text style={styles.taskSub}>{t.student_name} • {new Date(t.due_date).toLocaleDateString()}</Text>
-              </View>
-              <Ionicons name="checkmark-circle-outline" size={24} color="#ccc" />
+          {/* SAĞ: Önizleme Listesi */}
+          <View style={styles.previewPanel}>
+            <View style={{flexDirection:'row', justifyContent:'space-between', alignItems:'center'}}>
+              <Text style={styles.sectionTitle}>3. Program Önizleme</Text>
+              <TouchableOpacity style={styles.sendBtn} onPress={sendProgram}>
+                <Text style={styles.sendBtnText}>Programı Gönder 🚀</Text>
+              </TouchableOpacity>
             </View>
-          ))}
+
+            <View style={styles.listContainer}>
+              {programList.length === 0 ? (
+                <Text style={styles.emptyText}>Henüz ders eklenmedi.</Text>
+              ) : (
+                <FlatList
+                  data={programList}
+                  keyExtractor={(_, i) => i.toString()}
+                  renderItem={({item, index}) => (
+                    <View style={styles.listItem}>
+                      <View style={styles.listLeft}>
+                        <Text style={styles.listDay}>{item.gun}</Text>
+                        <Text style={styles.listTask}>{item.task}</Text>
+                        <Text style={styles.listDetail}>{item.duration} • {item.questions} Soru</Text>
+                      </View>
+                      <TouchableOpacity onPress={() => removeFromProgram(index)}>
+                        <Ionicons name="trash-outline" size={20} color="#e74c3c" />
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                />
+              )}
+            </View>
+          </View>
         </View>
-      </ScrollView>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, flexDirection: 'row', backgroundColor: '#f5f6fa' },
-  sidebar: { width: 220, backgroundColor: '#2c3e50', padding: 20 },
-  logo: { color: '#fff', fontSize: 20, fontWeight: 'bold', marginBottom: 30, textAlign:'center' },
-  menuItem: { padding: 15, borderRadius: 8, marginBottom: 5 },
-  menuText: { color: '#bdc3c7' },
-  activeMenu: { backgroundColor: COLORS.light.primary },
-  activeMenuText: { color: '#fff', fontWeight: 'bold' },
-  
-  main: { flex: 1, padding: 30 },
-  headerTitle: { fontSize: 24, fontWeight: 'bold', color: '#2c3e50', marginBottom: 20 },
-  card: { backgroundColor: '#fff', padding: 25, borderRadius: 12, shadowOpacity: 0.05, shadowRadius: 10 },
-  label: { fontWeight: '600', marginBottom: 8, color: '#333' },
-  input: { borderWidth: 1, borderColor: '#eee', padding: 12, borderRadius: 8, marginBottom: 15, backgroundColor: '#fafafa' },
-  studentList: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 15 },
-  chip: { padding: 8, paddingHorizontal: 15, borderRadius: 20, backgroundColor: '#eee', marginRight: 8, marginBottom: 8 },
-  chipActive: { backgroundColor: COLORS.light.primary },
-  chipText: { fontSize: 13 },
-  btn: { backgroundColor: COLORS.light.primary, padding: 15, borderRadius: 8, alignItems: 'center' },
-  btnText: { color: '#fff', fontWeight: 'bold' },
+  sidebar: { width: 80, backgroundColor: '#2c3e50', alignItems: 'center', paddingTop: 30 },
+  logo: { color: '#fff', fontWeight: 'bold', fontSize: 12, marginBottom: 30 },
+  menuItem: { alignItems: 'center', marginBottom: 20, opacity: 0.6 },
+  menuItemActive: { alignItems: 'center', marginBottom: 20, opacity: 1 },
+  menuText: { color: '#fff', fontSize: 10, marginTop: 4 },
+  menuTextActive: { color: '#fff', fontSize: 10, marginTop: 4, fontWeight: 'bold' },
 
-  table: { marginTop: 10 },
-  row: { flexDirection: 'row', backgroundColor: '#fff', padding: 15, borderRadius: 8, marginBottom: 8, alignItems: 'center' },
-  taskTitle: { fontWeight: 'bold', fontSize: 16 },
-  taskSub: { color: '#888', fontSize: 13 }
+  main: { flex: 1, padding: 20 },
+  header: { marginBottom: 20 },
+  headerTitle: { fontSize: 24, fontWeight: 'bold', color: '#2c3e50' },
+
+  contentRow: { flex: 1, flexDirection: 'row', gap: 20 },
+  
+  // SOL PANEL
+  formPanel: { flex: 0.4, backgroundColor: '#fff', borderRadius: 12, padding: 20 },
+  sectionTitle: { fontSize: 16, fontWeight: 'bold', marginBottom: 15, color: '#333' },
+  studentScroll: { maxHeight: 50, marginBottom: 20 },
+  chip: { paddingHorizontal: 15, paddingVertical: 8, backgroundColor: '#eee', borderRadius: 20, marginRight: 8, justifyContent: 'center' },
+  chipActive: { backgroundColor: COLORS.light.primary },
+  chipText: { fontSize: 13, color: '#333' },
+  
+  inputGroup: { gap: 10 },
+  label: { fontSize: 12, fontWeight: 'bold', color: '#555', marginBottom: 4 },
+  input: { borderWidth: 1, borderColor: '#eee', padding: 10, borderRadius: 8, backgroundColor: '#fafafa' },
+  
+  dayChip: { paddingHorizontal: 12, paddingVertical: 6, backgroundColor: '#f0f0f0', borderRadius: 6, marginRight: 6 },
+  dayChipActive: { backgroundColor: '#34495e' },
+  dayText: { fontSize: 12, color: '#555' },
+
+  addBtn: { backgroundColor: '#27ae60', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 12, borderRadius: 8, marginTop: 10 },
+  addBtnText: { color: '#fff', fontWeight: 'bold', marginLeft: 8 },
+
+  // SAĞ PANEL
+  previewPanel: { flex: 0.6, backgroundColor: '#fff', borderRadius: 12, padding: 20 },
+  sendBtn: { backgroundColor: COLORS.light.primary, paddingHorizontal: 20, paddingVertical: 8, borderRadius: 8 },
+  sendBtnText: { color: '#fff', fontWeight: 'bold' },
+  
+  listContainer: { flex: 1, marginTop: 10, backgroundColor: '#fafafa', borderRadius: 8, padding: 10 },
+  emptyText: { textAlign: 'center', color: '#999', marginTop: 50 },
+  listItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fff', padding: 12, marginBottom: 8, borderRadius: 8, borderLeftWidth: 4, borderLeftColor: COLORS.light.primary },
+  listLeft: { flex: 1 },
+  listDay: { fontSize: 10, fontWeight: 'bold', color: '#999', textTransform: 'uppercase' },
+  listTask: { fontSize: 15, fontWeight: 'bold', color: '#333' },
+  listDetail: { fontSize: 12, color: '#666' }
 });
