@@ -12,10 +12,12 @@ import {
   Platform,
   ScrollView,
   StatusBar,
-  Dimensions
+  Dimensions,
+  Alert // Alert bileşeni eklendi
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context'; 
-import { AnalizTablosu } from './AnalizTablosu';
+// AnalizTablosu dosyanın src/components klasöründe olduğunu varsayıyorum
+import { AnalizTablosu } from './AnalizTablosu'; 
 import { COLORS } from '../constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { LineChart } from "react-native-chart-kit";
@@ -29,11 +31,14 @@ export const AnalizView = ({
   const [denemeNet, setDenemeNet] = useState('');
   const [showAI, setShowAI] = useState(false); 
 
-  // Tooltip için yeni state'ler
+  // Tooltip için state'ler
   const [tooltip, setTooltip] = useState({ visible: false, value: 0, label: '' });
 
   const handleAdd = () => {
-    if (!denemeAd || !denemeNet) return;
+    if (!denemeAd || !denemeNet) {
+        Alert.alert("Eksik Bilgi", "Lütfen deneme adı ve net değerini giriniz.");
+        return;
+    }
     onAdd(denemeAd, denemeNet);
     setDenemeAd('');
     setDenemeNet('');
@@ -42,24 +47,38 @@ export const AnalizView = ({
 
   const isDark = theme.background === '#121212';
 
-  // Grafik verilerini hazırla (Son 6 deneme)
+  // --- HATA DÜZELTİLEN KISIM (prepareChartData) ---
   const prepareChartData = () => {
+    // Veri yoksa veya 2'den azsa grafik çizme (null döndür)
     if (!analizler || analizler.length < 2) return null;
+    
+    // Veriyi kopyalayıp son 6 tanesini alıyoruz ve ters çeviriyoruz (eskiden yeniye)
     const lastData = [...analizler].slice(0, 6).reverse();
+    
     return {
-      labels: lastData.map((a: any) => a.ad.substring(0, 4)),
+      labels: lastData.map((a: any) => {
+        // HATA ÇÖZÜMÜ: Eğer 'ad' yoksa boş string ("-") kabul et
+        const ad = a.ad ? String(a.ad) : "-";
+        // İsim 4 karakterden uzunsa kısalt (Örn: "Matematik" -> "Mate.")
+        return ad.length > 4 ? ad.substring(0, 4) + '.' : ad;
+      }),
       datasets: [{
-        data: lastData.map((a: any) => parseFloat(a.net) || 0)
+        data: lastData.map((a: any) => {
+          // Net değerini sayıya çevir, değilse 0 yap
+          const net = parseFloat(a.net);
+          return isNaN(net) ? 0 : net;
+        })
       }]
     };
   };
+  // --------------------------------------------------
 
   const chartData = prepareChartData();
 
   return (
     <TouchableWithoutFeedback onPress={() => {
       Keyboard.dismiss();
-      setTooltip({ ...tooltip, visible: false }); // Ekrana basınca tooltip kapansın
+      setTooltip({ ...tooltip, visible: false }); 
     }}>
       <View style={{ flex: 1, backgroundColor: theme.background }}>
         <StatusBar barStyle="light-content" />
@@ -85,7 +104,6 @@ export const AnalizView = ({
                   <View style={styles.chartHeader}>
                     <Text style={[styles.chartTitle, { color: theme.text }]}>Net Gelişim Grafiği</Text>
                     
-                    {/* Dinamik Tooltip Baloncuğu */}
                     {tooltip.visible && (
                       <View style={[styles.tooltipContainer, { backgroundColor: COLORS.warning }]}>
                         <Text style={styles.tooltipText}>{tooltip.label}: {tooltip.value} Net</Text>
@@ -98,7 +116,6 @@ export const AnalizView = ({
                     width={width - 40}
                     height={180}
                     onDataPointClick={(data) => {
-                      // Noktaya basınca tooltip'i güncelle
                       setTooltip({
                         visible: true,
                         value: data.value,
@@ -183,7 +200,7 @@ export const AnalizView = ({
                 </TouchableOpacity>
               </View>
 
-              {/* Tablo Alanı */}
+              {/* Tablo Alanı - Orijinal Bileşeni Kullanıyor */}
               <View style={{ paddingHorizontal: 20 }}>
                 <AnalizTablosu veriler={analizler} onSil={onSil} theme={theme} />
               </View>
@@ -242,7 +259,7 @@ const styles = StyleSheet.create({
   },
   aiCard: { 
     marginHorizontal: 20, 
-    marginBottom: 20,
+    marginBottom: 20, 
     padding: 15, 
     borderRadius: 20, 
     borderLeftWidth: 5, 

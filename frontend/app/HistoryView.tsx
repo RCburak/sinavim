@@ -11,19 +11,20 @@ import {
   Platform,
   Modal,
   Dimensions,
-  Alert // Alert bileşeni eklendi
+  Alert
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../src/constants/theme';
 
+// API URL'yi .env dosyasından almak en iyisidir, yoksa burayı kendi IP'nle güncelle
+const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://192.168.1.130:8000"; 
 const { width } = Dimensions.get('window');
-const API_URL = "https://sam-unsublimed-unoptimistically.ngrok-free.dev";
 
 export const HistoryView = ({ theme, onBack, userId }: any) => {
   const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // YENİ: Sekme kontrolü için state
+  // Sekme kontrolü için state
   const [activeTab, setActiveTab] = useState<'ai' | 'manual'>('ai');
   const [selectedWeek, setSelectedWeek] = useState<any>(null);
   const [modalVisible, setModalVisible] = useState(false);
@@ -42,12 +43,12 @@ export const HistoryView = ({ theme, onBack, userId }: any) => {
       setHistory(Array.isArray(data) ? data : []);
     } catch (e) {
       console.error("Geçmiş yükleme hatası:", e);
+      Alert.alert("Hata", "Geçmiş verisi yüklenemedi.");
     } finally {
       setLoading(false);
     }
   };
 
-  // YENİ: Geçmiş silme fonksiyonu
   const handleDelete = (id: number) => {
     Alert.alert(
       "Programı Sil",
@@ -65,7 +66,6 @@ export const HistoryView = ({ theme, onBack, userId }: any) => {
               });
               const data = await res.json();
               if (data.status === 'success') {
-                // Listeden silinen öğeyi çıkararak state'i güncelle
                 setHistory(prev => prev.filter(item => item.id !== id));
               } else {
                 Alert.alert("Hata", "Kayıt silinemedi.");
@@ -80,23 +80,43 @@ export const HistoryView = ({ theme, onBack, userId }: any) => {
   };
 
   const openDetails = (week: any) => {
-    setSelectedWeek(week);
+    // Program verisini güvenli parse et
+    let parsedData = [];
+    try {
+      parsedData = typeof week.program_data === 'string' 
+        ? JSON.parse(week.program_data) 
+        : week.program_data;
+    } catch (e) {
+      parsedData = [];
+    }
+
+    setSelectedWeek({ ...week, program_data: parsedData });
     setModalVisible(true);
   };
 
-  const getTotalQuestions = (progData: any[]) => {
-    return progData?.reduce((total, item) => total + (parseInt(item.questions) || 0), 0) || 0;
+  // Güvenli toplam soru hesaplama
+  const getTotalQuestions = (progData: any) => {
+    if (!progData) return 0;
+    try {
+      const data = typeof progData === 'string' ? JSON.parse(progData) : progData;
+      return Array.isArray(data) 
+        ? data.reduce((total: number, item: any) => total + (parseInt(item.questions) || 0), 0) 
+        : 0;
+    } catch (e) {
+      return 0;
+    }
   };
 
-  // YENİ: Aktif sekmeye göre listeyi filtreleme
+  // Aktif sekmeye göre listeyi filtreleme
   const filteredHistory = history.filter(item => 
-    activeTab === 'ai' ? item.program_type === 'ai' : item.program_type === 'manual'
+    activeTab === 'ai' ? item.program_type === 'ai' : item.program_type !== 'ai' // 'manual' veya null olabilir
   );
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       <StatusBar barStyle={theme.background === '#121212' ? "light-content" : "dark-content"} />
       
+      {/* HEADER */}
       <View style={[styles.header, { backgroundColor: theme.primary }]}>
         <TouchableOpacity onPress={onBack} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
@@ -104,7 +124,7 @@ export const HistoryView = ({ theme, onBack, userId }: any) => {
         <Text style={styles.headerTitle}>Başarı Geçmişim</Text>
       </View>
 
-      {/* --- YENİ SEKMELER --- */}
+      {/* SEKMELER */}
       <View style={[styles.tabBar, { backgroundColor: theme.surface }]}>
         <TouchableOpacity 
           onPress={() => setActiveTab('ai')}
@@ -149,7 +169,7 @@ export const HistoryView = ({ theme, onBack, userId }: any) => {
                     </Text>
                   </View>
                   
-                  {/* --- ROZET VE SİLME BUTONU GRUBU --- */}
+                  {/* ROZET VE SİLME BUTONU */}
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     <View style={[styles.rateBadge, { backgroundColor: theme.primary + '20', marginRight: 10 }]}>
                       <Text style={[styles.rateText, { color: theme.primary }]}>%{item.completion_rate}</Text>
@@ -173,7 +193,7 @@ export const HistoryView = ({ theme, onBack, userId }: any) => {
                 </View>
 
                 <View style={[styles.progressTrack, { backgroundColor: theme.overlay }]}>
-                  <View style={[styles.progressFill, { width: `${item.completion_rate}%`, backgroundColor: theme.primary }]} />
+                  <View style={[styles.progressFill, { width: `${Math.min(item.completion_rate, 100)}%`, backgroundColor: theme.primary }]} />
                 </View>
                 
                 <View style={styles.cardFooter}>
@@ -195,7 +215,7 @@ export const HistoryView = ({ theme, onBack, userId }: any) => {
         </View>
       )}
 
-      {/* --- HAFTALIK DETAY MODALI --- */}
+      {/* HAFTALIK DETAY MODALI */}
       <Modal
         animationType="slide"
         transparent={true}
@@ -260,7 +280,8 @@ const styles = StyleSheet.create({
   },
   backBtn: { marginRight: 15 },
   headerTitle: { color: '#fff', fontSize: 20, fontWeight: 'bold' },
-  // YENİ: Sekme stilleri
+  
+  // Sekme stilleri
   tabBar: { flexDirection: 'row', height: 50, elevation: 2, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 5 },
   tabItem: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   tabText: { fontSize: 14 },
@@ -286,6 +307,8 @@ const styles = StyleSheet.create({
   cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   infoText: { fontSize: 12, fontStyle: 'italic' },
   emptyText: { marginTop: 15, fontSize: 16, textAlign: 'center' },
+  
+  // Modal Stilleri
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
   modalContent: { borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 24, height: '75%' },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 25 },
