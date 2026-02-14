@@ -9,13 +9,7 @@ logger = logging.getLogger(__name__)
 COLLECTION_EXAM_RESULTS = "exam_results"
 
 
-def _get_groq_client():
-    import os
-    from groq import Groq
-    api_key = os.getenv("GROQ_API_KEY")
-    if not api_key:
-        raise ValueError("GROQ_API_KEY ortam degiskeni tanimli degil")
-    return Groq(api_key=api_key)
+
 
 
 def _doc_to_dict(doc) -> dict:
@@ -74,33 +68,8 @@ def delete_analiz(analiz_id: str) -> tuple[bool, str | None]:
 
 
 def get_ai_yorum(user_id: str) -> str:
-    """AI ile deneme yorumu üretir."""
-    try:
-        db = get_firestore()
-        snap = (
-            db.collection(COLLECTION_EXAM_RESULTS)
-            .where("user_id", "==", user_id)
-            .order_by("date", direction="DESCENDING")
-            .limit(5)
-            .get()
-        )
-        data = [d.to_dict() for d in snap]
-        if not data:
-            return "Veri yok"
-        summary = ", ".join(
-            f"{d.get('lesson_name', '')}: {d.get('net', '')}" for d in data
-        )
-        client = _get_groq_client()
-        completion = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
-            messages=[
-                {"role": "system", "content": f"Öğrenci koçu olarak yorumla: {summary}"}
-            ],
-        )
-        return completion.choices[0].message.content or "Yorum üretilemedi."
-    except Exception as e:
-        logger.exception("AI yorum hatasi")
-        return "Yorum oluşturulurken hata oluştu."
+    """AI ile deneme yorumu üretir (DEVRE DISI)."""
+    return "Yapay zeka yorum özelliği şu anda devre dışıdır."
 
 
 class AnalizService:
