@@ -12,13 +12,11 @@ import {
 } from "firebase/auth";
 import { Platform } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
+import { API_URL } from '../config/api';
 
 WebBrowser.maybeCompleteAuthSession();
 
 const googleProvider = new GoogleAuthProvider();
-
-// .env dosyasındaki API adresini alıyoruz
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 export const authService = {
   // 1. Kayıt Olma

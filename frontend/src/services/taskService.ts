@@ -1,5 +1,4 @@
-// frontend/src/services/taskService.ts
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
+import { API_URL } from '../config/api';
 
 export const taskService = {
   // Öğrencinin ödevlerini getir

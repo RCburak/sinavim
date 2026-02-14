@@ -10,6 +10,7 @@ backend/venv/
 backend/__pycache__/
 backend/*.pyc
 backend/sinavim.db
+backend/serviceAccountKey.json
 backend/.pytest_cache/
 backend/.vscode/
 venv/
@@ -53,3 +54,4 @@ Thumbs.db
 
 expo-env.d.ts
 # @end expo-cli
+backend/firebase-credentials.json

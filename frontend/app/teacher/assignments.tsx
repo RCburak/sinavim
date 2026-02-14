@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert,
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../src/constants/theme';
+import { API_URL } from '../../src/config/api';
 
 interface Student {
   id: string;
@@ -40,7 +41,7 @@ export default function AssignmentBuilder() {
 
   const fetchStudents = async () => {
     try {
-      const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/teacher/students/${TEACHER_INSTITUTION_ID}`);
+      const response = await fetch(`${API_URL}/teacher/students/${TEACHER_INSTITUTION_ID}`);
       const data = await response.json();
       if(Array.isArray(data)) setStudents(data);
     } catch (e) { console.error(e); }
@@ -71,7 +72,7 @@ export default function AssignmentBuilder() {
     if (programList.length === 0) { Alert.alert("Hata", "Program listesi boş."); return; }
 
     try {
-      const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/teacher/assign-program`, {
+      const response = await fetch(`${API_URL}/teacher/assign-program`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({

@@ -14,10 +14,8 @@ import {
   Alert
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS } from '../src/constants/theme';
+import { API_URL, API_HEADERS } from '../src/config/api';
 
-// API URL'yi .env dosyasından almak en iyisidir, yoksa burayı kendi IP'nle güncelle
-const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://192.168.1.130:8000"; 
 const { width } = Dimensions.get('window');
 
 export const HistoryView = ({ theme, onBack, userId }: any) => {
@@ -37,7 +35,7 @@ export const HistoryView = ({ theme, onBack, userId }: any) => {
     setLoading(true);
     try {
       const response = await fetch(`${API_URL}/get-history/${userId}`, {
-        headers: { 'ngrok-skip-browser-warning': 'true' }
+        headers: API_HEADERS as HeadersInit,
       });
       const data = await response.json();
       setHistory(Array.isArray(data) ? data : []);
@@ -62,7 +60,7 @@ export const HistoryView = ({ theme, onBack, userId }: any) => {
             try {
               const res = await fetch(`${API_URL}/delete-history/${id}`, {
                 method: 'DELETE',
-                headers: { 'ngrok-skip-browser-warning': 'true' }
+                headers: API_HEADERS as HeadersInit,
               });
               const data = await res.json();
               if (data.status === 'success') {

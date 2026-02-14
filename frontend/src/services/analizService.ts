@@ -1,10 +1,6 @@
-const API_URL = "https://sam-unsublimed-unoptimistically.ngrok-free.dev";
+import { API_URL, API_HEADERS } from '../config/api';
 
-// Ngrok ve Browser engellerini aşmak için profesyonel header yapısı
-const defaultHeaders = {
-  'Content-Type': 'application/json',
-  'ngrok-skip-browser-warning': 'true' 
-};
+const defaultHeaders = API_HEADERS;
 
 export const analizService = {
   // 1. Kullanıcıya özel analizleri çeker

@@ -6,7 +6,7 @@ import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage'; // EKLENDİ
 
-const API_URL = "https://sam-unsublimed-unoptimistically.ngrok-free.dev";
+import { API_URL, API_HEADERS } from '../config/api';
 
 export const useProfile = (initialName: string) => {
   const [stats, setStats] = useState({ total_hours: 0, total_tasks: 0 });
@@ -45,7 +45,7 @@ export const useProfile = (initialName: string) => {
     setLoading(true);
     try {
       const response = await fetch(`${API_URL}/user-stats/${user.uid}`, {
-        headers: { 'ngrok-skip-browser-warning': 'true' }
+        headers: API_HEADERS as HeadersInit,
       });
       const data = await response.json();
       setStats(data);
@@ -102,7 +102,7 @@ export const useProfile = (initialName: string) => {
       await updateProfile(user, { displayName: newName });
       await fetch(`${API_URL}/update-profile`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: API_HEADERS as HeadersInit,
         body: JSON.stringify({ user_id: user.uid, name: newName })
       });
       Alert.alert("Başarılı", "Profil güncellendi.");

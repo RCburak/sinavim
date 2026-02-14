@@ -12,6 +12,7 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../src/constants/theme';
+import { API_URL } from '../../src/config/api';
 
 // Tip Tanımlamaları
 interface Student {
@@ -48,7 +49,6 @@ export default function TeacherDashboard() {
 
   const fetchStudents = async () => {
     try {
-      const API_URL = process.env.EXPO_PUBLIC_API_URL;
       const response = await fetch(`${API_URL}/teacher/students/${TEACHER_INSTITUTION_ID}`);
       const data = await response.json();
       if (Array.isArray(data)) setStudents(data);
@@ -65,7 +65,6 @@ export default function TeacherDashboard() {
     setModalVisible(true);
     setLoadingDetail(true);
     try {
-      const API_URL = process.env.EXPO_PUBLIC_API_URL;
       const response = await fetch(`${API_URL}/analizler/${student.id}`);
       const data = await response.json();
       setStudentAnaliz(Array.isArray(data) ? data : []);

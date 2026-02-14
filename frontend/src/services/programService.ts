@@ -1,14 +1,11 @@
-const API_URL = 'https://sam-unsublimed-unoptimistically.ngrok-free.dev';
+import { API_URL, API_HEADERS } from '../config/api';
 
 export const programService = {
   generateProgram: async (goal: string, hours: number) => {
     try {
       const response = await fetch(`${API_URL}/generate-program`, {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json', 
-          'ngrok-skip-browser-warning': 'true' 
-        },
+        headers: API_HEADERS as HeadersInit,
         body: JSON.stringify({ goal, hours }),
       });
 

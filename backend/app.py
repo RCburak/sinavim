@@ -1,44 +1,56 @@
+"""RC Sınavım Backend - Ana uygulama (Firestore)."""
+import os
+import logging
 from flask import Flask
 from flask_cors import CORS
-from routes import setup_routes
-from database import init_db
-import logging
 
-# Loglama sistemini kuruyoruz (Hataları terminalde daha net görmek için)
+from config import config_by_name
+from firebase_db import initialize_firebase
+from routes import register_blueprints
+from errors import register_error_handlers
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def create_app():
+
+def create_app(config_name: str | None = None) -> Flask:
+    """Uygulama fabrikası."""
+    if config_name is None:
+        config_name = os.getenv("FLASK_ENV", "development")
+
     app = Flask(__name__)
-    
-    # CORS: Geliştirme aşamasında ngrok ve Expo Go için en esnek ayar
-    CORS(app, resources={r"/*": {
-        "origins": "*",
-        "allow_headers": ["Content-Type", "ngrok-skip-browser-warning"],
-        "methods": ["GET", "POST", "DELETE", "OPTIONS"]
-    }})
+    config = config_by_name[config_name]
+    app.config.from_object(config)
 
-    # Veritabanı tablolarını kontrol et ve gerekirse oluştur
+    CORS(
+        app,
+        resources={r"/*": {
+            "origins": "*",
+            "allow_headers": config.CORS_HEADERS,
+            "methods": config.CORS_METHODS,
+        }},
+    )
+
     try:
-        init_db()
-        logger.info("✅ Veritabanı başarıyla bağlandı.")
+        initialize_firebase()
+        logger.info("Firebase (Firestore) basariyla baglandi.")
     except Exception as e:
-        logger.error(f"❌ Veritabanı başlatma hatası: {e}")
+        logger.error("Firebase baslatma hatasi: %s", e)
+        raise
 
-    # Rotaları uygulamaya dahil et
-    setup_routes(app)
-    
+    register_blueprints(app)
+    register_error_handlers(app)
     return app
+
 
 app = create_app()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     print("""
-    🚀 RC Sınavım Backend Yayında!
+    RC Sinavim Backend (Firestore)
     ------------------------------
     Port: 8000
-    Mod: Debug (Açık)
     ------------------------------
     """)
-    # host='0.0.0.0' sayesinde yerel ağdaki cihazlar ve ngrok erişebilir
-    app.run(debug=True, host='0.0.0.0', port=8000)
+    app.run(debug=True, host="0.0.0.0", port=8000)
