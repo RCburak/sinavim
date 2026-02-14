@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { 
-  View, 
-  ScrollView, 
-  Text, 
-  TouchableOpacity, 
-  SafeAreaView, 
-  StyleSheet, 
+import {
+  View,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  SafeAreaView,
+  StyleSheet,
   StatusBar,
   Dimensions,
   Platform,
@@ -13,18 +13,17 @@ import {
   TextInput,
   KeyboardAvoidingView
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { DayFolder } from './DayFolder';
 import { COLORS, GUNLER } from '../constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 
 const { width, height } = Dimensions.get('window');
 
-// isEditMode, onAddTask ve onFinalize propları Index.tsx'den geliyor
 export const ProgramView = ({ tasks, toggleTask, updateQuestions, onBack, onAddTask, onFinalize, theme = COLORS.light, isEditMode = false }: any) => {
   const [selectedDay, setSelectedDay] = useState(GUNLER[0]);
   const [modalVisible, setModalVisible] = useState(false);
-  
-  // Form State'leri
+
   const [taskName, setTaskName] = useState('');
   const [duration, setDuration] = useState('1 Saat');
   const [questions, setQuestions] = useState('');
@@ -33,9 +32,11 @@ export const ProgramView = ({ tasks, toggleTask, updateQuestions, onBack, onAddT
   const completedTasks = tasks.filter((t: any) => t.completed).length;
   const weeklyProgress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
+  const isDark = theme.background === '#0F0F1A' || theme.background === '#121212';
+
   const handleSaveTask = () => {
     if (!taskName) return;
-    
+
     const newTask = {
       gun: selectedDay,
       task: taskName,
@@ -44,7 +45,7 @@ export const ProgramView = ({ tasks, toggleTask, updateQuestions, onBack, onAddT
       completed: false
     };
 
-    onAddTask(newTask); // Index.tsx'e veriyi gönderir (Sadece yerel state güncellenir)
+    onAddTask(newTask);
     setTaskName('');
     setQuestions('');
     setModalVisible(false);
@@ -52,35 +53,41 @@ export const ProgramView = ({ tasks, toggleTask, updateQuestions, onBack, onAddT
 
   return (
     <SafeAreaView style={[styles.fullScreen, { backgroundColor: theme.background }]}>
-      <StatusBar barStyle={theme.background === '#121212' ? "light-content" : "dark-content"} />
-      
-      {/* Header Kısmı */}
-      <View style={[styles.header, { backgroundColor: theme.primary }]}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
+
+      {/* Header */}
+      <LinearGradient
+        colors={isDark ? ['#1A1A2E', '#16213E'] : ['#6C3CE1', '#4A1DB5']}
+        style={styles.header}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
         <TouchableOpacity onPress={onBack} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={28} color="#fff" />
+          <Ionicons name="chevron-back" size={26} color="#fff" />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={styles.headerTitle}>{isEditMode ? "Programımı Tasarla" : "Çalışma Masam"}</Text>
           <Text style={styles.headerSubTitle}>{isEditMode ? "Kendi haftalık planını oluştur" : "Bugün ne yapıyoruz?"}</Text>
         </View>
-      </View>
+      </LinearGradient>
 
-      {/* Gün Tabları */}
+      {/* Gün Tabları - Pill Style */}
       <View style={[styles.tabContainer, { backgroundColor: theme.surface }]}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabScroll}>
           {GUNLER.map((gun) => (
-            <TouchableOpacity 
-              key={gun} 
+            <TouchableOpacity
+              key={gun}
               onPress={() => setSelectedDay(gun)}
               style={[
-                styles.tabItem, 
-                selectedDay === gun && { borderBottomColor: theme.primary, borderBottomWidth: 3 }
+                styles.tabPill,
+                selectedDay === gun && { backgroundColor: theme.primary }
               ]}
+              activeOpacity={0.7}
             >
               <Text style={[
-                styles.tabText, 
-                { color: selectedDay === gun ? theme.primary : theme.textSecondary },
-                selectedDay === gun && { fontWeight: 'bold' }
+                styles.tabText,
+                { color: selectedDay === gun ? '#fff' : theme.textSecondary },
+                selectedDay === gun && { fontWeight: '700' }
               ]}>
                 {gun.substring(0, 3)}
               </Text>
@@ -91,7 +98,7 @@ export const ProgramView = ({ tasks, toggleTask, updateQuestions, onBack, onAddT
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {/* İstatistik Kartı */}
-        <View style={[styles.statsCard, { backgroundColor: theme.surface }]}>
+        <View style={[styles.statsCard, { backgroundColor: theme.surface }, theme.cardShadow]}>
           <View style={styles.statsInfo}>
             <View>
               <Text style={[styles.statsTitle, { color: theme.text }]}>Haftalık Durum</Text>
@@ -103,6 +110,10 @@ export const ProgramView = ({ tasks, toggleTask, updateQuestions, onBack, onAddT
               <Text style={[styles.progressText, { color: theme.primary }]}>%{weeklyProgress}</Text>
             </View>
           </View>
+          {/* Mini progress bar */}
+          <View style={[styles.miniProgressTrack, { backgroundColor: theme.primary + '15' }]}>
+            <View style={[styles.miniProgressFill, { width: `${weeklyProgress}%`, backgroundColor: theme.primary }]} />
+          </View>
         </View>
 
         {/* Görev Listesi */}
@@ -112,63 +123,71 @@ export const ProgramView = ({ tasks, toggleTask, updateQuestions, onBack, onAddT
             .map((t: any, idx: number) => ({ ...t, originalIndex: idx }))
             .filter((t: any) => t.gun.toLowerCase() === selectedDay.toLowerCase())
             .map((task: any) => (
-              <DayFolder 
-                key={task.originalIndex} 
-                day={selectedDay} 
-                tasks={[task]} 
+              <DayFolder
+                key={task.originalIndex}
+                day={selectedDay}
+                tasks={[task]}
                 toggleTask={toggleTask}
                 updateQuestions={updateQuestions}
                 theme={theme}
               />
             ))}
-          
+
           {tasks.filter((t: any) => t.gun.toLowerCase() === selectedDay.toLowerCase()).length === 0 && (
-            <View style={styles.emptyState}>
-              <Ionicons name="add-circle-outline" size={50} color={theme.textSecondary} />
-              <Text style={[styles.emptyText, { color: theme.textSecondary }]}>Bu güne henüz ders eklemedin. Aşağıdaki butondan ekleyebilirsin.</Text>
+            <View style={[styles.emptyState, { backgroundColor: theme.surface }, theme.cardShadow]}>
+              <Ionicons name="add-circle-outline" size={48} color={theme.textSecondary} />
+              <Text style={[styles.emptyText, { color: theme.textSecondary }]}>Bu güne henüz ders eklemedin.</Text>
             </View>
           )}
         </View>
 
-        {/* --- DÜZELTİLEN BÖLÜM: SADECE PAZAR GÜNÜ GÖRÜNEN BUTON --- */}
         {isEditMode && tasks.length > 0 && selectedDay === 'Pazar' && (
-          <TouchableOpacity 
-            style={[styles.finalizeBtn, { backgroundColor: '#27ae60' }]} 
+          <TouchableOpacity
+            style={styles.finalizeBtn}
             onPress={onFinalize}
+            activeOpacity={0.8}
           >
-            <Ionicons name="checkmark-done-circle-outline" size={24} color="#fff" />
-            <Text style={styles.finalizeBtnText}>Haftayı Onayla ve Bitir</Text>
+            <LinearGradient
+              colors={['#10B981', '#059669']}
+              style={styles.finalizeBtnGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+            >
+              <Ionicons name="checkmark-done-circle-outline" size={24} color="#fff" />
+              <Text style={styles.finalizeBtnText}>Haftayı Onayla ve Bitir</Text>
+            </LinearGradient>
           </TouchableOpacity>
         )}
       </ScrollView>
 
-      {/* --- MANUEL EKLEME MODALI --- */}
+      {/* Modal */}
       <Modal visible={modalVisible} animationType="slide" transparent>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: theme.surface }]}>
+            <View style={styles.modalHandle} />
             <Text style={[styles.modalTitle, { color: theme.text }]}>{selectedDay} İçin Ders Ekle</Text>
-            
-            <TextInput 
-              style={[styles.modalInput, { color: theme.text, borderColor: theme.border }]}
+
+            <TextInput
+              style={[styles.modalInput, { color: theme.text, borderColor: theme.border, backgroundColor: theme.background }]}
               placeholder="Ders veya Konu Adı"
-              placeholderTextColor="#999"
+              placeholderTextColor={theme.textSecondary}
               value={taskName}
               onChangeText={setTaskName}
             />
 
             <View style={styles.modalRow}>
-              <TextInput 
-                style={[styles.modalInput, { flex: 1, marginRight: 10, color: theme.text, borderColor: theme.border }]}
+              <TextInput
+                style={[styles.modalInput, { flex: 1, marginRight: 10, color: theme.text, borderColor: theme.border, backgroundColor: theme.background }]}
                 placeholder="Süre (Örn: 2 Saat)"
-                placeholderTextColor="#999"
+                placeholderTextColor={theme.textSecondary}
                 value={duration}
                 onChangeText={setDuration}
               />
-              <TextInput 
-                style={[styles.modalInput, { flex: 1, color: theme.text, borderColor: theme.border }]}
+              <TextInput
+                style={[styles.modalInput, { flex: 1, color: theme.text, borderColor: theme.border, backgroundColor: theme.background }]}
                 placeholder="Soru Hedefi"
                 keyboardType="numeric"
-                placeholderTextColor="#999"
+                placeholderTextColor={theme.textSecondary}
                 value={questions}
                 onChangeText={setQuestions}
               />
@@ -176,23 +195,24 @@ export const ProgramView = ({ tasks, toggleTask, updateQuestions, onBack, onAddT
 
             <View style={styles.modalButtons}>
               <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.cancelBtn}>
-                <Text style={{ color: theme.textSecondary }}>Vazgeç</Text>
+                <Text style={{ color: theme.textSecondary, fontWeight: '600' }}>Vazgeç</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={handleSaveTask} style={[styles.saveBtn, { backgroundColor: theme.primary }]}>
-                <Text style={{ color: '#fff', fontWeight: 'bold' }}>Programa Ekle</Text>
+                <Text style={{ color: '#fff', fontWeight: '700' }}>Programa Ekle</Text>
               </TouchableOpacity>
             </View>
           </View>
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* --- YÜZEN EKLEME BUTONU (FAB) --- */}
+      {/* FAB */}
       {isEditMode && (
-        <TouchableOpacity 
-          style={[styles.fab, { backgroundColor: theme.primary }]} 
+        <TouchableOpacity
+          style={[styles.fab, { backgroundColor: theme.primary }]}
           onPress={() => setModalVisible(true)}
+          activeOpacity={0.85}
         >
-          <Ionicons name="add" size={32} color="#fff" />
+          <Ionicons name="add" size={30} color="#fff" />
         </TouchableOpacity>
       )}
     </SafeAreaView>
@@ -201,56 +221,68 @@ export const ProgramView = ({ tasks, toggleTask, updateQuestions, onBack, onAddT
 
 const styles = StyleSheet.create({
   fullScreen: { flex: 1 },
-  header: { 
-    paddingHorizontal: 20, 
-    paddingBottom: 25, 
-    paddingTop: Platform.OS === 'ios' ? 10 : 40, 
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
+  header: {
+    paddingHorizontal: 20,
+    paddingBottom: 25,
+    paddingTop: Platform.OS === 'ios' ? 10 : 40,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
     flexDirection: 'row',
     alignItems: 'center'
   },
-  backBtn: { marginRight: 15 },
-  headerTitle: { color: '#fff', fontSize: 20, fontWeight: 'bold' },
-  headerSubTitle: { color: 'rgba(255,255,255,0.9)', fontSize: 12, marginTop: 2 },
-  tabContainer: { height: 60, elevation: 2 },
-  tabScroll: { paddingHorizontal: 15, alignItems: 'center' },
-  tabItem: { paddingHorizontal: 20, height: '100%', justifyContent: 'center' },
-  tabText: { fontSize: 14 },
+  backBtn: { marginRight: 15, width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.12)', justifyContent: 'center', alignItems: 'center' },
+  headerTitle: { color: '#fff', fontSize: 20, fontWeight: '800' },
+  headerSubTitle: { color: 'rgba(255,255,255,0.7)', fontSize: 12, marginTop: 2, fontWeight: '500' },
+
+  tabContainer: { paddingVertical: 12 },
+  tabScroll: { paddingHorizontal: 15, alignItems: 'center', gap: 8 },
+  tabPill: {
+    paddingHorizontal: 18, paddingVertical: 8, borderRadius: 20,
+  },
+  tabText: { fontSize: 13 },
+
   scrollView: { flex: 1 },
   scrollContent: { padding: 20, paddingBottom: 120 },
-  statsCard: { padding: 15, borderRadius: 20, marginBottom: 20, elevation: 3 },
+
+  statsCard: { padding: 18, borderRadius: 20, marginBottom: 20 },
   statsInfo: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  statsTitle: { fontSize: 16, fontWeight: 'bold' },
-  statsSub: { fontSize: 11, marginTop: 2 },
-  progressCircle: { width: 50, height: 50, borderRadius: 25, borderWidth: 3, justifyContent: 'center', alignItems: 'center' },
-  progressText: { fontWeight: 'bold', fontSize: 12 },
+  statsTitle: { fontSize: 16, fontWeight: '700' },
+  statsSub: { fontSize: 11, marginTop: 3, fontWeight: '500' },
+  progressCircle: { width: 50, height: 50, borderRadius: 25, borderWidth: 2.5, justifyContent: 'center', alignItems: 'center' },
+  progressText: { fontWeight: '800', fontSize: 12 },
+  miniProgressTrack: { height: 4, borderRadius: 2, marginTop: 14, overflow: 'hidden' },
+  miniProgressFill: { height: '100%', borderRadius: 2 },
+
   dayView: { marginTop: 5 },
-  dayTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 15, marginLeft: 5 },
-  emptyState: { alignItems: 'center', marginTop: 40, paddingHorizontal: 40 },
-  emptyText: { textAlign: 'center', marginTop: 15, fontSize: 13, lineHeight: 18 },
-  fab: { position: 'absolute', bottom: 30, right: 30, width: 60, height: 60, borderRadius: 30, elevation: 8, justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 5 },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalContent: { borderTopLeftRadius: 30, borderTopRightRadius: 30, padding: 25, paddingBottom: 40 },
-  modalTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 20 },
-  modalInput: { height: 50, borderWidth: 1, borderRadius: 12, paddingHorizontal: 15, marginBottom: 15 },
-  modalRow: { flexDirection: 'row' },
-  modalButtons: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 10 },
-  cancelBtn: { padding: 15, marginRight: 10 },
-  saveBtn: { paddingVertical: 15, paddingHorizontal: 25, borderRadius: 12 },
-  finalizeBtn: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    justifyContent: 'center', 
-    marginTop: 20, 
-    padding: 18, 
-    borderRadius: 15, 
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 5
+  dayTitle: { fontSize: 18, fontWeight: '800', marginBottom: 15, marginLeft: 5 },
+  emptyState: { alignItems: 'center', paddingVertical: 40, paddingHorizontal: 40, borderRadius: 20 },
+  emptyText: { textAlign: 'center', marginTop: 12, fontSize: 14, lineHeight: 20, fontWeight: '500' },
+
+  fab: {
+    position: 'absolute', bottom: 30, right: 30, width: 58, height: 58,
+    borderRadius: 20, justifyContent: 'center', alignItems: 'center',
+    shadowColor: '#6C3CE1', shadowOpacity: 0.3, shadowRadius: 12, shadowOffset: { width: 0, height: 6 },
+    elevation: 8,
   },
-  finalizeBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold', marginLeft: 10 }
+
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  modalContent: { borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 25, paddingBottom: 40 },
+  modalHandle: { width: 40, height: 4, backgroundColor: '#ddd', borderRadius: 2, alignSelf: 'center', marginBottom: 20 },
+  modalTitle: { fontSize: 20, fontWeight: '800', marginBottom: 20 },
+  modalInput: { height: 52, borderWidth: 1, borderRadius: 14, paddingHorizontal: 16, marginBottom: 14, fontSize: 15 },
+  modalRow: { flexDirection: 'row' },
+  modalButtons: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 10, gap: 10 },
+  cancelBtn: { padding: 15 },
+  saveBtn: { paddingVertical: 15, paddingHorizontal: 25, borderRadius: 14 },
+
+  finalizeBtn: { marginTop: 20, borderRadius: 16, overflow: 'hidden' },
+  finalizeBtnGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 18,
+  },
+  finalizeBtnText: { color: '#fff', fontSize: 16, fontWeight: '700', marginLeft: 10 }
 });
 
 export default ProgramView;

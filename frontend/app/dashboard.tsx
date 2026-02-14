@@ -1,36 +1,39 @@
 import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  StatusBar, 
-  TouchableOpacity, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  StatusBar,
+  TouchableOpacity,
   Dimensions,
   Image,
   Platform,
   RefreshControl
 } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
+import { LinearGradient } from 'expo-linear-gradient';
 import { MenuCard } from '../src/components/Dashboard/MenuCard';
 import { Ionicons } from '@expo/vector-icons';
+
+const { width } = Dimensions.get('window');
 
 // --- ALT NAVİGASYON ÇUBUĞU ---
 const BottomTabBar = ({ setView, theme }: any) => {
   return (
     <View style={[styles.bottomBar, { backgroundColor: theme.surface }]}>
-      {/* Anasayfa Butonu (Aktif) */}
       <TouchableOpacity style={styles.tabItem} activeOpacity={0.8}>
-        <Ionicons name="home" size={24} color={theme.primary} />
+        <View style={[styles.activeIndicator, { backgroundColor: theme.primary }]} />
+        <Ionicons name="home" size={22} color={theme.primary} />
         <Text style={[styles.tabText, { color: theme.primary, fontWeight: '700' }]}>Anasayfa</Text>
       </TouchableOpacity>
 
-      {/* Profil Butonu */}
-      <TouchableOpacity 
-        style={styles.tabItem} 
+      <TouchableOpacity
+        style={styles.tabItem}
         onPress={() => setView('profile')}
         activeOpacity={0.8}
       >
-        <Ionicons name="person-outline" size={24} color={theme.textSecondary} />
+        <View style={styles.activeIndicator} />
+        <Ionicons name="person-outline" size={22} color={theme.textSecondary} />
         <Text style={[styles.tabText, { color: theme.textSecondary }]}>Profilim</Text>
       </TouchableOpacity>
     </View>
@@ -38,21 +41,27 @@ const BottomTabBar = ({ setView, theme }: any) => {
 };
 
 const DashboardHeader = ({ username, theme }: any) => {
-  const today = new Date().toLocaleDateString('tr-TR', { 
-    month: 'long', 
-    day: 'numeric', 
-    weekday: 'long' 
+  const today = new Date().toLocaleDateString('tr-TR', {
+    month: 'long',
+    day: 'numeric',
+    weekday: 'long'
   });
 
+  const isDark = theme.background === '#0F0F1A' || theme.background === '#121212';
+
   return (
-    <View style={[styles.headerWrapper, { backgroundColor: theme.background }]}>
-      <View style={[styles.blueHeader, { backgroundColor: theme.primary }]}>
-        
-        {/* Üst Satır: Logo ve Tarih */}
+    <View style={styles.headerWrapper}>
+      <LinearGradient
+        colors={isDark ? ['#1A1A2E', '#16213E'] : ['#6C3CE1', '#4A1DB5']}
+        style={styles.blueHeader}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        {/* Üst Satır */}
         <View style={styles.topRow}>
           <View style={styles.logoContainer}>
-            <Image 
-              source={require('../assets/images/icon.png')} 
+            <Image
+              source={require('../assets/images/icon.png')}
               style={styles.actualLogo}
               resizeMode="contain"
             />
@@ -63,21 +72,21 @@ const DashboardHeader = ({ username, theme }: any) => {
               </Text>
             </View>
           </View>
-          
+
           <View style={styles.dateBadge}>
             <Ionicons name="calendar-outline" size={12} color="rgba(255,255,255,0.9)" />
             <Text style={styles.dateText}>{today}</Text>
           </View>
         </View>
 
-        {/* Alt Satır: İsim ve Mesaj */}
+        {/* Alt Satır */}
         <View style={styles.greetingRow}>
           <View style={styles.nameContainer}>
             <Text style={styles.usernameText}>{username || 'Öğrenci'} 👋</Text>
             <Text style={styles.subText}>İyi çalışmalar, hedeflerine odaklan!</Text>
           </View>
         </View>
-      </View>
+      </LinearGradient>
     </View>
   );
 };
@@ -87,85 +96,74 @@ export const DashboardView = ({ username, onLogout, setView, schedule, analiz, p
 
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
-    // Verileri yenileme işlemi
-    if(analiz && analiz.refreshAnaliz) analiz.refreshAnaliz();
+    if (analiz && analiz.refreshAnaliz) analiz.refreshAnaliz();
     setTimeout(() => setRefreshing(false), 1000);
   }, [analiz]);
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <StatusBar barStyle="light-content" backgroundColor={theme.primary} />
-      
-      <DashboardHeader 
-        username={username} 
+
+      <DashboardHeader
+        username={username}
         theme={theme}
       />
 
-      <ScrollView 
-        contentContainerStyle={styles.scrollContent} 
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />}
       >
-        
+
         <View style={styles.menuGrid}>
-          {/* 1. Kendi Planım */}
-          <MenuCard 
-            title="Kendi Planım" 
-            emoji="✍️" 
-            subText="Haftanı kendin tasarla" 
-            onPress={() => setView('manual_setup')} 
+          <MenuCard
+            title="Kendi Planım"
+            emoji="✍️"
+            subText="Haftanı kendin tasarla"
+            onPress={() => setView('manual_setup')}
             theme={theme}
           />
 
-          {/* 2. Geçmişim */}
-          <MenuCard 
-            title="Geçmişim" 
-            emoji="📚" 
-            subText="Arşivlenen programlar" 
-            onPress={() => setView('history')} 
+          <MenuCard
+            title="Geçmişim"
+            emoji="📚"
+            subText="Arşivlenen programlar"
+            onPress={() => setView('history')}
             theme={theme}
           />
 
-          {/* 3. Analizler */}
-          <MenuCard 
-            title="Analizler" 
-            emoji="📈" 
-            subText="Net takibi yap" 
+          <MenuCard
+            title="Analizler"
+            emoji="📈"
+            subText="Net takibi yap"
             onPress={() => {
               setView('analiz');
-              if(analiz && analiz.refreshAnaliz) analiz.refreshAnaliz();
-            }} 
+              if (analiz && analiz.refreshAnaliz) analiz.refreshAnaliz();
+            }}
             theme={theme}
           />
 
-          {/* 4. Pomodoro */}
-          <MenuCard 
-            title="Pomodoro" 
-            emoji="⏱️" 
-            subText={pomodoro.formatTime(pomodoro.timer)} 
-            onPress={() => setView('pomodoro')} 
+          <MenuCard
+            title="Pomodoro"
+            emoji="⏱️"
+            subText={pomodoro.formatTime(pomodoro.timer)}
+            onPress={() => setView('pomodoro')}
             theme={theme}
           />
 
-          {/* 5. Programım */}
-          <MenuCard 
-            title="Programım" 
-            emoji="📅" 
-            subText={`${schedule?.length || 0} Ders Listeleniyor`} 
-            onPress={() => setView('program')} 
+          <MenuCard
+            title="Programım"
+            emoji="📅"
+            subText={`${schedule?.length || 0} Ders Listeleniyor`}
+            onPress={() => setView('program')}
             theme={theme}
           />
-
-          {/* AI PROGRAMIM KARTI SİLİNDİ */}
-
         </View>
-        
-        {/* Alt boşluk */}
+
         <View style={{ height: 80 }} />
 
       </ScrollView>
 
-      {/* Alt Navigasyon Çubuğu */}
       <BottomTabBar setView={setView} theme={theme} />
     </View>
   );
@@ -177,61 +175,40 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   headerWrapper: { zIndex: 10 },
   blueHeader: {
-    paddingTop: Platform.OS === 'android' ? 60 : 70, 
+    paddingTop: Platform.OS === 'android' ? 60 : 70,
     paddingHorizontal: 25,
     paddingBottom: 35,
-    borderBottomLeftRadius: 36,
-    borderBottomRightRadius: 36,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 15,
-    elevation: 10,
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
   },
-  
-  topRow: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'center', 
-    marginBottom: 25 
+
+  topRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 25
   },
   logoContainer: {
-    flexDirection: 'row', 
+    flexDirection: 'row',
     alignItems: 'center',
     gap: 12
   },
-  actualLogo: { 
-    width: 44, 
-    height: 44, 
+  actualLogo: {
+    width: 42,
+    height: 42,
     borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    padding: 2
+    backgroundColor: 'rgba(255,255,255,0.15)',
   },
-  
-  brandContainer: {
-    justifyContent: 'center',
-  },
-  brandText: {
-    fontSize: 24,
-    color: '#fff',
-    textShadowColor: 'rgba(0, 0, 0, 0.15)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
-  },
-  brandBold: {
-    fontWeight: '900', 
-    letterSpacing: -0.5,
-  },
-  brandLight: {
-    fontWeight: '300',
-    opacity: 0.95,
-    letterSpacing: 0.5,
-  },
+
+  brandContainer: { justifyContent: 'center' },
+  brandText: { fontSize: 22, color: '#fff' },
+  brandBold: { fontWeight: '900', letterSpacing: -0.5 },
+  brandLight: { fontWeight: '300', opacity: 0.95, letterSpacing: 0.5 },
 
   dateBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: 'rgba(255,255,255,0.12)',
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 20,
@@ -249,33 +226,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 5
   },
-  nameContainer: {
-    justifyContent: 'center'
-  },
+  nameContainer: { justifyContent: 'center' },
   usernameText: {
     color: '#fff',
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: '800',
     letterSpacing: -0.5,
     marginBottom: 4
   },
   subText: {
-    color: 'rgba(255,255,255,0.7)',
+    color: 'rgba(255,255,255,0.6)',
     fontSize: 13,
     fontWeight: '500'
   },
-  
+
   scrollContent: {
     paddingBottom: 20,
-    paddingTop: 20 
+    paddingTop: 20
   },
 
-  menuGrid: { 
-    flexDirection: 'row', 
-    flexWrap: 'wrap', 
-    padding: 20, 
+  menuGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    padding: 20,
     justifyContent: 'space-between',
-    paddingTop: 5 
+    paddingTop: 5
   },
 
   bottomBar: {
@@ -284,15 +259,14 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     flexDirection: 'row',
-    height: Platform.OS === 'ios' ? 85 : 70, 
+    height: Platform.OS === 'ios' ? 85 : 70,
     paddingBottom: Platform.OS === 'ios' ? 20 : 0,
-    elevation: 20, 
-    shadowColor: '#000', 
+    elevation: 20,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(0,0,0,0.05)',
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    borderTopWidth: 0,
     justifyContent: 'space-around',
     alignItems: 'center'
   },
@@ -301,10 +275,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     height: '100%',
-    gap: 4
+    gap: 3
+  },
+  activeIndicator: {
+    width: 20,
+    height: 3,
+    borderRadius: 2,
+    marginBottom: 4,
   },
   tabText: {
-    fontSize: 12,
-    fontWeight: '500'
+    fontSize: 11,
+    fontWeight: '600'
   }
 });

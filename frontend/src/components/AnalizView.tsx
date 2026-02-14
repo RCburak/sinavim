@@ -1,41 +1,44 @@
 import React, { useState, useMemo } from 'react';
-import { 
-  View, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  StyleSheet, 
-  Keyboard, 
-  TouchableWithoutFeedback, 
-  KeyboardAvoidingView, 
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Keyboard,
+  TouchableWithoutFeedback,
+  KeyboardAvoidingView,
   Platform,
   ScrollView,
   StatusBar,
   Dimensions,
-  Alert 
+  Alert
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context'; 
+import { LinearGradient } from 'expo-linear-gradient';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS } from '../constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { LineChart } from "react-native-chart-kit";
 
 const { width } = Dimensions.get('window');
 
-export const AnalizView = ({ 
-  analizler = [], 
-  onAdd, 
-  onSil, 
-  onBack, 
-  theme = COLORS.light 
+export const AnalizView = ({
+  analizler = [],
+  onAdd,
+  onSil,
+  onBack,
+  theme = COLORS.light
 }: any) => {
   const [denemeAd, setDenemeAd] = useState('');
   const [denemeNet, setDenemeNet] = useState('');
   const [tooltip, setTooltip] = useState({ visible: false, value: 0, label: '' });
 
+  const isDark = theme.background === '#0F0F1A' || theme.background === '#121212';
+
   const handleAdd = () => {
     if (!denemeAd || !denemeNet) {
-        Alert.alert("Eksik Bilgi", "Lütfen deneme adı ve net değerini giriniz.");
-        return;
+      Alert.alert("Eksik Bilgi", "Lütfen deneme adı ve net değerini giriniz.");
+      return;
     }
     onAdd(denemeAd, denemeNet);
     setDenemeAd('');
@@ -50,17 +53,15 @@ export const AnalizView = ({
     ]);
   };
 
-  // --- VERİ HAZIRLAMA VE TARİH DÜZELTME ---
   const islenmisVeriler = useMemo(() => {
     if (!analizler) return [];
     return analizler.map((item: any) => ({
       ...item,
-      ad: item.ad || item.lesson_name || "-", 
-      tarih: item.tarih || item.date || new Date().toISOString() 
+      ad: item.ad || item.lesson_name || "-",
+      tarih: item.tarih || item.date || new Date().toISOString()
     }));
   }, [analizler]);
 
-  // --- GRAFİK VERİSİ ---
   const prepareChartData = () => {
     if (islenmisVeriler.length < 2) return null;
     const lastData = [...islenmisVeriler].slice(0, 6).reverse();
@@ -80,13 +81,12 @@ export const AnalizView = ({
 
   const chartData = prepareChartData();
 
-  // --- TARİH FORMATLAYICI ---
   const formatTarih = (tarihString: string) => {
     try {
       const date = new Date(tarihString);
       return date.toLocaleDateString('tr-TR', {
         day: 'numeric',
-        month: 'long', 
+        month: 'long',
         year: 'numeric'
       });
     } catch (e) {
@@ -97,34 +97,39 @@ export const AnalizView = ({
   return (
     <TouchableWithoutFeedback onPress={() => {
       Keyboard.dismiss();
-      setTooltip({ ...tooltip, visible: false }); 
+      setTooltip({ ...tooltip, visible: false });
     }}>
       <View style={{ flex: 1, backgroundColor: theme.background }}>
         <StatusBar barStyle="light-content" />
-        <KeyboardAvoidingView 
+        <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={{ flex: 1 }}
         >
           <SafeAreaView style={{ flex: 1 }}>
-            
+
             {/* Header */}
-            <View style={[styles.header, { backgroundColor: COLORS.warning }]}>
+            <LinearGradient
+              colors={isDark ? ['#92400E', '#78350F'] : ['#F59E0B', '#D97706']}
+              style={styles.header}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
               <TouchableOpacity onPress={onBack} style={styles.backBtn}>
-                <Ionicons name="arrow-back" size={24} color="#FFF" />
+                <Ionicons name="arrow-back" size={22} color="#FFF" />
               </TouchableOpacity>
               <Text style={styles.headerTitle}>Deneme Analizi</Text>
-            </View>
+            </LinearGradient>
 
             <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 20 }} showsVerticalScrollIndicator={false}>
-              
-              {/* GRAFİK ALANI */}
+
+              {/* Grafik */}
               <View style={styles.chartWrapper}>
                 {chartData ? (
                   <>
                     <View style={styles.chartHeader}>
                       <Text style={[styles.chartTitle, { color: theme.text }]}>Net Gelişim Grafiği</Text>
                       {tooltip.visible && (
-                        <View style={[styles.tooltipContainer, { backgroundColor: COLORS.warning }]}>
+                        <View style={styles.tooltipContainer}>
                           <Text style={styles.tooltipText}>{tooltip.label}: {tooltip.value} Net</Text>
                         </View>
                       )}
@@ -152,7 +157,7 @@ export const AnalizView = ({
                         propsForDots: { r: "6", strokeWidth: "2", stroke: COLORS.warning }
                       }}
                       bezier
-                      style={styles.chartStyle}
+                      style={[styles.chartStyle, theme.cardShadow]}
                     />
                     <Text style={[styles.infoText, { color: theme.textSecondary }]}>
                       Noktalara dokunarak net ayrıntılarını gör
@@ -168,70 +173,75 @@ export const AnalizView = ({
                 )}
               </View>
 
-              {/* AI YORUM BÖLÜMÜ TAMAMEN KALDIRILDI */}
-
-              {/* Veri Giriş Formu */}
-              <View style={[styles.formCard, { backgroundColor: theme.surface }]}>
+              {/* Form */}
+              <View style={[styles.formCard, { backgroundColor: theme.surface }, theme.cardShadow]}>
                 <Text style={[styles.sectionHeader, { color: theme.text }]}>Yeni Sonuç Ekle</Text>
                 <View style={styles.inputRow}>
-                  <TextInput 
-                    style={[styles.input, { color: theme.text, borderColor: theme.border, flex: 2 }]} 
-                    placeholder="Örn: TYT-1" 
-                    value={denemeAd} 
-                    onChangeText={setDenemeAd} 
+                  <TextInput
+                    style={[styles.input, { color: theme.text, borderColor: theme.border, backgroundColor: theme.background, flex: 2 }]}
+                    placeholder="Örn: TYT-1"
+                    value={denemeAd}
+                    onChangeText={setDenemeAd}
                     placeholderTextColor={theme.textSecondary}
                   />
-                  <TextInput 
-                    style={[styles.input, { color: theme.text, borderColor: theme.border, flex: 1 }]} 
-                    placeholder="Net" 
-                    keyboardType="numeric" 
-                    value={denemeNet} 
-                    onChangeText={setDenemeNet} 
+                  <TextInput
+                    style={[styles.input, { color: theme.text, borderColor: theme.border, backgroundColor: theme.background, flex: 1 }]}
+                    placeholder="Net"
+                    keyboardType="numeric"
+                    value={denemeNet}
+                    onChangeText={setDenemeNet}
                     placeholderTextColor={theme.textSecondary}
                     onSubmitEditing={handleAdd}
                   />
                 </View>
-                <TouchableOpacity 
-                  style={[styles.btn, { backgroundColor: COLORS.warning }]} 
+                <TouchableOpacity
+                  style={styles.btn}
                   onPress={handleAdd}
+                  activeOpacity={0.8}
                 >
-                  <Text style={styles.headerTextWhite}>Kaydet</Text>
+                  <LinearGradient
+                    colors={['#F59E0B', '#D97706']}
+                    style={styles.btnGradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                  >
+                    <Text style={styles.btnText}>Kaydet</Text>
+                  </LinearGradient>
                 </TouchableOpacity>
               </View>
 
-              {/* TABLO ALANI (LİSTE) */}
+              {/* Liste */}
               <View style={styles.listContainer}>
-                <View style={{ flexDirection:'row', justifyContent:'space-between', alignItems:'center', marginBottom:10, paddingHorizontal:20 }}>
-                   <Text style={[styles.sectionHeader, { color: theme.text, marginBottom:0 }]}>Sonuç Geçmişi</Text>
-                   <Text style={{ fontSize:12, color: theme.textSecondary }}>Toplam: {islenmisVeriler.length}</Text>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, paddingHorizontal: 20 }}>
+                  <Text style={[styles.sectionHeader, { color: theme.text, marginBottom: 0 }]}>Sonuç Geçmişi</Text>
+                  <View style={[styles.countBadge, { backgroundColor: theme.primary + '15' }]}>
+                    <Text style={{ fontSize: 12, color: theme.primary, fontWeight: '700' }}>{islenmisVeriler.length}</Text>
+                  </View>
                 </View>
-                
+
                 {islenmisVeriler && islenmisVeriler.length > 0 ? (
                   islenmisVeriler.map((item: any, index: number) => (
-                    <View key={index} style={[styles.listItem, { backgroundColor: theme.surface }]}>
+                    <View key={index} style={[styles.listItem, { backgroundColor: theme.surface }, theme.cardShadow]}>
                       <View style={styles.listLeft}>
-                        {/* Net Rozeti */}
-                        <View style={[styles.netBadge, { borderColor: COLORS.warning }]}>
+                        <View style={[styles.netBadge, { backgroundColor: COLORS.warning + '15' }]}>
                           <Text style={[styles.netValue, { color: COLORS.warning }]}>{item.net}</Text>
                         </View>
-                        
-                        {/* İsim ve Tarih */}
-                        <View style={{ marginLeft: 12 }}>
+                        <View style={{ marginLeft: 14 }}>
                           <Text style={[styles.listName, { color: theme.text }]}>{item.ad}</Text>
-                          <Text style={{ fontSize: 12, color: theme.textSecondary }}>
-                            <Ionicons name="calendar-outline" size={12} color={theme.textSecondary} /> {formatTarih(item.tarih)}
-                          </Text>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                            <Ionicons name="calendar-outline" size={11} color={theme.textSecondary} />
+                            <Text style={{ fontSize: 12, color: theme.textSecondary, fontWeight: '500' }}>{formatTarih(item.tarih)}</Text>
+                          </View>
                         </View>
                       </View>
-                      
-                      {/* Silme Butonu */}
-                      <TouchableOpacity onPress={() => handleDelete(item.id)} style={{ padding: 8 }}>
-                        <Ionicons name="trash-outline" size={20} color="#FF5252" />
+
+                      <TouchableOpacity onPress={() => handleDelete(item.id)} style={styles.deleteBtn}>
+                        <Ionicons name="trash-outline" size={18} color="#EF4444" />
                       </TouchableOpacity>
                     </View>
                   ))
                 ) : (
-                  <Text style={{ textAlign: 'center', color: theme.textSecondary, marginTop: 20 }}>
+                  <Text style={{ textAlign: 'center', color: theme.textSecondary, marginTop: 20, fontWeight: '500' }}>
                     Henüz kayıt bulunmuyor.
                   </Text>
                 )}
@@ -247,86 +257,82 @@ export const AnalizView = ({
 };
 
 const styles = StyleSheet.create({
-  header: { 
-    paddingHorizontal: 20, 
-    paddingVertical: 15, 
-    flexDirection: 'row', 
+  header: {
+    paddingHorizontal: 20,
+    paddingVertical: 18,
+    flexDirection: 'row',
     alignItems: 'center',
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
-  backBtn: { padding: 5 },
-  headerTitle: { color: '#FFF', fontSize: 20, fontWeight: 'bold', marginLeft: 15 },
-  headerTextWhite: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
-  chartWrapper: { alignItems: 'center', marginTop: 15, marginBottom: 20 },
-  chartHeader: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'center', 
-    width: width - 40, 
-    marginBottom: 10 
+  backBtn: { width: 38, height: 38, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center' },
+  headerTitle: { color: '#FFF', fontSize: 20, fontWeight: '800', marginLeft: 15 },
+
+  chartWrapper: { alignItems: 'center', marginTop: 18, marginBottom: 20 },
+  chartHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: width - 40,
+    marginBottom: 10
   },
-  chartTitle: { fontSize: 14, fontWeight: 'bold' },
-  chartStyle: { borderRadius: 20, elevation: 4 },
-  
-  tooltipContainer: { 
-    paddingHorizontal: 12, 
-    paddingVertical: 6, 
-    borderRadius: 10, 
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOpacity: 0.2
+  chartTitle: { fontSize: 15, fontWeight: '700' },
+  chartStyle: { borderRadius: 20 },
+
+  tooltipContainer: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 10,
+    backgroundColor: COLORS.warning,
   },
-  tooltipText: { color: '#FFF', fontSize: 12, fontWeight: 'bold' },
-  infoText: { fontSize: 11, marginTop: 5, fontStyle: 'italic' },
+  tooltipText: { color: '#FFF', fontSize: 12, fontWeight: '700' },
+  infoText: { fontSize: 11, marginTop: 8, fontStyle: 'italic' },
 
   emptyChart: { width: width - 40, padding: 30, borderRadius: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderStyle: 'dashed' },
-  emptyText: { marginTop: 10, fontSize: 14 },
+  emptyText: { marginTop: 10, fontSize: 14, fontWeight: '500' },
 
-  formCard: { 
-    marginHorizontal: 20, 
-    marginBottom: 20, 
-    padding: 20, 
-    borderRadius: 20, 
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+  formCard: {
+    marginHorizontal: 20,
+    marginBottom: 20,
+    padding: 20,
+    borderRadius: 20,
   },
-  sectionHeader: { fontSize: 16, fontWeight: 'bold', marginBottom: 15 },
+  sectionHeader: { fontSize: 16, fontWeight: '700', marginBottom: 15 },
   inputRow: { flexDirection: 'row', gap: 10, marginBottom: 15 },
-  input: { 
-    borderWidth: 1, 
-    borderRadius: 10,
-    paddingVertical: 10, 
-    paddingHorizontal: 15,
-    fontSize: 15 
+  input: {
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    fontSize: 15,
+    fontWeight: '500',
   },
-  btn: { padding: 14, borderRadius: 12, alignItems: 'center' },
+  btn: { borderRadius: 14, overflow: 'hidden' },
+  btnGradient: { padding: 14, alignItems: 'center' },
+  btnText: { color: '#FFF', fontWeight: '800', fontSize: 16 },
 
   listContainer: { paddingBottom: 20 },
+  countBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
   listItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginHorizontal: 20,
     marginBottom: 10,
-    padding: 15,
-    borderRadius: 15,
-    elevation: 1,
+    padding: 16,
+    borderRadius: 16,
   },
   listLeft: { flexDirection: 'row', alignItems: 'center' },
-  netBadge: { 
-    width: 44, 
-    height: 44, 
-    borderRadius: 22, 
-    borderWidth: 2, 
-    justifyContent: 'center', 
-    alignItems: 'center' 
+  netBadge: {
+    width: 46,
+    height: 46,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center'
   },
-  netValue: { fontWeight: 'bold', fontSize: 14 },
-  listName: { fontWeight: 'bold', fontSize: 15, marginBottom: 4 }
+  netValue: { fontWeight: '800', fontSize: 15 },
+  listName: { fontWeight: '700', fontSize: 15, marginBottom: 4 },
+  deleteBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#FEE2E2', justifyContent: 'center', alignItems: 'center' },
 });
 
 export default AnalizView;
