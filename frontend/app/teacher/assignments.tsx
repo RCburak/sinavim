@@ -8,6 +8,12 @@ import { API_URL } from '../../src/config/api';
 interface Student {
   id: string;
   name: string;
+  class_id?: string | null;
+}
+
+interface ClassItem {
+  id: string;
+  name: string;
 }
 
 interface ProgramItem {
@@ -22,7 +28,11 @@ const GUNLER = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumart
 export default function AssignmentBuilder() {
   const router = useRouter();
   const [students, setStudents] = useState<Student[]>([]);
-  const [selectedStudent, setSelectedStudent] = useState<string>('');
+  const [classes, setClasses] = useState<ClassItem[]>([]);
+
+  // Selection States
+  const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
+  const [activeClassFilter, setActiveClassFilter] = useState<string | 'ALL'>('ALL');
 
   // Form State
   const [selectedDay, setSelectedDay] = useState('Pazartesi');
@@ -39,7 +49,7 @@ export default function AssignmentBuilder() {
         const stored = sessionStorage.getItem('teacher_data');
         if (stored) {
           const parsed = JSON.parse(stored);
-          fetchStudents(parsed.id);
+          fetchData(parsed.id);
           return;
         }
       }
@@ -47,12 +57,51 @@ export default function AssignmentBuilder() {
     router.replace('/teacher/login');
   }, []);
 
+  const fetchData = async (institutionId: string) => {
+    await Promise.all([fetchStudents(institutionId), fetchClasses(institutionId)]);
+  };
+
   const fetchStudents = async (institutionId: string) => {
     try {
       const response = await fetch(`${API_URL}/teacher/students/${institutionId}`);
       const data = await response.json();
       if (Array.isArray(data)) setStudents(data);
     } catch (e) { console.error(e); }
+  };
+
+  const fetchClasses = async (institutionId: string) => {
+    try {
+      const response = await fetch(`${API_URL}/teacher/classes/${institutionId}`);
+      const data = await response.json();
+      if (Array.isArray(data)) setClasses(data);
+    } catch (error) { console.error(error); }
+  };
+
+  // Filter Logic
+  const filteredStudents = activeClassFilter === 'ALL'
+    ? students
+    : students.filter(s => s.class_id === activeClassFilter);
+
+  const toggleStudent = (id: string) => {
+    if (selectedStudentIds.includes(id)) {
+      setSelectedStudentIds(prev => prev.filter(sid => sid !== id));
+    } else {
+      setSelectedStudentIds(prev => [...prev, id]);
+    }
+  };
+
+  const toggleSelectAllInFilter = () => {
+    const idsInFilter = filteredStudents.map(s => s.id);
+    const allSelected = idsInFilter.every(id => selectedStudentIds.includes(id));
+
+    if (allSelected) {
+      // Deselect all in current filter
+      setSelectedStudentIds(prev => prev.filter(id => !idsInFilter.includes(id)));
+    } else {
+      // Select all in current filter
+      const unique = new Set([...selectedStudentIds, ...idsInFilter]);
+      setSelectedStudentIds(Array.from(unique));
+    }
   };
 
   const addToProgram = () => {
@@ -66,7 +115,7 @@ export default function AssignmentBuilder() {
     };
 
     setProgramList([...programList, newItem]);
-    setTask(''); // Formu temizle ama günü değiştirme, seri ekleme için kolaylık olsun
+    setTask('');
   };
 
   const removeFromProgram = (index: number) => {
@@ -76,28 +125,35 @@ export default function AssignmentBuilder() {
   };
 
   const sendProgram = async () => {
-    if (!selectedStudent) { Alert.alert("Hata", "Lütfen bir öğrenci seçin."); return; }
+    if (selectedStudentIds.length === 0) { Alert.alert("Hata", "Lütfen en az bir öğrenci seçin."); return; }
     if (programList.length === 0) { Alert.alert("Hata", "Program listesi boş."); return; }
 
-    try {
-      const response = await fetch(`${API_URL}/teacher/assign-program`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          student_id: selectedStudent,
-          program: programList
-        })
-      });
+    let successCount = 0;
 
-      const res = await response.json();
-      if (res.status === 'success') {
-        Alert.alert("Başarılı", "Program öğrenciye gönderildi!");
-        setProgramList([]);
-      } else {
-        Alert.alert("Hata", res.message);
+    // Basit bir batch gönderimi (Client-side loop)
+    // Gerçek dünyada backend'de toplu işlem endpoint'i olmalı
+    for (const studentId of selectedStudentIds) {
+      try {
+        const response = await fetch(`${API_URL}/teacher/assign-program`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            student_id: studentId,
+            program: programList
+          })
+        });
+        if (response.ok) successCount++;
+      } catch (e) {
+        console.error(e);
       }
-    } catch (e) {
-      Alert.alert("Hata", "Sunucu hatası");
+    }
+
+    if (successCount > 0) {
+      Alert.alert("Başarılı", `${successCount} öğrenciye program gönderildi!`);
+      setProgramList([]);
+      setSelectedStudentIds([]);
+    } else {
+      Alert.alert("Hata", "Gönderim başarısız oldu.");
     }
   };
 
@@ -125,16 +181,51 @@ export default function AssignmentBuilder() {
           {/* SOL: Form Alanı */}
           <View style={styles.formPanel}>
             <Text style={styles.sectionTitle}>1. Öğrenci Seç</Text>
-            <ScrollView horizontal style={styles.studentScroll} showsHorizontalScrollIndicator={false}>
-              {students.map(s => (
+
+            {/* Sınıf Filtreleri */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.classFilterScroll}>
+              <TouchableOpacity
+                style={[styles.filterChip, activeClassFilter === 'ALL' && styles.filterChipActive]}
+                onPress={() => setActiveClassFilter('ALL')}
+              >
+                <Text style={[styles.filterText, activeClassFilter === 'ALL' && { color: '#fff' }]}>Tümü</Text>
+              </TouchableOpacity>
+              {classes.map(c => (
                 <TouchableOpacity
-                  key={s.id}
-                  style={[styles.chip, selectedStudent === s.id && styles.chipActive]}
-                  onPress={() => setSelectedStudent(s.id)}
+                  key={c.id}
+                  style={[styles.filterChip, activeClassFilter === c.id && styles.filterChipActive]}
+                  onPress={() => setActiveClassFilter(c.id)}
                 >
-                  <Text style={[styles.chipText, selectedStudent === s.id && { color: '#fff' }]}>{s.name}</Text>
+                  <Text style={[styles.filterText, activeClassFilter === c.id && { color: '#fff' }]}>{c.name}</Text>
                 </TouchableOpacity>
               ))}
+            </ScrollView>
+
+            <View style={styles.bulkActions}>
+              <Text style={{ fontSize: 12, color: '#777' }}>{selectedStudentIds.length} seçili</Text>
+              <TouchableOpacity onPress={toggleSelectAllInFilter}>
+                <Text style={{ fontSize: 12, color: COLORS.light.primary, fontWeight: 'bold' }}>
+                  {filteredStudents.every(s => selectedStudentIds.includes(s.id)) && filteredStudents.length > 0 ? "Seçimi Kaldır" : "Tümünü Seç"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.studentGridScroll}>
+              <View style={styles.studentGrid}>
+                {filteredStudents.map(s => {
+                  const isSelected = selectedStudentIds.includes(s.id);
+                  return (
+                    <TouchableOpacity
+                      key={s.id}
+                      style={[styles.chip, isSelected && styles.chipActive]}
+                      onPress={() => toggleStudent(s.id)}
+                    >
+                      {isSelected && <Ionicons name="checkmark-circle" size={16} color="#fff" style={{ marginRight: 5 }} />}
+                      <Text style={[styles.chipText, isSelected && { color: '#fff', fontWeight: 'bold' }]}>{s.name}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
             </ScrollView>
 
             <Text style={styles.sectionTitle}>2. Ders Ekle</Text>
@@ -226,8 +317,18 @@ const styles = StyleSheet.create({
   // SOL PANEL
   formPanel: { flex: 0.4, backgroundColor: '#fff', borderRadius: 12, padding: 20 },
   sectionTitle: { fontSize: 16, fontWeight: 'bold', marginBottom: 15, color: '#333' },
-  studentScroll: { maxHeight: 50, marginBottom: 20 },
-  chip: { paddingHorizontal: 15, paddingVertical: 8, backgroundColor: '#eee', borderRadius: 20, marginRight: 8, justifyContent: 'center' },
+
+  // Filter Styles
+  classFilterScroll: { marginBottom: 10, maxHeight: 40 },
+  filterChip: { paddingHorizontal: 12, paddingVertical: 6, backgroundColor: '#f0f0f0', borderRadius: 8, marginRight: 8, height: 32, justifyContent: 'center' },
+  filterChipActive: { backgroundColor: '#34495e' },
+  filterText: { fontSize: 12, color: '#555' },
+
+  bulkActions: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10, paddingHorizontal: 5 },
+
+  studentGridScroll: { maxHeight: 150, marginBottom: 20 },
+  studentGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 15, paddingVertical: 8, backgroundColor: '#eee', borderRadius: 20 },
   chipActive: { backgroundColor: COLORS.light.primary },
   chipText: { fontSize: 13, color: '#333' },
 

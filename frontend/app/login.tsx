@@ -43,7 +43,7 @@ export default function LoginScreen({ onLogin, onGoToRegister, theme = COLORS.li
     webClientId: "624675277189-liukvj1lrr8icrj0ko8h0s3dqug1klqt.apps.googleusercontent.com",
     androidClientId: "624675277189-liukvj1lrr8icrj0ko8h0s3dqug1klqt.apps.googleusercontent.com",
     iosClientId: "624675277189-liukvj1lrr8icrj0ko8h0s3dqug1klqt.apps.googleusercontent.com",
-    redirectUri: "https://auth.expo.io/@rcburak/rc-sinavim"
+    redirectUri: "https://auth.expo.io/@rcburak/rc-sinavim",
   });
 
   useEffect(() => {

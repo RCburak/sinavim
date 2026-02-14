@@ -2,6 +2,7 @@
   "expo": {
     "name": "RC Sınavım",
     "slug": "rc-sinavim",
+    "owner": "rcburak",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -49,9 +50,6 @@
     "extra": {
       "router": {
         "origin": false
-      },
-      "eas": {
-        "projectId": "73edd638-d5c6-4b06-83dc-c1558f48b843"
       }
     }
   }

@@ -54,6 +54,8 @@ def join_institution(
                     "avatar": None,
                     "institution_id": inst_id,
                     "created_at": firestore.SERVER_TIMESTAMP,
+                    "status": "pending",  # Onay bekliyor
+                    "class_id": None,
                 }, merge=True)
         else:
             user_snap = (
@@ -61,8 +63,10 @@ def join_institution(
             )
             if not user_snap:
                 return None, "Kullanıcı bulunamadı."
+            
+            # Var olan kullanıcı kuruma katılıyor - status pending yap
             db.collection(COLLECTION_USERS).document(user_snap[0].id).update(
-                {"institution_id": inst_id}
+                {"institution_id": inst_id, "status": "pending", "class_id": None}
             )
         return inst_data, None
     except Exception as e:
@@ -103,12 +107,55 @@ def get_students(institution_id: str) -> list[dict]:
             .get()
         )
         students = [_doc_to_dict(d) for d in snap]
+        # Varsayılan değerler
+        for s in students:
+            if "status" not in s: s["status"] = "approved" # Eski kayıtlar onaylı sayılsın
+            if "class_id" not in s: s["class_id"] = None
+            
         students.sort(key=lambda s: s.get("name", ""))
         return students
     except Exception as e:
         logger.exception("Ogrenci listesi hatasi")
         return []
 
+def approve_student(student_id: str) -> tuple[bool, str | None]:
+    """Öğrenciyi onaylar (status=approved)."""
+    try:
+        db = get_firestore()
+        db.collection(COLLECTION_USERS).document(student_id).update({"status": "approved"})
+        return True, None
+    except Exception as e:
+        return False, str(e)
+
+def create_class(institution_id: str, name: str) -> tuple[dict | None, str | None]:
+    """Yeni sınıf oluşturur."""
+    try:
+        db = get_firestore()
+        ref = db.collection(COLLECTION_INSTITUTIONS).document(institution_id).collection("classes").add({
+            "name": name,
+            "created_at": firestore.SERVER_TIMESTAMP
+        })
+        return {"id": ref[1].id, "name": name}, None
+    except Exception as e:
+        return None, str(e)
+
+def get_classes(institution_id: str) -> list[dict]:
+    """Kurumun sınıflarını getirir."""
+    try:
+        db = get_firestore()
+        snap = db.collection(COLLECTION_INSTITUTIONS).document(institution_id).collection("classes").order_by("name").get()
+        return [{"id": d.id, **d.to_dict()} for d in snap]
+    except Exception as e:
+        return []
+
+def update_student_class(student_id: str, class_id: str | None) -> tuple[bool, str | None]:
+    """Öğrenciyi sınıfa atar."""
+    try:
+        db = get_firestore()
+        db.collection(COLLECTION_USERS).document(student_id).update({"class_id": class_id})
+        return True, None
+    except Exception as e:
+        return False, str(e)
 
 def assign_program(student_id: str, program: list[dict]) -> tuple[bool, str | None]:
     """Öğrenciye haftalık program atar."""
@@ -135,6 +182,10 @@ class TeacherService:
     login = staticmethod(teacher_login)
     get_students = staticmethod(get_students)
     assign_program = staticmethod(assign_program)
+    approve_student = staticmethod(approve_student)
+    create_class = staticmethod(create_class)
+    get_classes = staticmethod(get_classes)
+    update_student_class = staticmethod(update_student_class)
 
 
 teacher_service = TeacherService()

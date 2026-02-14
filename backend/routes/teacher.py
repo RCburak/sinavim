@@ -50,3 +50,55 @@ def assign_program():
     if err:
         return error_response(err, 500)
     return success_response(message="Haftalık program başarıyla atandı!", status_code=201)
+
+
+@teacher_bp.route("/approve-student", methods=["POST"])
+def approve_student():
+    """Öğrenci onaylama."""
+    data = request.get_json(silent=True) or {}
+    student_id = data.get("student_id")
+    if not student_id:
+        return error_response("student_id gerekli", 400)
+    
+    ok, err = teacher_service.approve_student(student_id)
+    if not ok:
+        return error_response(err, 500)
+    return success_response(message="Öğrenci onaylandı.")
+
+
+@teacher_bp.route("/create-class", methods=["POST"])
+def create_class():
+    """Yeni sınıf oluşturma."""
+    data = request.get_json(silent=True) or {}
+    inst_id = data.get("institution_id")
+    name = data.get("name")
+    if not inst_id or not name:
+        return error_response("institution_id ve name gerekli", 400)
+    
+    res, err = teacher_service.create_class(inst_id, name)
+    if err:
+        return error_response(err, 500)
+    return success_response(res)
+
+
+@teacher_bp.route("/classes/<institution_id>", methods=["GET"])
+def get_classes_route(institution_id):
+    """Sınıfları listeleme."""
+    classes = teacher_service.get_classes(institution_id)
+    return jsonify(classes)
+
+
+@teacher_bp.route("/assign-class", methods=["POST"])
+def assign_class():
+    """Öğrenciyi sınıfa atama."""
+    data = request.get_json(silent=True) or {}
+    student_id = data.get("student_id")
+    class_id = data.get("class_id") # None olabilir (sınıfsız)
+    
+    if not student_id:
+        return error_response("student_id gerekli", 400)
+        
+    ok, err = teacher_service.update_student_class(student_id, class_id)
+    if not ok:
+        return error_response(err, 500)
+    return success_response(message="Öğrenci sınıfı güncellendi.")
