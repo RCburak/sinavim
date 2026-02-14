@@ -23,7 +23,7 @@ export const HistoryView = ({ theme, onBack, userId }: any) => {
   const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [activeTab, setActiveTab] = useState<'ai' | 'manual'>('ai');
+  const [activeTab, setActiveTab] = useState<'manual' | 'odev'>('manual');
   const [selectedWeek, setSelectedWeek] = useState<any>(null);
   const [modalVisible, setModalVisible] = useState(false);
 
@@ -105,7 +105,7 @@ export const HistoryView = ({ theme, onBack, userId }: any) => {
   };
 
   const filteredHistory = history.filter(item =>
-    activeTab === 'ai' ? item.program_type === 'ai' : item.program_type !== 'ai'
+    activeTab === 'odev' ? item.program_type === 'teacher' : item.program_type !== 'teacher'
   );
 
   return (
@@ -128,21 +128,21 @@ export const HistoryView = ({ theme, onBack, userId }: any) => {
       {/* SEKMELER - Pill Style */}
       <View style={[styles.tabBar, { backgroundColor: theme.surface }]}>
         <TouchableOpacity
-          onPress={() => setActiveTab('ai')}
-          style={[styles.tabPill, activeTab === 'ai' && { backgroundColor: theme.primary }]}
-          activeOpacity={0.7}
-        >
-          <Text style={[styles.tabText, { color: activeTab === 'ai' ? '#fff' : theme.textSecondary, fontWeight: activeTab === 'ai' ? '700' : '500' }]}>
-            AI Programlarım
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
           onPress={() => setActiveTab('manual')}
           style={[styles.tabPill, activeTab === 'manual' && { backgroundColor: theme.primary }]}
           activeOpacity={0.7}
         >
           <Text style={[styles.tabText, { color: activeTab === 'manual' ? '#fff' : theme.textSecondary, fontWeight: activeTab === 'manual' ? '700' : '500' }]}>
             Kendi Planlarım
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => setActiveTab('odev')}
+          style={[styles.tabPill, activeTab === 'odev' && { backgroundColor: theme.primary }]}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.tabText, { color: activeTab === 'odev' ? '#fff' : theme.textSecondary, fontWeight: activeTab === 'odev' ? '700' : '500' }]}>
+            Ödevlerim
           </Text>
         </TouchableOpacity>
       </View>
@@ -168,7 +168,7 @@ export const HistoryView = ({ theme, onBack, userId }: any) => {
                       {new Date(item.archive_date).toLocaleDateString('tr-TR')}
                     </Text>
                     <Text style={[styles.weekTitle, { color: theme.text }]}>
-                      {item.program_type === 'ai' ? 'AI Haftalık Analiz' : 'Manuel Haftalık Analiz'}
+                      {item.program_type === 'teacher' ? 'Öğretmen Ödevi' : 'Kendi Planım'}
                     </Text>
                   </View>
 
@@ -212,7 +212,7 @@ export const HistoryView = ({ theme, onBack, userId }: any) => {
         <View style={styles.center}>
           <Ionicons name="book-outline" size={56} color={theme.textSecondary} />
           <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
-            {activeTab === 'ai' ? 'Henüz AI programı arşivin yok.' : 'Henüz kendi planlarından bir arşiv yok.'}
+            {activeTab === 'odev' ? 'Henüz ödev arşivin yok.' : 'Henüz kendi planlarından bir arşiv yok.'}
           </Text>
         </View>
       )}
@@ -231,7 +231,7 @@ export const HistoryView = ({ theme, onBack, userId }: any) => {
               <View>
                 <Text style={[styles.modalTitle, { color: theme.text }]}>Haftalık Rapor</Text>
                 <Text style={{ color: theme.textSecondary, fontSize: 12, fontWeight: '500' }}>
-                  {selectedWeek?.program_type === 'ai' ? 'Robotik Koç Programı' : 'Bireysel Tasarım Planı'}
+                  {selectedWeek?.program_type === 'teacher' ? 'Öğretmen Ödevi' : 'Kendi Planım'}
                 </Text>
               </View>
               <TouchableOpacity onPress={() => setModalVisible(false)} style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: theme.background, justifyContent: 'center', alignItems: 'center' }}>

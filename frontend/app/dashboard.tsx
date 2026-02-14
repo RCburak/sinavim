@@ -125,10 +125,10 @@ export const DashboardView = ({ username, onLogout, setView, schedule, analiz, p
           />
 
           <MenuCard
-            title="Geçmişim"
-            emoji="📚"
-            subText="Arşivlenen programlar"
-            onPress={() => setView('history')}
+            title="Ödev"
+            emoji="📝"
+            subText={`${schedule?.length || 0} Ders Atanmış`}
+            onPress={() => setView('program')}
             theme={theme}
           />
 
@@ -144,18 +144,18 @@ export const DashboardView = ({ username, onLogout, setView, schedule, analiz, p
           />
 
           <MenuCard
-            title="Pomodoro"
-            emoji="⏱️"
-            subText={pomodoro.formatTime(pomodoro.timer)}
-            onPress={() => setView('pomodoro')}
+            title="Geçmişim"
+            emoji="📚"
+            subText="Arşivlenen programlar"
+            onPress={() => setView('history')}
             theme={theme}
           />
 
           <MenuCard
-            title="Programım"
-            emoji="📅"
-            subText={`${schedule?.length || 0} Ders Listeleniyor`}
-            onPress={() => setView('program')}
+            title="Pomodoro"
+            emoji="⏱️"
+            subText={pomodoro.formatTime(pomodoro.timer)}
+            onPress={() => setView('pomodoro')}
             theme={theme}
           />
         </View>

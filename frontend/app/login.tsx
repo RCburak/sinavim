@@ -33,6 +33,7 @@ export default function LoginScreen({ onLogin, onGoToRegister, theme = COLORS.li
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
 
   const [resetModalVisible, setResetModalVisible] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
@@ -78,6 +79,7 @@ export default function LoginScreen({ onLogin, onGoToRegister, theme = COLORS.li
       await AsyncStorage.setItem('@SınavımAI_UserLoggedIn', 'true');
       await AsyncStorage.setItem('@SınavımAI_UserId', user.id || user.uid);
       await AsyncStorage.setItem('@SınavımAI_UserName', displayName);
+      await AsyncStorage.setItem('@SınavımAI_RememberMe', rememberMe ? 'true' : 'false');
       onLogin();
     } catch (e) {
       Alert.alert("Hata", "Giriş bilgileri kaydedilemedi.");
@@ -177,9 +179,23 @@ export default function LoginScreen({ onLogin, onGoToRegister, theme = COLORS.li
                 </TouchableOpacity>
               </View>
 
-              <TouchableOpacity style={styles.forgotPassBtn} onPress={() => setResetModalVisible(true)}>
-                <Text style={styles.forgotPassText}>Şifremi Unuttum?</Text>
-              </TouchableOpacity>
+              {/* Oturum Açık Tut + Şifremi Unuttum */}
+              <View style={styles.rememberRow}>
+                <TouchableOpacity
+                  style={styles.checkboxRow}
+                  onPress={() => setRememberMe(!rememberMe)}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
+                    {rememberMe && <Ionicons name="checkmark" size={14} color="#fff" />}
+                  </View>
+                  <Text style={styles.rememberText}>Oturum açık tut</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity onPress={() => setResetModalVisible(true)}>
+                  <Text style={styles.forgotPassText}>Şifremi Unuttum?</Text>
+                </TouchableOpacity>
+              </View>
 
               <TouchableOpacity
                 style={[styles.loginBtn, loading && { opacity: 0.7 }]}
@@ -296,7 +312,24 @@ const styles = StyleSheet.create({
   input: { flex: 1, color: '#fff', fontSize: 16, paddingHorizontal: 14, height: '100%' },
   eyeBtn: { padding: 15 },
 
-  forgotPassBtn: { alignSelf: 'flex-end', marginBottom: 22 },
+  rememberRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 22,
+    marginTop: 4,
+  },
+  checkboxRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  checkbox: {
+    width: 22, height: 22, borderRadius: 6,
+    borderWidth: 2, borderColor: 'rgba(255,255,255,0.35)',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  checkboxChecked: {
+    backgroundColor: '#6C3CE1',
+    borderColor: '#6C3CE1',
+  },
+  rememberText: { color: 'rgba(255,255,255,0.7)', fontWeight: '600', fontSize: 13 },
   forgotPassText: { color: 'rgba(255,255,255,0.6)', fontWeight: '600', fontSize: 13 },
 
   loginBtn: {

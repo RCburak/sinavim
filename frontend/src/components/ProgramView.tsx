@@ -66,8 +66,8 @@ export const ProgramView = ({ tasks, toggleTask, updateQuestions, onBack, onAddT
           <Ionicons name="chevron-back" size={26} color="#fff" />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle}>{isEditMode ? "Programımı Tasarla" : "Çalışma Masam"}</Text>
-          <Text style={styles.headerSubTitle}>{isEditMode ? "Kendi haftalık planını oluştur" : "Bugün ne yapıyoruz?"}</Text>
+          <Text style={styles.headerTitle}>{isEditMode ? "Programımı Tasarla" : "Ödevlerim"}</Text>
+          <Text style={styles.headerSubTitle}>{isEditMode ? "Kendi haftalık planını oluştur" : "Öğretmenin atadığı program"}</Text>
         </View>
       </LinearGradient>
 
@@ -161,7 +161,7 @@ export const ProgramView = ({ tasks, toggleTask, updateQuestions, onBack, onAddT
           )}
         </View>
 
-        {isEditMode && tasks.length > 0 && selectedDay === 'Pazar' && (
+        {onFinalize && tasks.length > 0 && selectedDay === 'Pazar' && (
           <TouchableOpacity
             style={styles.finalizeBtn}
             onPress={onFinalize}
@@ -174,7 +174,7 @@ export const ProgramView = ({ tasks, toggleTask, updateQuestions, onBack, onAddT
               end={{ x: 1, y: 0 }}
             >
               <Ionicons name="checkmark-done-circle-outline" size={24} color="#fff" />
-              <Text style={styles.finalizeBtnText}>Haftayı Onayla ve Bitir</Text>
+              <Text style={styles.finalizeBtnText}>Haftayı Bitir 🎉</Text>
             </LinearGradient>
           </TouchableOpacity>
         )}

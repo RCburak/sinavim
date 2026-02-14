@@ -1,11 +1,17 @@
 """Öğretmen paneli rotaları."""
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, render_template
 from utils.responses import success_response, error_response
 from utils.validators import require_keys
 from errors import ValidationError
 from services.teacher_service import teacher_service
 
 teacher_bp = Blueprint("teacher", __name__)
+
+
+@teacher_bp.route("/panel", methods=["GET"])
+def teacher_panel():
+    """Öğretmen web panelini sunar."""
+    return render_template("teacher_panel.html")
 
 
 @teacher_bp.route("/login", methods=["POST"])

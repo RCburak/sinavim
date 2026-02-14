@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Modal, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { authService } from '../../services/authService';
+import { auth } from '../../services/firebaseConfig';
 
 interface TeacherJoinModalProps {
   visible: boolean;
@@ -26,9 +27,15 @@ export const TeacherJoinModal = ({ visible, onClose, theme, userEmail, onSuccess
       return;
     }
 
+    const uid = auth.currentUser?.uid;
+    if (!uid) {
+      Alert.alert("Hata", "Oturum bulunamadı. Lütfen tekrar giriş yapın.");
+      return;
+    }
+
     setLoading(true);
     // AuthService üzerinden backend'e istek atıyoruz
-    const result = await authService.joinClassroom(userEmail, code.trim());
+    const result = await authService.joinClassroom(uid, userEmail, code.trim());
     setLoading(false);
 
     if (result.status === 'success') {
@@ -58,7 +65,7 @@ export const TeacherJoinModal = ({ visible, onClose, theme, userEmail, onSuccess
             <View style={[styles.iconContainer, { backgroundColor: theme.background }]}>
               <Ionicons name="school" size={40} color={theme.primary} />
             </View>
-            
+
             <Text style={[styles.description, { color: theme.textSecondary }]}>
               Öğretmeninin veya kurumunun sana verdiği davet kodunu girerek sınıfına katılabilirsin.
             </Text>
@@ -75,7 +82,7 @@ export const TeacherJoinModal = ({ visible, onClose, theme, userEmail, onSuccess
               />
             </View>
 
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.joinButton, { backgroundColor: theme.primary }]}
               onPress={handleJoin}
               disabled={loading}

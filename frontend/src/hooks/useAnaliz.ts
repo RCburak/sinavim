@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Alert } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { auth } from '../services/firebaseConfig';
 import { analizService } from '../services/analizService';
 
 export const useAnaliz = () => {
@@ -8,14 +8,14 @@ export const useAnaliz = () => {
   const [aiYorum, setAiYorum] = useState('Verileriniz analiz ediliyor...');
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    refreshAnaliz();
-  }, []);
+  const getUserId = (): string | null => {
+    return auth.currentUser?.uid || null;
+  };
 
-  const refreshAnaliz = async () => {
+  const refreshAnaliz = useCallback(async () => {
     setLoading(true);
     try {
-      const userId = await AsyncStorage.getItem('@SınavımAI_UserId');
+      const userId = getUserId();
       if (!userId) {
         setLoading(false);
         return;
@@ -23,7 +23,7 @@ export const useAnaliz = () => {
 
       const data = await analizService.getAll(userId);
       setAnalizler(data || []);
-      
+
       const yorum = await analizService.getAIYorum(userId);
       setAiYorum(yorum || 'Henüz analiz yorumu oluşturulmadı.');
     } catch (e) {
@@ -31,27 +31,41 @@ export const useAnaliz = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    // Auth state değiştiğinde analizleri yükle
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (user) {
+        refreshAnaliz();
+      } else {
+        setAnalizler([]);
+      }
+    });
+    return () => unsubscribe();
+  }, [refreshAnaliz]);
 
   const addAnaliz = async (ad: string, net: string) => {
     try {
-      const userId = await AsyncStorage.getItem('@SınavımAI_UserId');
-      if (!userId) return false;
+      const userId = getUserId();
+      if (!userId) {
+        Alert.alert("Hata", "Oturum bulunamadı. Lütfen tekrar giriş yapın.");
+        return false;
+      }
 
       const success = await analizService.add(ad, net, userId);
       if (success) await refreshAnaliz();
       return success;
     } catch (e) {
+      console.error("Analiz ekleme hatası:", e);
       return false;
     }
   };
 
-  const deleteAnaliz = async (id: number) => {
+  const deleteAnaliz = async (id: number | string) => {
     try {
-      // Önce bir onay kutusu çıkaralım (isteğe bağlı ama güvenli)
       const success = await analizService.delete(id);
       if (success) {
-        // State'i anında güncelle (Sayfa yenilenmeden listeden silinsin)
         setAnalizler(prev => prev.filter(item => item.id !== id));
         return true;
       }

@@ -31,10 +31,11 @@ def get_analizler(user_id: str) -> list[dict]:
         snap = (
             db.collection(COLLECTION_EXAM_RESULTS)
             .where("user_id", "==", user_id)
-            .order_by("date", direction="DESCENDING")
             .get()
         )
-        return [_doc_to_dict(d) for d in snap]
+        results = [_doc_to_dict(d) for d in snap]
+        results.sort(key=lambda x: x.get("date", ""), reverse=True)
+        return results
     except Exception as e:
         logger.exception("Analiz getirme hatasi")
         return []

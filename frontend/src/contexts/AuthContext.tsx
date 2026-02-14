@@ -22,6 +22,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser && firebaseUser.emailVerified) {
+        // "Oturum açık tut" seçilmiş mi kontrol et
+        const rememberMe = await AsyncStorage.getItem("@SınavımAI_RememberMe");
+        if (rememberMe === "false") {
+          // Oturum açık tutma seçilmemiş, çıkış yap
+          await auth.signOut();
+          await AsyncStorage.removeItem("@SınavımAI_RememberMe");
+          setUser(null);
+          // Minimum splash süresi
+          setTimeout(() => setLoading(false), 2600);
+          return;
+        }
         const savedName = await AsyncStorage.getItem("@SınavımAI_UserName");
         const finalName =
           firebaseUser.displayName ||
@@ -33,7 +44,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         setUser(null);
       }
-      setLoading(false);
+      // Minimum 2 saniye splash göster
+      setTimeout(() => setLoading(false), 3400);
     });
     return () => unsubscribe();
   }, []);

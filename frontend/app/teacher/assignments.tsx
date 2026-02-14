@@ -23,7 +23,7 @@ export default function AssignmentBuilder() {
   const router = useRouter();
   const [students, setStudents] = useState<Student[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<string>('');
-  
+
   // Form State
   const [selectedDay, setSelectedDay] = useState('Pazartesi');
   const [task, setTask] = useState('');
@@ -33,23 +33,31 @@ export default function AssignmentBuilder() {
   // Oluşturulan Program Listesi
   const [programList, setProgramList] = useState<ProgramItem[]>([]);
 
-  const TEACHER_INSTITUTION_ID = 1;
-
   useEffect(() => {
-    fetchStudents();
+    try {
+      if (typeof window !== 'undefined') {
+        const stored = sessionStorage.getItem('teacher_data');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          fetchStudents(parsed.id);
+          return;
+        }
+      }
+    } catch (e) { /* ignore */ }
+    router.replace('/teacher/login');
   }, []);
 
-  const fetchStudents = async () => {
+  const fetchStudents = async (institutionId: string) => {
     try {
-      const response = await fetch(`${API_URL}/teacher/students/${TEACHER_INSTITUTION_ID}`);
+      const response = await fetch(`${API_URL}/teacher/students/${institutionId}`);
       const data = await response.json();
-      if(Array.isArray(data)) setStudents(data);
+      if (Array.isArray(data)) setStudents(data);
     } catch (e) { console.error(e); }
   };
 
   const addToProgram = () => {
     if (!task) { Alert.alert("Hata", "Lütfen ders/konu giriniz."); return; }
-    
+
     const newItem: ProgramItem = {
       gun: selectedDay,
       task,
@@ -74,13 +82,13 @@ export default function AssignmentBuilder() {
     try {
       const response = await fetch(`${API_URL}/teacher/assign-program`, {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           student_id: selectedStudent,
           program: programList
         })
       });
-      
+
       const res = await response.json();
       if (res.status === 'success') {
         Alert.alert("Başarılı", "Program öğrenciye gönderildi!");
@@ -119,24 +127,24 @@ export default function AssignmentBuilder() {
             <Text style={styles.sectionTitle}>1. Öğrenci Seç</Text>
             <ScrollView horizontal style={styles.studentScroll} showsHorizontalScrollIndicator={false}>
               {students.map(s => (
-                <TouchableOpacity 
-                  key={s.id} 
+                <TouchableOpacity
+                  key={s.id}
                   style={[styles.chip, selectedStudent === s.id && styles.chipActive]}
                   onPress={() => setSelectedStudent(s.id)}
                 >
-                  <Text style={[styles.chipText, selectedStudent === s.id && {color:'#fff'}]}>{s.name}</Text>
+                  <Text style={[styles.chipText, selectedStudent === s.id && { color: '#fff' }]}>{s.name}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
 
             <Text style={styles.sectionTitle}>2. Ders Ekle</Text>
-            
+
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Gün:</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{marginBottom: 10}}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 10 }}>
                 {GUNLER.map(g => (
                   <TouchableOpacity key={g} onPress={() => setSelectedDay(g)} style={[styles.dayChip, selectedDay === g && styles.dayChipActive]}>
-                    <Text style={[styles.dayText, selectedDay === g && {color:'#fff'}]}>{g}</Text>
+                    <Text style={[styles.dayText, selectedDay === g && { color: '#fff' }]}>{g}</Text>
                   </TouchableOpacity>
                 ))}
               </ScrollView>
@@ -144,12 +152,12 @@ export default function AssignmentBuilder() {
               <Text style={styles.label}>Ders / Konu:</Text>
               <TextInput style={styles.input} value={task} onChangeText={setTask} placeholder="Örn: Matematik - Türev Test 1" />
 
-              <View style={{flexDirection:'row', gap:10}}>
-                <View style={{flex:1}}>
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <View style={{ flex: 1 }}>
                   <Text style={styles.label}>Süre:</Text>
                   <TextInput style={styles.input} value={duration} onChangeText={setDuration} placeholder="45 dk" />
                 </View>
-                <View style={{flex:1}}>
+                <View style={{ flex: 1 }}>
                   <Text style={styles.label}>Soru Sayısı:</Text>
                   <TextInput style={styles.input} value={questions} onChangeText={setQuestions} keyboardType="numeric" placeholder="20" />
                 </View>
@@ -164,7 +172,7 @@ export default function AssignmentBuilder() {
 
           {/* SAĞ: Önizleme Listesi */}
           <View style={styles.previewPanel}>
-            <View style={{flexDirection:'row', justifyContent:'space-between', alignItems:'center'}}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <Text style={styles.sectionTitle}>3. Program Önizleme</Text>
               <TouchableOpacity style={styles.sendBtn} onPress={sendProgram}>
                 <Text style={styles.sendBtnText}>Programı Gönder 🚀</Text>
@@ -178,7 +186,7 @@ export default function AssignmentBuilder() {
                 <FlatList
                   data={programList}
                   keyExtractor={(_, i) => i.toString()}
-                  renderItem={({item, index}) => (
+                  renderItem={({ item, index }) => (
                     <View style={styles.listItem}>
                       <View style={styles.listLeft}>
                         <Text style={styles.listDay}>{item.gun}</Text>
@@ -214,7 +222,7 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 24, fontWeight: 'bold', color: '#2c3e50' },
 
   contentRow: { flex: 1, flexDirection: 'row', gap: 20 },
-  
+
   // SOL PANEL
   formPanel: { flex: 0.4, backgroundColor: '#fff', borderRadius: 12, padding: 20 },
   sectionTitle: { fontSize: 16, fontWeight: 'bold', marginBottom: 15, color: '#333' },
@@ -222,11 +230,11 @@ const styles = StyleSheet.create({
   chip: { paddingHorizontal: 15, paddingVertical: 8, backgroundColor: '#eee', borderRadius: 20, marginRight: 8, justifyContent: 'center' },
   chipActive: { backgroundColor: COLORS.light.primary },
   chipText: { fontSize: 13, color: '#333' },
-  
+
   inputGroup: { gap: 10 },
   label: { fontSize: 12, fontWeight: 'bold', color: '#555', marginBottom: 4 },
   input: { borderWidth: 1, borderColor: '#eee', padding: 10, borderRadius: 8, backgroundColor: '#fafafa' },
-  
+
   dayChip: { paddingHorizontal: 12, paddingVertical: 6, backgroundColor: '#f0f0f0', borderRadius: 6, marginRight: 6 },
   dayChipActive: { backgroundColor: '#34495e' },
   dayText: { fontSize: 12, color: '#555' },
@@ -238,7 +246,7 @@ const styles = StyleSheet.create({
   previewPanel: { flex: 0.6, backgroundColor: '#fff', borderRadius: 12, padding: 20 },
   sendBtn: { backgroundColor: COLORS.light.primary, paddingHorizontal: 20, paddingVertical: 8, borderRadius: 8 },
   sendBtnText: { color: '#fff', fontWeight: 'bold' },
-  
+
   listContainer: { flex: 1, marginTop: 10, backgroundColor: '#fafafa', borderRadius: 8, padding: 10 },
   emptyText: { textAlign: 'center', color: '#999', marginTop: 50 },
   listItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fff', padding: 12, marginBottom: 8, borderRadius: 8, borderLeftWidth: 4, borderLeftColor: COLORS.light.primary },

@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  TouchableOpacity, 
-  FlatList, 
-  ActivityIndicator, 
-  Modal, 
-  ScrollView 
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  FlatList,
+  ActivityIndicator,
+  Modal,
+  ScrollView
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -25,7 +25,7 @@ interface Student {
 
 interface Analiz {
   id: number;
-  ad: string; 
+  ad: string;
   net: string;
   tarih: string;
 }
@@ -34,22 +34,34 @@ export default function TeacherDashboard() {
   const router = useRouter();
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
-  
+  const [teacherData, setTeacherData] = useState<any>(null);
+
   // Detay Modalı için State'ler
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [studentAnaliz, setStudentAnaliz] = useState<Analiz[]>([]);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
 
-  const TEACHER_INSTITUTION_ID = 1; // Test ID'si
-
   useEffect(() => {
-    fetchStudents();
+    // Teacher verisini sessionStorage'dan oku
+    try {
+      if (typeof window !== 'undefined') {
+        const stored = sessionStorage.getItem('teacher_data');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          setTeacherData(parsed);
+          fetchStudents(parsed.id);
+          return;
+        }
+      }
+    } catch (e) { /* ignore */ }
+    // Giriş yapılmamışsa login'e yönlendir
+    router.replace('/teacher/login');
   }, []);
 
-  const fetchStudents = async () => {
+  const fetchStudents = async (institutionId: string) => {
     try {
-      const response = await fetch(`${API_URL}/teacher/students/${TEACHER_INSTITUTION_ID}`);
+      const response = await fetch(`${API_URL}/teacher/students/${institutionId}`);
       const data = await response.json();
       if (Array.isArray(data)) setStudents(data);
     } catch (error) {
@@ -81,14 +93,14 @@ export default function TeacherDashboard() {
       {/* HATA BURADAYDI: View'den styles.cell kaldırıldı */}
       <View style={{ flex: 0.5, justifyContent: 'center' }}>
         <View style={styles.avatarPlaceholder}>
-           <Text style={styles.avatarText}>{item.name.charAt(0).toUpperCase()}</Text>
+          <Text style={styles.avatarText}>{item.name.charAt(0).toUpperCase()}</Text>
         </View>
       </View>
-      
+
       {/* Text olduğu için burada styles.cell kalabilir */}
       <Text style={[styles.cell, { flex: 2, fontWeight: 'bold' }]}>{item.name}</Text>
       <Text style={[styles.cell, { flex: 3 }]}>{item.email}</Text>
-      
+
       {/* HATA BURADAYDI: View'den styles.cell kaldırıldı */}
       <View style={{ flex: 1, justifyContent: 'center' }}>
         <TouchableOpacity style={styles.actionBtn} onPress={() => openStudentDetail(item)}>
@@ -106,17 +118,17 @@ export default function TeacherDashboard() {
           <Ionicons name="school" size={32} color="#fff" />
           <Text style={styles.logo}>RC PANEL</Text>
         </View>
-        
+
         <TouchableOpacity style={styles.menuItemActive}>
           <Ionicons name="people" size={20} color="#fff" style={styles.menuIcon} />
           <Text style={styles.menuTextActive}>Öğrenciler</Text>
         </TouchableOpacity>
-        
+
         <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/teacher/assignments')}>
           <Ionicons name="create" size={20} color="#bdc3c7" style={styles.menuIcon} />
           <Text style={styles.menuText}>Ödev Atama</Text>
         </TouchableOpacity>
-        
+
         <View style={{ flex: 1 }} />
         <TouchableOpacity style={styles.logoutBtn} onPress={() => router.replace('/teacher/login')}>
           <Ionicons name="log-out-outline" size={20} color="#e74c3c" style={styles.menuIcon} />
@@ -134,7 +146,7 @@ export default function TeacherDashboard() {
               <Text style={styles.badgeText}>{students.length} Öğrenci</Text>
             </View>
             <View style={styles.profileIcon}>
-              <Text style={{color:'#fff', fontWeight:'bold'}}>BH</Text>
+              <Text style={{ color: '#fff', fontWeight: 'bold' }}>{teacherData?.name?.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2) || 'ÖĞ'}</Text>
             </View>
           </View>
         </View>
@@ -148,7 +160,7 @@ export default function TeacherDashboard() {
               <Text style={[styles.headerCell, { flex: 3 }]}>E-Posta</Text>
               <Text style={[styles.headerCell, { flex: 1 }]}>İşlem</Text>
             </View>
-            
+
             {loading ? (
               <ActivityIndicator size="large" color={COLORS.light.primary} style={{ margin: 50 }} />
             ) : (
@@ -182,7 +194,7 @@ export default function TeacherDashboard() {
             </View>
 
             {loadingDetail ? (
-               <ActivityIndicator color={COLORS.light.primary} style={{ padding: 20 }} />
+              <ActivityIndicator color={COLORS.light.primary} style={{ padding: 20 }} />
             ) : (
               <ScrollView style={{ maxHeight: 400 }}>
                 {/* Öğrenci Bilgisi */}
@@ -198,7 +210,7 @@ export default function TeacherDashboard() {
                     {studentAnaliz.map((analiz, idx) => (
                       <View key={idx} style={styles.analizRow}>
                         <View style={styles.analizBadge}>
-                           <Text style={styles.analizNet}>{analiz.net}</Text>
+                          <Text style={styles.analizNet}>{analiz.net}</Text>
                         </View>
                         <View style={{ marginLeft: 10 }}>
                           <Text style={styles.analizName}>{analiz.ad || (analiz as any).lesson_name || "-"}</Text>
@@ -214,10 +226,10 @@ export default function TeacherDashboard() {
                 )}
               </ScrollView>
             )}
-            
+
             <View style={styles.modalFooter}>
-              <TouchableOpacity 
-                style={styles.closeBtn} 
+              <TouchableOpacity
+                style={styles.closeBtn}
                 onPress={() => setModalVisible(false)}
               >
                 <Text style={styles.closeBtnText}>Kapat</Text>
@@ -232,7 +244,7 @@ export default function TeacherDashboard() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, flexDirection: 'row', backgroundColor: '#f4f6f8' },
-  
+
   // Sidebar
   sidebar: { width: 250, backgroundColor: '#2c3e50', paddingVertical: 30, paddingHorizontal: 20 },
   brandContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 40, gap: 10 },
@@ -253,7 +265,7 @@ const styles = StyleSheet.create({
   badge: { backgroundColor: '#e3f2fd', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 15 },
   badgeText: { color: '#1976d2', fontWeight: 'bold', fontSize: 12 },
   profileIcon: { width: 35, height: 35, borderRadius: 17.5, backgroundColor: COLORS.light.primary, justifyContent: 'center', alignItems: 'center' },
-  
+
   // Tablo
   content: { padding: 30 },
   tableCard: { backgroundColor: '#fff', borderRadius: 8, padding: 0, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 5, overflow: 'hidden' },
@@ -261,12 +273,12 @@ const styles = StyleSheet.create({
   headerCell: { fontWeight: 'bold', color: '#555', fontSize: 13 },
   tableRow: { flexDirection: 'row', padding: 15, alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
   tableRowAlt: { backgroundColor: '#fafafa' },
-  
+
   cell: { color: '#333', fontSize: 14 }, // Sadece Text bileşenleri için
-  
+
   avatarPlaceholder: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#eee', justifyContent: 'center', alignItems: 'center' },
   avatarText: { fontWeight: 'bold', color: '#555' },
-  
+
   actionBtn: { backgroundColor: COLORS.light.primary, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 4, alignSelf: 'flex-start' },
   actionBtnText: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
 
@@ -279,14 +291,14 @@ const styles = StyleSheet.create({
   summaryLabel: { fontWeight: 'bold', marginRight: 10, color: '#555' },
   summaryValue: { color: '#333' },
   sectionTitle: { fontSize: 16, fontWeight: 'bold', marginBottom: 15, color: '#2c3e50' },
-  
+
   analizTable: { gap: 10 },
   analizRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f9f9f9', padding: 10, borderRadius: 8 },
   analizBadge: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#e3f2fd', justifyContent: 'center', alignItems: 'center' },
   analizNet: { fontWeight: 'bold', color: '#1976d2', fontSize: 14 },
   analizName: { fontWeight: 'bold', fontSize: 14, color: '#333' },
   analizDate: { fontSize: 12, color: '#777' },
-  
+
   modalFooter: { marginTop: 20, alignItems: 'flex-end' },
   closeBtn: { paddingHorizontal: 20, paddingVertical: 10, backgroundColor: '#eee', borderRadius: 6 },
   closeBtnText: { color: '#333', fontWeight: 'bold' }

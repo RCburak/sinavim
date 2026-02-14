@@ -76,10 +76,14 @@ def archive_program(
         items = (snap.to_dict() or {}).get("items") or []
         if not items:
             return True, None
+        # Tamamlanma oranını hesapla
+        total = len(items)
+        completed = sum(1 for it in items if it.get("completed"))
+        completion_rate = round((completed / total) * 100) if total > 0 else 0
         program_data = json.dumps(items, ensure_ascii=False)
         db.collection(COLLECTION_PROGRAM_HISTORY).add({
             "user_id": user_id,
-            "completion_rate": 0,
+            "completion_rate": completion_rate,
             "program_data": program_data,
             "program_type": program_type,
             "archive_date": firestore.SERVER_TIMESTAMP,
@@ -98,7 +102,6 @@ def get_history(user_id: str) -> list[dict]:
         snap = (
             db.collection(COLLECTION_PROGRAM_HISTORY)
             .where("user_id", "==", user_id)
-            .order_by("archive_date", direction="DESCENDING")
             .get()
         )
         out = []
@@ -108,6 +111,7 @@ def get_history(user_id: str) -> list[dict]:
             if "archive_date" in d and hasattr(d["archive_date"], "isoformat"):
                 d["archive_date"] = d["archive_date"].isoformat()
             out.append(d)
+        out.sort(key=lambda x: x.get("archive_date", ""), reverse=True)
         return out
     except Exception as e:
         logger.exception("Gecmis getirme hatasi")

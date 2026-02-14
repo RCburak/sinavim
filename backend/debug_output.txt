@@ -1,0 +1,8 @@
+=== INSTITUTIONS ===
+  ID: tjsAwSDgu359UjoYcWOj
+  name: burak hocam
+  email: burak@hocam.com
+  invite_code: rcburak
+
+=== USERS ===
+  ID: fvONBB2Q7VWvYScicu4CLiWXjrI2 | name: Burak İbrahim kaya | email: kaya.burak.ibrahim42@gmail.com | institution_id: tjsAwSDgu359UjoYcWOj

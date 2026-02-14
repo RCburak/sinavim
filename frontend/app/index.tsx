@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { View, StatusBar, StyleSheet, Alert, ActivityIndicator } from "react-native";
+import React, { useState, useEffect, useRef } from "react";
+import { View, StatusBar, StyleSheet, Alert, ActivityIndicator, AppState } from "react-native";
 import { auth } from "../src/services/firebaseConfig";
 import { API_URL, API_HEADERS } from "../src/config/api";
 import { useAuth } from "../src/contexts/AuthContext";
@@ -16,6 +16,7 @@ import { ProgramView } from "../src/components/ProgramView";
 import { PomodoroView } from "../src/components/PomodoroView";
 import { AnalizView } from "../src/components/AnalizView";
 import { HistoryView } from "./HistoryView";
+import { SplashScreen } from "./SplashScreen";
 
 type AuthScreen = "login" | "register";
 type AppView =
@@ -52,13 +53,32 @@ export default function Index() {
     }
   }, [user?.uid, loadProgram]);
 
-  const archiveProgram = async () => {
+  // App ön plana gelince programı yeniden yükle
+  const appState = useRef(AppState.currentState);
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (nextState) => {
+      if (appState.current.match(/inactive|background/) && nextState === 'active') {
+        if (user?.uid) loadProgram(user.uid);
+      }
+      appState.current = nextState;
+    });
+    return () => sub.remove();
+  }, [user?.uid, loadProgram]);
+
+  // Sayfa değiştiğinde de programı yeniden yükle (dashboard'a dönünce)
+  useEffect(() => {
+    if (view === 'dashboard' && user?.uid) {
+      loadProgram(user.uid);
+    }
+  }, [view]);
+
+  const archiveProgram = async (programType: string) => {
     if (!user) return;
     try {
       await fetch(`${API_URL}/archive-program`, {
         method: "POST",
         headers: API_HEADERS as HeadersInit,
-        body: JSON.stringify({ user_id: user.uid, type: "manual" }),
+        body: JSON.stringify({ user_id: user.uid, type: programType }),
       });
     } catch (e) {
       console.error("Arşiv hatası:", e);
@@ -67,15 +87,32 @@ export default function Index() {
 
   const finalizeManualWeek = async () => {
     if (!user || schedule.length === 0) return;
-    try {
-      await saveScheduleToCloud(schedule);
-      await archiveProgram();
-      setSchedule([]);
-      Alert.alert("Başarılı", "Plan arşivlendi! 🚀");
-      setView("dashboard");
-    } catch (e) {
-      Alert.alert("Hata", "İşlem sırasında bir sorun oluştu.");
-    }
+    const isTeacherProgram = view === "program";
+    const archiveType = isTeacherProgram ? "teacher" : "manual";
+    Alert.alert(
+      "Haftayı Bitir",
+      isTeacherProgram
+        ? "Ödev arşivlenecek ve ödevlerim geçmişine düşecek. Emin misin?"
+        : "Bu haftanın programı arşivlenecek. Emin misin?",
+      [
+        { text: "Vazgeç", style: "cancel" },
+        {
+          text: "Bitir",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await saveScheduleToCloud(schedule);
+              await archiveProgram(archiveType);
+              setSchedule([]);
+              Alert.alert("Başarılı", "Arşivlendi! Geçmişten inceleyebilirsin. 🚀");
+              setView("dashboard");
+            } catch (e) {
+              Alert.alert("Hata", "İşlem sırasında bir sorun oluştu.");
+            }
+          },
+        },
+      ]
+    );
   };
 
   // Auto-save when leaving manual_setup
@@ -117,11 +154,7 @@ export default function Index() {
 
   // Yükleniyor
   if (authLoading) {
-    return (
-      <View style={[styles.loading, { backgroundColor: theme.background }]}>
-        <ActivityIndicator size="large" color={theme.primary} />
-      </View>
-    );
+    return <SplashScreen />;
   }
 
   // Giriş / Kayıt ekranları
@@ -173,6 +206,7 @@ export default function Index() {
             updateQuestions={handleUpdateQuestions}
             theme={theme}
             onBack={() => setView("dashboard")}
+            onFinalize={finalizeManualWeek}
           />
         );
       case "analiz":

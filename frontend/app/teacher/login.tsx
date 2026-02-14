@@ -21,8 +21,13 @@ export default function TeacherLogin() {
     setLoading(false);
 
     if (result.status === 'success') {
-      // Giriş başarılı, dashboard'a yönlendir
-      // Not: Gerçek uygulamada burada token'ı kaydetmek gerekir.
+      // Teacher verisini kaydet (institution_id = teacher doc ID)
+      try {
+        const teacherData = result.teacher;
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('teacher_data', JSON.stringify(teacherData));
+        }
+      } catch (e) { /* ignore storage errors */ }
       router.replace('/teacher/dashboard');
     } else {
       Alert.alert("Giriş Başarısız", result.message || "Hatalı e-posta veya şifre.");
@@ -39,18 +44,18 @@ export default function TeacherLogin() {
 
         <View style={styles.form}>
           <Text style={styles.label}>E-Posta Adresi</Text>
-          <TextInput 
-            style={styles.input} 
-            placeholder="ornek@kurum.com" 
+          <TextInput
+            style={styles.input}
+            placeholder="ornek@kurum.com"
             value={email}
             onChangeText={setEmail}
             autoCapitalize="none"
           />
 
           <Text style={styles.label}>Şifre</Text>
-          <TextInput 
-            style={styles.input} 
-            placeholder="******" 
+          <TextInput
+            style={styles.input}
+            placeholder="******"
             secureTextEntry
             value={password}
             onChangeText={setPassword}

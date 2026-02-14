@@ -1,6 +1,7 @@
 """Öğretmen ve kurum işlemleri servisi (Firestore)."""
 from __future__ import annotations
 import logging
+from firebase_admin import firestore
 from firebase_db import get_firestore
 
 logger = logging.getLogger(__name__)
@@ -41,9 +42,19 @@ def join_institution(
         inst_data = {"id": inst_id, "name": inst_doc.to_dict().get("name", "")}
 
         if user_id:
-            db.collection(COLLECTION_USERS).document(user_id).update(
-                {"institution_id": inst_id}
-            )
+            ref = db.collection(COLLECTION_USERS).document(user_id)
+            snap = ref.get()
+            if snap.exists:
+                ref.update({"institution_id": inst_id})
+            else:
+                # sync-user henüz çağrılmamış olabilir, dokümanı oluştur
+                ref.set({
+                    "email": email or "",
+                    "name": email.split("@")[0] if email else "Öğrenci",
+                    "avatar": None,
+                    "institution_id": inst_id,
+                    "created_at": firestore.SERVER_TIMESTAMP,
+                }, merge=True)
         else:
             user_snap = (
                 db.collection(COLLECTION_USERS).where("email", "==", email).limit(1).get()
@@ -89,10 +100,11 @@ def get_students(institution_id: str) -> list[dict]:
         snap = (
             db.collection(COLLECTION_USERS)
             .where("institution_id", "==", institution_id)
-            .order_by("name")
             .get()
         )
-        return [_doc_to_dict(d) for d in snap]
+        students = [_doc_to_dict(d) for d in snap]
+        students.sort(key=lambda s: s.get("name", ""))
+        return students
     except Exception as e:
         logger.exception("Ogrenci listesi hatasi")
         return []

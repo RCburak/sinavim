@@ -1,7 +1,7 @@
 import { auth } from './firebaseConfig';
-import { 
-  createUserWithEmailAndPassword, 
-  signInWithEmailAndPassword, 
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
   sendEmailVerification,
   signOut,
   GoogleAuthProvider,
@@ -20,7 +20,7 @@ const googleProvider = new GoogleAuthProvider();
 
 export const authService = {
   // 1. Kayıt Olma
-  register: async ({ name, email, password }: any) => { 
+  register: async ({ name, email, password }: any) => {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       await updateProfile(userCredential.user, { displayName: name });
@@ -48,7 +48,7 @@ export const authService = {
       // Kullanıcı Firebase'de var ama PostgreSQL'de yoksa otomatik oluşturur.
       if (API_URL) {
         try {
-           await fetch(`${API_URL}/sync-user`, {
+          await fetch(`${API_URL}/sync-user`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -63,13 +63,13 @@ export const authService = {
       }
       // -----------------------------------
 
-      return { 
-        status: "success", 
-        user: { 
-          id: user.uid, 
-          email: user.email, 
+      return {
+        status: "success",
+        user: {
+          id: user.uid,
+          email: user.email,
           name: user.displayName || user.email?.split('@')[0]
-        } 
+        }
       };
     } catch (error: any) {
       return { status: "error", message: "E-posta veya şifre hatalı!" };
@@ -94,9 +94,9 @@ export const authService = {
     try {
       if (Platform.OS === 'web') {
         const result = await signInWithPopup(auth, googleProvider);
-        return { 
-          status: "success", 
-          user: { id: result.user.uid, email: result.user.email, name: result.user.displayName } 
+        return {
+          status: "success",
+          user: { id: result.user.uid, email: result.user.email, name: result.user.displayName }
         };
       } else {
         if (idToken) {
@@ -123,7 +123,7 @@ export const authService = {
   },
 
   // 6. Kuruma Katıl (Backend Bağlantısı)
-  joinClassroom: async (email: string, code: string) => {
+  joinClassroom: async (uid: string, email: string, code: string) => {
     try {
       if (!API_URL) {
         console.error("API URL eksik! .env dosyasını kontrol et.");
@@ -133,11 +133,11 @@ export const authService = {
       const response = await fetch(`${API_URL}/join-institution`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, code })
+        body: JSON.stringify({ user_id: uid, email, code })
       });
 
       const result = await response.json();
-      return result; 
+      return result;
     } catch (error: any) {
       console.error("Kuruma katılma hatası:", error);
       return { status: "error", message: "Sunucuya bağlanılamadı." };
@@ -148,13 +148,13 @@ export const authService = {
   loginTeacher: async (email: string, password: string) => {
     try {
       if (!API_URL) return { status: "error", message: "API URL eksik" };
-      
+
       const response = await fetch(`${API_URL}/teacher/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
       });
-      
+
       return await response.json();
     } catch (e) {
       console.error(e);
