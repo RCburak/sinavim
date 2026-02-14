@@ -78,27 +78,12 @@ export default function Index() {
     }
   };
 
-  const archiveOldAndSetup = async () => {
-    if (!user) return;
+  // Auto-save when leaving manual_setup
+  const handleBackFromSetup = async () => {
     if (schedule.length > 0) {
-      Alert.alert(
-        "Yeni Haftaya Başla",
-        "Mevcut programın arşive taşınacak. Onaylıyor musun?",
-        [
-          { text: "Vazgeç", style: "cancel" },
-          {
-            text: "Evet",
-            onPress: async () => {
-              await archiveProgram();
-              setSchedule([]);
-              setView("manual_setup");
-            },
-          },
-        ]
-      );
-    } else {
-      setView("manual_setup");
+      await saveScheduleToCloud(schedule);
     }
+    setView("dashboard");
   };
 
   const handleLogout = () => {
@@ -153,7 +138,7 @@ export default function Index() {
     return (
       <LoginScreen
         theme={theme}
-        onLogin={() => {}}
+        onLogin={() => { }}
         onGoToRegister={() => setAuthScreen("register")}
       />
     );
@@ -170,9 +155,10 @@ export default function Index() {
             toggleTask={handleToggleTask}
             updateQuestions={handleUpdateQuestions}
             onAddTask={(t: any) => setSchedule((prev) => [...prev, t])}
+            onDeleteTask={(index: number) => setSchedule((prev) => prev.filter((_, i) => i !== index))}
             onFinalize={finalizeManualWeek}
             theme={theme}
-            onBack={() => setView("dashboard")}
+            onBack={handleBackFromSetup}
           />
         );
       case "pomodoro":
@@ -230,8 +216,7 @@ export default function Index() {
             username={userName}
             theme={theme}
             onLogout={handleLogout}
-            setView={(v: any) =>
-              v === "manual_setup" ? archiveOldAndSetup() : setView(v)
+            setView={(v: any) => setView(v)
             }
             schedule={schedule}
             analiz={analiz}

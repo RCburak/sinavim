@@ -20,7 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 const { width, height } = Dimensions.get('window');
 
-export const ProgramView = ({ tasks, toggleTask, updateQuestions, onBack, onAddTask, onFinalize, theme = COLORS.light, isEditMode = false }: any) => {
+export const ProgramView = ({ tasks, toggleTask, updateQuestions, onBack, onAddTask, onDeleteTask, onFinalize, theme = COLORS.light, isEditMode = false }: any) => {
   const [selectedDay, setSelectedDay] = useState(GUNLER[0]);
   const [modalVisible, setModalVisible] = useState(false);
 
@@ -132,6 +132,26 @@ export const ProgramView = ({ tasks, toggleTask, updateQuestions, onBack, onAddT
                 theme={theme}
               />
             ))}
+
+          {/* Edit mode'da basit task listesi (DayFolder yerine silme butonlu) */}
+          {isEditMode && tasks
+            .map((t: any, idx: number) => ({ ...t, originalIndex: idx }))
+            .filter((t: any) => t.gun.toLowerCase() === selectedDay.toLowerCase())
+            .map((task: any) => (
+              <View key={`edit-${task.originalIndex}`} style={[{ flexDirection: 'row', alignItems: 'center', backgroundColor: theme.surface, borderRadius: 14, padding: 14, marginBottom: 10 }, theme.cardShadow]}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: theme.text, fontWeight: '700', fontSize: 15 }}>{task.task}</Text>
+                  <Text style={{ color: theme.textSecondary, fontSize: 12, marginTop: 3 }}>{task.duration}</Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => onDeleteTask && onDeleteTask(task.originalIndex)}
+                  style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#FEE2E2', justifyContent: 'center', alignItems: 'center' }}
+                >
+                  <Ionicons name="trash-outline" size={18} color="#EF4444" />
+                </TouchableOpacity>
+              </View>
+            ))
+          }
 
           {tasks.filter((t: any) => t.gun.toLowerCase() === selectedDay.toLowerCase()).length === 0 && (
             <View style={[styles.emptyState, { backgroundColor: theme.surface }, theme.cardShadow]}>
