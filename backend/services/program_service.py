@@ -130,18 +130,44 @@ def delete_history(history_id: str) -> tuple[bool, str | None]:
 
 
 def get_user_stats(user_id: str) -> dict:
-    """Kullanıcı istatistiklerini getirir."""
+    """Kullanıcı istatistiklerini ve kurum bilgisini getirir."""
     try:
         db = get_firestore()
+        
+        # 1. Tamamlanan görev sayısı (Geçmişten)
         snap = (
             db.collection(COLLECTION_PROGRAM_HISTORY)
             .where("user_id", "==", user_id)
             .get()
         )
-        return {"total_tasks": len(snap), "total_hours": 0}
+        total_tasks = len(snap)
+
+        # 2. Kurum bilgisi (Users koleksiyonundan)
+        institution = None
+        user_ref = db.collection("users").document(user_id)
+        user_snap = user_ref.get()
+        
+        if user_snap.exists:
+            user_data = user_snap.to_dict()
+            inst_id = user_data.get("institution_id")
+            if inst_id:
+                # Kurum adını al
+                inst_ref = db.collection("institutions").document(inst_id)
+                inst_snap = inst_ref.get()
+                if inst_snap.exists:
+                    institution = {
+                        "id": inst_id,
+                        "name": inst_snap.to_dict().get("name", "Bilinmeyen Kurum")
+                    }
+
+        return {
+            "total_tasks": total_tasks,
+            "total_hours": 0,
+            "institution": institution
+        }
     except Exception as e:
         logger.exception("Istatistik hatasi")
-        return {"total_tasks": 0, "total_hours": 0}
+        return {"total_tasks": 0, "total_hours": 0, "institution": None}
 
 
 class ProgramService:

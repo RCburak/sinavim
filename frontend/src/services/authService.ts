@@ -160,5 +160,23 @@ export const authService = {
       console.error(e);
       return { status: "error", message: "Sunucuya bağlanılamadı." };
     }
+  },
+
+  // 8. Kurumdan Ayrıl
+  leaveClassroom: async (uid: string) => {
+    try {
+      if (!API_URL) return { status: "error", message: "API URL eksik" };
+
+      const response = await fetch(`${API_URL}/leave-institution`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: uid })
+      });
+
+      return await response.json();
+    } catch (e) {
+      console.error("Kurumdan ayrılma hatası:", e);
+      return { status: "error", message: "Sunucuya bağlanılamadı." };
+    }
   }
 };

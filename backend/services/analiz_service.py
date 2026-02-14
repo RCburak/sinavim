@@ -25,31 +25,52 @@ def _doc_to_dict(doc) -> dict:
 
 
 def get_analizler(user_id: str) -> list[dict]:
-    """Kullanıcının deneme sonuçlarını getirir."""
+    """Kullanıcının deneme sonuçlarını getirir (users/{uid}/exam_results)."""
     try:
         db = get_firestore()
+        # ARTIK ANA KOLEKSIYON YERINE USER ALTINDAKI SUB-COLLECTION
         snap = (
-            db.collection(COLLECTION_EXAM_RESULTS)
-            .where("user_id", "==", user_id)
+            db.collection("users").document(user_id).collection("exam_results")
+            .order_by("date", direction=firestore.Query.DESCENDING)
             .get()
         )
         results = [_doc_to_dict(d) for d in snap]
-        results.sort(key=lambda x: x.get("date", ""), reverse=True)
         return results
     except Exception as e:
         logger.exception("Analiz getirme hatasi")
         return []
 
 
-def add_analiz(user_id: str, ad: str, net: float) -> tuple[bool, str | None]:
-    """Yeni analiz ekler."""
+def add_analiz(user_id: str, ad: str, net: float, exam_type: str = "Diğer", date: any = None) -> tuple[bool, str | None]:
+    """Yeni analiz ekler (users/{uid}/exam_results)."""
     try:
         db = get_firestore()
-        db.collection(COLLECTION_EXAM_RESULTS).add({
-            "user_id": user_id,
+        
+        # Tarih kontrolü
+        if date:
+            # Eğer string gelirse (frontend'den ISO format gelebilir)
+            if isinstance(date, str):
+                try:
+                    from datetime import datetime
+                    # Sadece YYYY-MM-DD gelirse
+                    if len(date) == 10: 
+                        date_obj = datetime.strptime(date, "%Y-%m-%d")
+                    else:
+                        date_obj = datetime.fromisoformat(date.replace('Z', '+00:00'))
+                    firestore_date = date_obj
+                except:
+                    firestore_date = firestore.SERVER_TIMESTAMP
+            else:
+                firestore_date = date
+        else:
+            firestore_date = firestore.SERVER_TIMESTAMP
+
+        db.collection("users").document(user_id).collection("exam_results").add({
             "lesson_name": ad,
             "net": net,
-            "date": firestore.SERVER_TIMESTAMP,
+            "type": exam_type,
+            "date": firestore_date,
+            "user_id": user_id
         })
         return True, None
     except Exception as e:
@@ -57,11 +78,12 @@ def add_analiz(user_id: str, ad: str, net: float) -> tuple[bool, str | None]:
         return False, str(e)
 
 
-def delete_analiz(analiz_id: str) -> tuple[bool, str | None]:
-    """Analizi siler (doc id string)."""
+def delete_analiz(user_id: str, analiz_id: str) -> tuple[bool, str | None]:
+    """Analizi siler (users/{uid}/exam_results/{doc_id})."""
     try:
         db = get_firestore()
-        db.collection(COLLECTION_EXAM_RESULTS).document(analiz_id).delete()
+        # User ID artik zorunlu cunku sub-collection
+        db.collection("users").document(user_id).collection("exam_results").document(analiz_id).delete()
         return True, None
     except Exception as e:
         logger.exception("Analiz silme hatasi")

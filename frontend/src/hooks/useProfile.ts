@@ -8,11 +8,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage'; // EKLEND�
 
 import { API_URL, API_HEADERS } from '../config/api';
 
+import { authService } from '../services/authService';
+
 export const useProfile = (initialName: string) => {
-  const [stats, setStats] = useState({ total_hours: 0, total_tasks: 0 });
+  const [stats, setStats] = useState({ total_hours: 0, total_tasks: 0, institution: null as { id: string, name: string } | null });
   const [loading, setLoading] = useState(true);
   const [newName, setNewName] = useState(initialName || '');
-  
+
   // Modal Visibility States
   const [modals, setModals] = useState({
     settings: false,
@@ -56,13 +58,42 @@ export const useProfile = (initialName: string) => {
     }
   };
 
+  const handleLeaveClass = async () => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    Alert.alert(
+      "Kurumdan Ayrıl",
+      "Sınıfından ayrılmak istediğine emin misin? Bu işlem geri alınamaz ve tekrar katılmak için koda ihtiyacın olacak.",
+      [
+        { text: "Vazgeç", style: "cancel" },
+        {
+          text: "Ayrıl",
+          style: "destructive",
+          onPress: async () => {
+            setLoading(true);
+            const result = await authService.leaveClassroom(user.uid);
+            setLoading(false);
+
+            if (result.status === 'success') {
+              Alert.alert("Başarılı", result.message);
+              fetchUserStats(); // Refresh to update UI
+            } else {
+              Alert.alert("Hata", result.message);
+            }
+          }
+        }
+      ]
+    );
+  };
+
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert('İzin Gerekli', 'Fotoğraf yüklemek için galeri izni vermelisiniz.');
       return;
     }
-    
+
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
@@ -80,7 +111,7 @@ export const useProfile = (initialName: string) => {
     try {
       const response = await fetch(uri);
       const blob = await response.blob();
-      
+
       const storageRef = ref(storage, `users/${user.uid}/profile.jpg`);
       await uploadBytes(storageRef, blob);
       const downloadUrl = await getDownloadURL(storageRef);
@@ -148,8 +179,8 @@ export const useProfile = (initialName: string) => {
       "Uygulamadan çıkmak istediğine emin misin?",
       [
         { text: "İptal", style: "cancel" },
-        { 
-          text: "Çıkış Yap", 
+        {
+          text: "Çıkış Yap",
           style: "destructive",
           onPress: async () => {
             try {
@@ -174,6 +205,7 @@ export const useProfile = (initialName: string) => {
     passwords, setPasswords,
     updating, handleUpdateProfile, handleChangePassword,
     avatarUrl, imageLoading, pickImage,
-    handleLogout // Hook'tan dışarı aktarıyoruz
+    handleLogout,
+    handleLeaveClass // Hook dışa aktarımı
   };
 };

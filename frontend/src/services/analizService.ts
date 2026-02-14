@@ -33,8 +33,8 @@ export const analizService = {
     }
   },
 
-  // 3. Yeni analiz ekler
-  add: async (ad: string, net: string, userId: string) => {
+  // 3. Yeni analiz ekler (Gelişmiş)
+  add: async (ad: string, net: string, userId: string, type: string = "Diğer", date: string | null = null) => {
     try {
       const response = await fetch(`${API_URL}/analiz-ekle`, {
         method: 'POST',
@@ -43,7 +43,8 @@ export const analizService = {
           user_id: userId,
           ad: ad,
           net: parseFloat(net),
-          tarih: new Date().toLocaleDateString('tr-TR')
+          type: type,
+          date: date || new Date().toISOString()
         }),
       });
       return response.ok;
@@ -53,17 +54,16 @@ export const analizService = {
     }
   },
 
-  // 4. Analiz siler (DÜZELTİLDİ)
-  delete: async (id: number | string) => {
+  // 4. Analiz siler (DÜZELTİLDİ + user_id eklendi)
+  delete: async (id: number | string, userId: string) => {
     try {
-      console.log(`Silme isteği gönderiliyor: ID = ${id}`);
-      
-      const response = await fetch(`${API_URL}/analiz-sil/${id}`, {
-        method: 'DELETE', // Backend tarafında methods=['DELETE'] tanımlı olmalı
+      console.log(`Silme isteği gönderiliyor: ID = ${id}, UserID = ${userId}`);
+
+      const response = await fetch(`${API_URL}/analiz-sil/${id}?user_id=${userId}`, {
+        method: 'DELETE',
         headers: defaultHeaders
       });
 
-      // Eğer response 405 (Method Not Allowed) dönüyorsa backend'de DELETE kapalıdır
       if (response.status === 405) {
         console.error("Hata: Backend 'DELETE' metoduna izin vermiyor.");
       }

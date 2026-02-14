@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
-import { View, StatusBar, StyleSheet, Alert, ActivityIndicator, AppState } from "react-native";
+import { View, StatusBar, StyleSheet, Alert, ActivityIndicator, AppState, Platform } from "react-native";
+import { useRouter } from "expo-router";
 import { auth } from "../src/services/firebaseConfig";
 import { API_URL, API_HEADERS } from "../src/config/api";
 import { useAuth } from "../src/contexts/AuthContext";
@@ -29,6 +30,7 @@ type AppView =
   | "history";
 
 export default function Index() {
+  const router = useRouter();
   const { user, userName, setUserName, loading: authLoading, logout } = useAuth();
   const { theme, isDarkMode, toggleDarkMode } = useTheme();
   const {
@@ -42,13 +44,25 @@ export default function Index() {
 
   const [authScreen, setAuthScreen] = useState<AuthScreen>("login");
   const [view, setView] = useState<AppView>("dashboard");
+  const [isWebRedirecting, setIsWebRedirecting] = useState(Platform.OS === 'web');
 
   const pomodoro = usePomodoro();
   const analiz = useAnaliz();
 
+  // Platform Check for Web -> Teacher Panel
+  useEffect(() => {
+    if (Platform.OS === 'web') {
+      // Small delay to ensure navigation is ready or just direct
+      const timer = setTimeout(() => {
+        router.replace('/teacher/login');
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
   // Kullanıcı giriş yaptığında programı yükle
   useEffect(() => {
-    if (user?.uid) {
+    if (user?.uid && Platform.OS !== 'web') {
       loadProgram(user.uid);
     }
   }, [user?.uid, loadProgram]);
@@ -56,6 +70,8 @@ export default function Index() {
   // App ön plana gelince programı yeniden yükle
   const appState = useRef(AppState.currentState);
   useEffect(() => {
+    if (Platform.OS === 'web') return;
+
     const sub = AppState.addEventListener('change', (nextState) => {
       if (appState.current.match(/inactive|background/) && nextState === 'active') {
         if (user?.uid) loadProgram(user.uid);
@@ -67,7 +83,7 @@ export default function Index() {
 
   // Sayfa değiştiğinde de programı yeniden yükle (dashboard'a dönünce)
   useEffect(() => {
-    if (view === 'dashboard' && user?.uid) {
+    if (view === 'dashboard' && user?.uid && Platform.OS !== 'web') {
       loadProgram(user.uid);
     }
   }, [view]);
@@ -151,6 +167,15 @@ export default function Index() {
     setSchedule(newSchedule);
     if (view !== "manual_setup") await saveScheduleToCloud(newSchedule);
   };
+
+  // WEB REDIRECT LOADER
+  if (isWebRedirecting) {
+    return (
+      <View style={styles.loading}>
+        <ActivityIndicator size="large" color={theme.primary} />
+      </View>
+    );
+  }
 
   // Yükleniyor
   if (authLoading) {

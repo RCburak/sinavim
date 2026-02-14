@@ -59,22 +59,42 @@ export const ProfileView = ({ username, onBack, onLogout, theme, isDarkMode, tog
         {/* Eğitim Kurumum */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>Eğitim Kurumum</Text>
-          <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: theme.surface }, theme.cardShadow]}
-            onPress={() => setTeacherModalVisible(true)}
-            activeOpacity={0.8}
-          >
-            <View style={styles.row}>
-              <View style={[styles.actionIconCircle, { backgroundColor: theme.primary + '15' }]}>
-                <Ionicons name="school" size={20} color={theme.primary} />
+
+          {profile.stats.institution ? (
+            <TouchableOpacity
+              style={[styles.actionButton, { backgroundColor: theme.surface }, theme.cardShadow]}
+              onPress={profile.handleLeaveClass}
+              activeOpacity={0.8}
+            >
+              <View style={styles.row}>
+                <View style={[styles.actionIconCircle, { backgroundColor: '#FEE2E2' }]}>
+                  <Ionicons name="school" size={20} color="#EF4444" />
+                </View>
+                <View>
+                  <Text style={[styles.actionText, { color: theme.text }]}>{profile.stats.institution.name}</Text>
+                  <Text style={{ fontSize: 12, color: "#EF4444", marginTop: 2, fontWeight: '500' }}>Kurumdan Ayrıl</Text>
+                </View>
               </View>
-              <View>
-                <Text style={[styles.actionText, { color: theme.text }]}>Öğretmenine Bağlan</Text>
-                <Text style={{ fontSize: 12, color: theme.textSecondary, marginTop: 2, fontWeight: '500' }}>Kurum kodunu girerek sınıfına katıl</Text>
+              <Ionicons name="log-out-outline" size={18} color="#EF4444" />
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={[styles.actionButton, { backgroundColor: theme.surface }, theme.cardShadow]}
+              onPress={() => setTeacherModalVisible(true)}
+              activeOpacity={0.8}
+            >
+              <View style={styles.row}>
+                <View style={[styles.actionIconCircle, { backgroundColor: theme.primary + '15' }]}>
+                  <Ionicons name="school" size={20} color={theme.primary} />
+                </View>
+                <View>
+                  <Text style={[styles.actionText, { color: theme.text }]}>Öğretmenine Bağlan</Text>
+                  <Text style={{ fontSize: 12, color: theme.textSecondary, marginTop: 2, fontWeight: '500' }}>Kurum kodunu girerek sınıfına katıl</Text>
+                </View>
               </View>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
-          </TouchableOpacity>
+              <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Uygulama Ayarları */}

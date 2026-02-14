@@ -1,8 +1,23 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Platform } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+  Alert,
+  Platform,
+  Dimensions,
+  Image
+} from 'react-native';
 import { useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { authService } from '../../src/services/authService';
 import { COLORS } from '../../src/constants/theme';
+
+const { width, height } = Dimensions.get('window');
 
 export default function TeacherLogin() {
   const router = useRouter();
@@ -21,7 +36,6 @@ export default function TeacherLogin() {
     setLoading(false);
 
     if (result.status === 'success') {
-      // Teacher verisini kaydet (institution_id = teacher doc ID)
       try {
         const teacherData = result.teacher;
         if (typeof window !== 'undefined') {
@@ -36,36 +50,73 @@ export default function TeacherLogin() {
 
   return (
     <View style={styles.container}>
+      <LinearGradient
+        colors={[COLORS.light.primary, '#6C3CE1', '#4F46E5']}
+        style={styles.background}
+      />
+
+      {/* Abstract Shapes */}
+      <View style={[styles.shape, styles.shape1]} />
+      <View style={[styles.shape, styles.shape2]} />
+
       <View style={styles.card}>
         <View style={styles.header}>
+          <View style={styles.iconContainer}>
+            <Ionicons name="school" size={40} color={COLORS.light.primary} />
+          </View>
           <Text style={styles.title}>Öğretmen Paneli</Text>
           <Text style={styles.subtitle}>RC Sınavım Yönetim Sistemi</Text>
         </View>
 
         <View style={styles.form}>
-          <Text style={styles.label}>E-Posta Adresi</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="ornek@kurum.com"
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-          />
+          <View style={styles.inputContainer}>
+            <Ionicons name="mail-outline" size={20} color="#6B7280" style={styles.inputIcon} />
+            <TextInput
+              style={styles.input}
+              placeholder="E-Posta Adresi"
+              placeholderTextColor="#9CA3AF"
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+            />
+          </View>
 
-          <Text style={styles.label}>Şifre</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="******"
-            secureTextEntry
-            value={password}
-            onChangeText={setPassword}
-          />
+          <View style={styles.inputContainer}>
+            <Ionicons name="lock-closed-outline" size={20} color="#6B7280" style={styles.inputIcon} />
+            <TextInput
+              style={styles.input}
+              placeholder="Şifre"
+              placeholderTextColor="#9CA3AF"
+              secureTextEntry
+              value={password}
+              onChangeText={setPassword}
+            />
+          </View>
 
-          <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={loading}>
-            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Giriş Yap</Text>}
+          <TouchableOpacity
+            style={styles.button}
+            onPress={handleLogin}
+            disabled={loading}
+            activeOpacity={0.8}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <LinearGradient
+                colors={[COLORS.light.primary, '#7C3AED']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.buttonGradient}
+              >
+                <Text style={styles.buttonText}>Giriş Yap</Text>
+                <Ionicons name="arrow-forward" size={20} color="#fff" />
+              </LinearGradient>
+            )}
           </TouchableOpacity>
         </View>
       </View>
+
+      <Text style={styles.footerText}>© 2024 RC Sınavım. Tüm hakları saklıdır.</Text>
     </View>
   );
 }
@@ -73,63 +124,120 @@ export default function TeacherLogin() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f0f2f5',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    backgroundColor: '#F3F4F6',
+  },
+  background: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.9,
+  },
+  shape: {
+    position: 'absolute',
+    borderRadius: 999,
+    opacity: 0.2,
+    backgroundColor: '#fff',
+  },
+  shape1: {
+    width: 300,
+    height: 300,
+    top: -100,
+    left: -100,
+  },
+  shape2: {
+    width: 400,
+    height: 400,
+    bottom: -150,
+    right: -100,
   },
   card: {
-    backgroundColor: '#fff',
-    width: Platform.OS === 'web' ? 400 : '100%',
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    width: Platform.OS === 'web' ? 420 : '90%',
     padding: 40,
-    borderRadius: 16,
+    borderRadius: 24,
     shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 5,
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 10,
+    alignItems: 'center',
   },
   header: {
     alignItems: 'center',
-    marginBottom: 30,
+    marginBottom: 32,
+    width: '100%',
+  },
+  iconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#EEF2FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#E0E7FF'
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#111827',
+    marginBottom: 8,
   },
   subtitle: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 5,
+    fontSize: 15,
+    color: '#6B7280',
+    fontWeight: '500',
   },
   form: {
     width: '100%',
+    gap: 16,
   },
-  label: {
-    fontWeight: '600',
-    marginBottom: 8,
-    color: '#333',
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    height: 56,
+  },
+  inputIcon: {
+    marginRight: 12,
   },
   input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    padding: 15,
-    borderRadius: 8,
-    marginBottom: 20,
+    flex: 1,
     fontSize: 16,
-    backgroundColor: '#fafafa',
+    color: '#111827',
+    height: '100%',
   },
   button: {
-    backgroundColor: COLORS.light.primary,
-    padding: 15,
-    borderRadius: 8,
+    marginTop: 8,
+    borderRadius: 12,
+    overflow: 'hidden',
+    shadowColor: COLORS.light.primary,
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 5,
+  },
+  buttonGradient: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 10,
+    justifyContent: 'center',
+    paddingVertical: 16,
+    gap: 8,
   },
   buttonText: {
     color: '#fff',
-    fontWeight: 'bold',
+    fontWeight: '700',
     fontSize: 16,
+  },
+  footerText: {
+    position: 'absolute',
+    bottom: 20,
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 12,
   }
 });

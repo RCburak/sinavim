@@ -45,7 +45,7 @@ export const useAnaliz = () => {
     return () => unsubscribe();
   }, [refreshAnaliz]);
 
-  const addAnaliz = async (ad: string, net: string) => {
+  const addAnaliz = async (ad: string, net: string, type: string = "Diğer", date: string | null = null) => {
     try {
       const userId = getUserId();
       if (!userId) {
@@ -53,7 +53,7 @@ export const useAnaliz = () => {
         return false;
       }
 
-      const success = await analizService.add(ad, net, userId);
+      const success = await analizService.add(ad, net, userId, type, date);
       if (success) await refreshAnaliz();
       return success;
     } catch (e) {
@@ -64,7 +64,12 @@ export const useAnaliz = () => {
 
   const deleteAnaliz = async (id: number | string) => {
     try {
-      const success = await analizService.delete(id);
+      const userId = getUserId();
+      if (!userId) {
+        Alert.alert("Hata", "Oturum bulunamadı. Silme işlemi yapılamaz.");
+        return false;
+      }
+      const success = await analizService.delete(id, userId);
       if (success) {
         setAnalizler(prev => prev.filter(item => item.id !== id));
         return true;

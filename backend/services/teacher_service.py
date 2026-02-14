@@ -74,6 +74,29 @@ def join_institution(
         return None, str(e)
 
 
+def leave_institution(user_id: str) -> tuple[bool, str | None]:
+    """Kullanıcıyı kurumdan ayırır."""
+    try:
+        db = get_firestore()
+        ref = db.collection(COLLECTION_USERS).document(user_id)
+        
+        # Kullanıcının mevcut durumunu kontrol et
+        snap = ref.get()
+        if not snap.exists:
+            return False, "Kullanıcı bulunamadı."
+            
+        # Kurum ve sınıf bilgisini sıfırla
+        ref.update({
+            "institution_id": None,
+            "class_id": None,
+            "status": None # Durumu da sıfırla
+        })
+        return True, None
+    except Exception as e:
+        logger.exception("Kurumdan ayrilma hatasi")
+        return False, str(e)
+
+
 def teacher_login(email: str, password: str) -> tuple[dict | None, str | None]:
     """Öğretmen girişi (institutions koleksiyonundan)."""
     try:
@@ -179,6 +202,7 @@ def assign_program(student_id: str, program: list[dict]) -> tuple[bool, str | No
 
 class TeacherService:
     join_institution = staticmethod(join_institution)
+    leave_institution = staticmethod(leave_institution)
     login = staticmethod(teacher_login)
     get_students = staticmethod(get_students)
     assign_program = staticmethod(assign_program)

@@ -28,8 +28,11 @@ def analiz_ekle():
         net = float(data["net"])
     except (ValueError, TypeError):
         return error_response("Geçersiz net değeri", 400)
+    
+    exam_type = data.get("type", "Diğer")
+    date_val = data.get("date", None) # Optional, service handles defaults
 
-    ok, err = analiz_service.add(data["user_id"], data["ad"], net)
+    ok, err = analiz_service.add(data["user_id"], data["ad"], net, exam_type, date_val)
     if err:
         return error_response(err, 500)
     return success_response(message="Eklendi", status_code=201)
@@ -37,8 +40,12 @@ def analiz_ekle():
 
 @analiz_bp.route("/analiz-sil/<analiz_id>", methods=["DELETE"])
 def analiz_sil(analiz_id):
-    """Analizi siler."""
-    ok, err = analiz_service.delete(analiz_id)
+    """Analizi siler (user_id query param gerekli)."""
+    user_id = request.args.get("user_id")
+    if not user_id:
+        return error_response("user_id parametresi gerekli", 400)
+        
+    ok, err = analiz_service.delete(user_id, analiz_id)
     if err:
         return error_response(err, 500)
     return success_response()

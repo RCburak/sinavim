@@ -28,3 +28,19 @@ def join_institution():
     return success_response(
         {"institution": institution, "message": f"{institution['name']} kurumuna başarıyla katıldınız!"}
     )
+
+
+@institution_bp.route("/leave-institution", methods=["POST"])
+def leave_institution():
+    """Kullanıcıyı kurumdan ayırır."""
+    data = request.get_json(silent=True) or {}
+    try:
+        require_keys(data, ["user_id"])
+    except ValidationError as e:
+        return error_response(e.message, 400)
+
+    ok, err = teacher_service.leave_institution(data["user_id"])
+    if not ok:
+        return error_response(err or "Kurumdan ayrılırken bir hata oluştu.", 500)
+
+    return success_response(message="Kurumdan başarıyla ayrıldınız.")
