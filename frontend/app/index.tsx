@@ -18,6 +18,7 @@ import { PomodoroView } from "../src/components/PomodoroView";
 import { AnalizView } from "../src/components/AnalizView";
 import { HistoryView } from "./HistoryView";
 import { SplashScreen } from "./SplashScreen";
+import { QuestionPoolView } from "./QuestionPoolView";
 
 type AuthScreen = "login" | "register";
 type AppView =
@@ -27,7 +28,10 @@ type AppView =
   | "program"
   | "analiz"
   | "profile"
-  | "history";
+  | "analiz"
+  | "profile"
+  | "history"
+  | "question_pool";
 
 export default function Index() {
   const router = useRouter();
@@ -251,6 +255,10 @@ export default function Index() {
             onBack={() => setView("dashboard")}
             userId={user.uid}
           />
+        );
+      case "question_pool":
+        return (
+          <QuestionPoolView theme={theme} onBack={() => setView("dashboard")} />
         );
       case "profile":
         return (

@@ -158,6 +158,15 @@ export const DashboardView = ({ username, onLogout, setView, schedule, analiz, p
             onPress={() => setView('pomodoro')}
             theme={theme}
           />
+
+          <MenuCard
+            title="Soru Havuzu"
+            emoji="📸"
+            subText="Yapamadıkların"
+            onPress={() => setView('question_pool')}
+            theme={theme}
+            color="#EC4899"
+          />
         </View>
 
         <View style={{ height: 80 }} />
