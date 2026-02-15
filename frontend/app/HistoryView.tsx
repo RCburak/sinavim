@@ -19,7 +19,7 @@ import { API_URL, API_HEADERS } from '../src/config/api';
 
 const { width } = Dimensions.get('window');
 
-export const HistoryView = ({ theme, onBack, userId }: any) => {
+export const HistoryView = ({ theme, onBack, userId, institution }: any) => {
   const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -136,15 +136,18 @@ export const HistoryView = ({ theme, onBack, userId }: any) => {
             Kendi Planlarım
           </Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => setActiveTab('odev')}
-          style={[styles.tabPill, activeTab === 'odev' && { backgroundColor: theme.primary }]}
-          activeOpacity={0.7}
-        >
-          <Text style={[styles.tabText, { color: activeTab === 'odev' ? '#fff' : theme.textSecondary, fontWeight: activeTab === 'odev' ? '700' : '500' }]}>
-            Ödevlerim
-          </Text>
-        </TouchableOpacity>
+
+        {institution && (
+          <TouchableOpacity
+            onPress={() => setActiveTab('odev')}
+            style={[styles.tabPill, activeTab === 'odev' && { backgroundColor: theme.primary }]}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.tabText, { color: activeTab === 'odev' ? '#fff' : theme.textSecondary, fontWeight: activeTab === 'odev' ? '700' : '500' }]}>
+              Ödevlerim
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {loading ? (

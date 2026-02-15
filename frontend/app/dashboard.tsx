@@ -14,6 +14,9 @@ import { ScrollView } from 'react-native-gesture-handler';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MenuCard } from '../src/components/Dashboard/MenuCard';
 import { Ionicons } from '@expo/vector-icons';
+import { TeacherJoinModal } from '../src/components/profile/TeacherJoinModal';
+import { auth } from '../src/services/firebaseConfig';
+import { API_URL, API_HEADERS } from '../src/config/api';
 
 const { width } = Dimensions.get('window');
 
@@ -91,14 +94,16 @@ const DashboardHeader = ({ username, theme }: any) => {
   );
 };
 
-export const DashboardView = ({ username, onLogout, setView, schedule, analiz, pomodoro, theme }: any) => {
+export const DashboardView = ({ username, onLogout, setView, schedule, analiz, pomodoro, theme, institution, refreshInstitution }: any) => {
   const [refreshing, setRefreshing] = useState(false);
+  const [teacherModalVisible, setTeacherModalVisible] = useState(false);
 
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
     if (analiz && analiz.refreshAnaliz) analiz.refreshAnaliz();
+    if (refreshInstitution) refreshInstitution();
     setTimeout(() => setRefreshing(false), 1000);
-  }, [analiz]);
+  }, [analiz, refreshInstitution]);
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -124,13 +129,17 @@ export const DashboardView = ({ username, onLogout, setView, schedule, analiz, p
             theme={theme}
           />
 
-          <MenuCard
-            title="Ödev"
-            emoji="📝"
-            subText={`${schedule?.length || 0} Ders Atanmış`}
-            onPress={() => setView('program')}
-            theme={theme}
-          />
+
+
+          {institution && (
+            <MenuCard
+              title="Ödev"
+              emoji="📝"
+              subText={`${schedule?.length || 0} Ders Atanmış`}
+              onPress={() => setView('program')}
+              theme={theme}
+            />
+          )}
 
           <MenuCard
             title="Analizler"
@@ -174,6 +183,16 @@ export const DashboardView = ({ username, onLogout, setView, schedule, analiz, p
       </ScrollView>
 
       <BottomTabBar setView={setView} theme={theme} />
+
+      <TeacherJoinModal
+        visible={teacherModalVisible}
+        onClose={() => setTeacherModalVisible(false)}
+        theme={theme}
+        userEmail={auth.currentUser?.email || null}
+        onSuccess={(institutionName: string) => {
+          if (refreshInstitution) refreshInstitution();
+        }}
+      />
     </View>
   );
 };

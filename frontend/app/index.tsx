@@ -53,6 +53,26 @@ export default function Index() {
   const pomodoro = usePomodoro();
   const analiz = useAnaliz();
 
+  const [institution, setInstitution] = useState<any>(null);
+
+  // Institution Status Check
+  const checkInstitutionStatus = async () => {
+    if (!user) return;
+    try {
+      const response = await fetch(`${API_URL}/user-stats/${user.uid}`, {
+        headers: API_HEADERS as HeadersInit,
+      });
+      const data = await response.json();
+      setInstitution(data.institution);
+    } catch (e) {
+      console.error("Kurum bilgisi alınamadı:", e);
+    }
+  };
+
+  useEffect(() => {
+    if (user?.uid) checkInstitutionStatus();
+  }, [user?.uid]);
+
   // Platform Check for Web -> Teacher Panel
   useEffect(() => {
     if (Platform.OS === 'web') {
@@ -78,7 +98,10 @@ export default function Index() {
 
     const sub = AppState.addEventListener('change', (nextState) => {
       if (appState.current.match(/inactive|background/) && nextState === 'active') {
-        if (user?.uid) loadProgram(user.uid);
+        if (user?.uid) {
+          loadProgram(user.uid);
+          checkInstitutionStatus();
+        }
       }
       appState.current = nextState;
     });
@@ -89,6 +112,7 @@ export default function Index() {
   useEffect(() => {
     if (view === 'dashboard' && user?.uid && Platform.OS !== 'web') {
       loadProgram(user.uid);
+      checkInstitutionStatus();
     }
   }, [view]);
 
@@ -206,6 +230,8 @@ export default function Index() {
     );
   }
 
+
+
   // Ana uygulama - sayfa render
   const renderView = () => {
     switch (view) {
@@ -254,6 +280,7 @@ export default function Index() {
             theme={theme}
             onBack={() => setView("dashboard")}
             userId={user.uid}
+            institution={institution}
           />
         );
       case "question_pool":
@@ -283,11 +310,12 @@ export default function Index() {
             username={userName}
             theme={theme}
             onLogout={handleLogout}
-            setView={(v: any) => setView(v)
-            }
+            setView={(v: any) => setView(v)}
             schedule={schedule}
             analiz={analiz}
             pomodoro={pomodoro}
+            institution={institution}
+            refreshInstitution={checkInstitutionStatus}
           />
         );
     }

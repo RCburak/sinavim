@@ -9,15 +9,15 @@ import { Platform } from 'react-native';
  * Fiziksel cihazda test ederken bu IP'nin doğru olduğundan emin olun.
  * CMD'de `ipconfig` komutuyla bulabilirsiniz.
  */
-const LOCAL_IP = "192.168.1.116";
+const LOCAL_IP = "192.168.1.116"; // Bilgisayarınızın IP adresi
 const LOCAL_PORT = "8000";
 
 /** Ana backend API adresi */
 export const API_URL =
   process.env.EXPO_PUBLIC_API_URL ??
   (Platform.OS === 'android'
-    ? `http://${LOCAL_IP}:${LOCAL_PORT}`  // Android fiziksel cihaz veya emülatör
-    : `http://${LOCAL_IP}:${LOCAL_PORT}`  // iOS fiziksel cihaz
+    ? `http://${LOCAL_IP}:${LOCAL_PORT}`  // Fiziksel Cihaz için. Emulator kullanıyorsanız "10.0.2.2" yapın.
+    : `http://${LOCAL_IP}:${LOCAL_PORT}`  // iOS
   );
 
 /** API istekleri için ortak headers */
