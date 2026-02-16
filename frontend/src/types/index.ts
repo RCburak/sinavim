@@ -4,6 +4,22 @@ export interface User {
     name: string | null;
 }
 
+export interface BaseResponse {
+    status: 'success' | 'error';
+    message?: string;
+    data?: any;
+}
+
+export interface AuthResponse extends BaseResponse {
+    user?: User;
+}
+
+export interface RegisterData {
+    name: string;
+    email: string;
+    password: string;
+}
+
 export interface ScheduleItem {
     gun: string;
     task: string;
@@ -31,15 +47,17 @@ export interface Analiz {
     [key: string]: any; // Allow extensibility for now
 }
 
+export type PomodoroMode = 'focus' | 'shortBreak' | 'longBreak';
+
 export interface PomodoroHook {
     timer: number;
     isActive: boolean;
-    mode: 'focus' | 'shortBreak' | 'longBreak';
+    mode: PomodoroMode;
     completedSessions: number;
     progress: number;
     toggleTimer: () => void;
     resetTimer: () => void;
-    changeMode: (newMode: 'focus' | 'shortBreak' | 'longBreak') => void;
+    changeMode: (newMode: PomodoroMode) => void;
     formatTime: (s: number) => string;
 }
 

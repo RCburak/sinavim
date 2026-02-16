@@ -8,11 +8,13 @@ import {
   signInWithPopup,
   signInWithCredential,
   updateProfile,
-  sendPasswordResetEmail
+  sendPasswordResetEmail,
+  User as FirebaseUser
 } from "firebase/auth";
 import { Platform } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import { API_URL } from '../config/api';
+import { AuthResponse, RegisterData, User } from '../types';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -20,7 +22,7 @@ const googleProvider = new GoogleAuthProvider();
 
 export const authService = {
   // 1. Kayıt Olma
-  register: async ({ name, email, password }: any) => {
+  register: async ({ name, email, password }: RegisterData): Promise<AuthResponse> => {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       await updateProfile(userCredential.user, { displayName: name });
@@ -34,7 +36,7 @@ export const authService = {
   },
 
   // 2. Giriş Yapma (GÜNCELLENDİ: SYNC EKLENDİ)
-  login: async (email: string, password: string) => {
+  login: async (email: string, password: string): Promise<AuthResponse> => {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
@@ -45,7 +47,6 @@ export const authService = {
       }
 
       // --- BACKEND İLE EŞİTLEME (SYNC) ---
-      // Kullanıcı Firebase'de var ama PostgreSQL'de yoksa otomatik oluşturur.
       if (API_URL) {
         try {
           await fetch(`${API_URL}/sync-user`, {
@@ -77,7 +78,7 @@ export const authService = {
   },
 
   // 3. Şifre Sıfırlama
-  resetPassword: async (email: string) => {
+  resetPassword: async (email: string): Promise<AuthResponse> => {
     try {
       await sendPasswordResetEmail(auth, email);
       return { status: "success", message: "Şifre sıfırlama bağlantısı e-postana gönderildi." };
@@ -90,19 +91,31 @@ export const authService = {
   },
 
   // 4. Google ile Giriş
-  loginWithGoogle: async (idToken?: string) => {
+  loginWithGoogle: async (idToken?: string): Promise<AuthResponse> => {
     try {
       if (Platform.OS === 'web') {
         const result = await signInWithPopup(auth, googleProvider);
         return {
           status: "success",
-          user: { id: result.user.uid, email: result.user.email, name: result.user.displayName }
+          user: {
+            id: result.user.uid,
+            email: result.user.email,
+            name: result.user.displayName
+          }
         };
       } else {
         if (idToken) {
           const credential = GoogleAuthProvider.credential(idToken);
           const result = await signInWithCredential(auth, credential);
-          return { status: "success", user: result.user };
+          const user = result.user;
+          return {
+            status: "success",
+            user: {
+              id: user.uid,
+              email: user.email,
+              name: user.displayName || user.email?.split('@')[0]
+            }
+          };
         }
         return { status: "error", message: "Token alınamadı." };
       }
@@ -113,7 +126,7 @@ export const authService = {
   },
 
   // 5. Çıkış Yapma
-  logout: async () => {
+  logout: async (): Promise<AuthResponse> => {
     try {
       await signOut(auth);
       return { status: "success" };
@@ -123,7 +136,7 @@ export const authService = {
   },
 
   // 6. Kuruma Katıl (Backend Bağlantısı)
-  joinClassroom: async (uid: string, email: string, code: string) => {
+  joinClassroom: async (uid: string, email: string, code: string): Promise<any> => {
     try {
       if (!API_URL) {
         console.error("API URL eksik! .env dosyasını kontrol et.");
@@ -144,8 +157,8 @@ export const authService = {
     }
   },
 
-  // 7. YENİ EKLENEN: Öğretmen Girişi (Web Panel İçin)
-  loginTeacher: async (email: string, password: string) => {
+  // 7. Öğretmen Girişi (Web Panel İçin)
+  loginTeacher: async (email: string, password: string): Promise<any> => {
     try {
       if (!API_URL) return { status: "error", message: "API URL eksik" };
 
@@ -163,7 +176,7 @@ export const authService = {
   },
 
   // 8. Kurumdan Ayrıl
-  leaveClassroom: async (uid: string) => {
+  leaveClassroom: async (uid: string): Promise<any> => {
     try {
       if (!API_URL) return { status: "error", message: "API URL eksik" };
 

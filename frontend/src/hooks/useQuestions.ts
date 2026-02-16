@@ -2,16 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Alert } from 'react-native';
 import { questionService } from '../services/questionService';
 import { auth } from '../services/firebaseConfig';
-
-export interface Question {
-    id: string;
-    image_url: string;
-    lesson: string;
-    topic?: string;
-    notes?: string;
-    solved: boolean;
-    created_at?: string;
-}
+import { Question } from '../types';
 
 export const useQuestions = () => {
     const [questions, setQuestions] = useState<Question[]>([]);

@@ -1,10 +1,11 @@
 import { API_URL, API_HEADERS } from '../config/api';
+import { Analiz, BaseResponse } from '../types';
 
-const defaultHeaders = API_HEADERS;
+const defaultHeaders = API_HEADERS as HeadersInit;
 
 export const analizService = {
   // 1. Kullanıcıya özel analizleri çeker
-  getAll: async (userId: string) => {
+  getAll: async (userId: string): Promise<Analiz[]> => {
     try {
       const url = `${API_URL}/analizler/${userId}`;
       console.log("Fetching Analiz URL:", url);
@@ -22,7 +23,7 @@ export const analizService = {
   },
 
   // 2. Kullanıcıya özel AI yorumunu çeker
-  getAIYorum: async (userId: string) => {
+  getAIYorum: async (userId: string): Promise<string> => {
     try {
       const response = await fetch(`${API_URL}/ai-yorumla/${userId}`, {
         method: 'GET',
@@ -36,7 +37,7 @@ export const analizService = {
   },
 
   // 3. Yeni analiz ekler (Gelişmiş)
-  add: async (ad: string, net: string, userId: string, type: string = "Diğer", date: string | null = null) => {
+  add: async (ad: string, net: string, userId: string, type: string = "Diğer", date: string | null = null): Promise<boolean> => {
     try {
       const response = await fetch(`${API_URL}/analiz-ekle`, {
         method: 'POST',
@@ -57,7 +58,7 @@ export const analizService = {
   },
 
   // 4. Analiz siler (DÜZELTİLDİ + user_id eklendi)
-  delete: async (id: number | string, userId: string) => {
+  delete: async (id: number | string, userId: string): Promise<boolean> => {
     try {
       console.log(`Silme isteği gönderiliyor: ID = ${id}, UserID = ${userId}`);
 

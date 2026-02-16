@@ -1,8 +1,9 @@
 import { API_URL, API_HEADERS } from '../config/api';
+import { BaseResponse, Question } from '../types';
 
 export const questionService = {
     // 1. Soru Ekle (Image + Data)
-    addQuestion: async (userId: string, imageUri: string, lesson: string, topic: string = '', notes: string = '') => {
+    addQuestion: async (userId: string, imageUri: string, lesson: string, topic: string = '', notes: string = ''): Promise<BaseResponse> => {
         try {
             const formData = new FormData();
             formData.append('user_id', userId);
@@ -10,8 +11,6 @@ export const questionService = {
             formData.append('topic', topic);
             formData.append('notes', notes);
 
-            // React Native Image Upload
-            // React Native Image Upload
             const filename = imageUri.split('/').pop() || 'question.jpg';
             const match = /\.(\w+)$/.exec(filename);
             const type = match ? `image/${match[1]}` : 'image/jpeg';
@@ -22,13 +21,10 @@ export const questionService = {
                 type: type,
             } as any);
 
-            // FormData kullanirken Content-Type header'ini manuel set etmemeliyiz, 
-            // fetch kendisi boundary ekler. O yuzden API_HEADERS direk kullanmiyoruz.
             const response = await fetch(`${API_URL}/questions/add`, {
                 method: 'POST',
                 headers: {
-                    'ngrok-skip-browser-warning': 'true', // Needed if tunneling
-                    // 'Authorization': ... (if needed)
+                    'ngrok-skip-browser-warning': 'true',
                 },
                 body: formData,
             });
@@ -47,7 +43,7 @@ export const questionService = {
     },
 
     // 2. Sorulari Getir
-    getQuestions: async (userId: string, lesson?: string | null, status?: 'solved' | 'unsolved' | null) => {
+    getQuestions: async (userId: string, lesson?: string | null, status?: 'solved' | 'unsolved' | null): Promise<Question[]> => {
         try {
             let url = `${API_URL}/questions/${userId}`;
             const params = new URLSearchParams();
@@ -57,7 +53,13 @@ export const questionService = {
             if (params.toString()) url += `?${params.toString()}`;
 
             const response = await fetch(url, { headers: API_HEADERS as HeadersInit });
-            return await response.json();
+            const result = await response.json();
+
+            if (result.status === 'success' && result.data && Array.isArray(result.data.questions)) {
+                return result.data.questions;
+            }
+            // Eski API formatı veya hata durumu için fallback
+            return Array.isArray(result) ? result : (result.questions || []);
         } catch (error) {
             console.error("Soru getirme hatasi:", error);
             return [];
@@ -65,7 +67,7 @@ export const questionService = {
     },
 
     // 3. Durum Guncelle
-    updateStatus: async (userId: string, questionId: string, solved: boolean) => {
+    updateStatus: async (userId: string, questionId: string, solved: boolean): Promise<BaseResponse> => {
         try {
             const response = await fetch(`${API_URL}/questions/${questionId}/status`, {
                 method: 'PUT',
@@ -79,7 +81,7 @@ export const questionService = {
     },
 
     // 4. Sil
-    deleteQuestion: async (userId: string, questionId: string) => {
+    deleteQuestion: async (userId: string, questionId: string): Promise<BaseResponse> => {
         try {
             const response = await fetch(`${API_URL}/questions/${questionId}?user_id=${userId}`, {
                 method: 'DELETE',
@@ -91,3 +93,4 @@ export const questionService = {
         }
     }
 };
+

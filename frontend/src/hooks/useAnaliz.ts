@@ -2,9 +2,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { Alert } from 'react-native';
 import { auth } from '../services/firebaseConfig';
 import { analizService } from '../services/analizService';
+import { Analiz } from '../types';
 
 export const useAnaliz = () => {
-  const [analizler, setAnalizler] = useState<any[]>([]);
+  const [analizler, setAnalizler] = useState<Analiz[]>([]);
   const [aiYorum, setAiYorum] = useState('Verileriniz analiz ediliyor...');
   const [loading, setLoading] = useState(false);
 

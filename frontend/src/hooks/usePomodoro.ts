@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Alert, Vibration } from 'react-native';
-
-export type PomodoroMode = 'focus' | 'shortBreak' | 'longBreak';
+import { PomodoroMode, PomodoroHook } from '../types';
 
 const DURATIONS = {
   focus: 25 * 60,
@@ -9,12 +8,12 @@ const DURATIONS = {
   longBreak: 15 * 60,
 };
 
-export const usePomodoro = () => {
+export const usePomodoro = (): PomodoroHook => {
   const [mode, setMode] = useState<PomodoroMode>('focus');
   const [timer, setTimer] = useState(DURATIONS.focus);
   const [isActive, setIsActive] = useState(false);
   const [completedSessions, setCompletedSessions] = useState(0);
-  
+
   const intervalRef = useRef<any>(null);
 
   useEffect(() => {
@@ -71,15 +70,15 @@ export const usePomodoro = () => {
   // İlerleme yüzdesi (Progress Bar için)
   const progress = (DURATIONS[mode] - timer) / DURATIONS[mode];
 
-  return { 
-    timer, 
-    isActive, 
-    mode, 
-    completedSessions, 
+  return {
+    timer,
+    isActive,
+    mode,
+    completedSessions,
     progress,
-    toggleTimer, 
-    resetTimer, 
-    changeMode, 
-    formatTime 
+    toggleTimer,
+    resetTimer,
+    changeMode,
+    formatTime
   };
 };
