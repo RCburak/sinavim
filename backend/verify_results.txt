@@ -1,0 +1,16 @@
+Testing Root...
+200 {'message': 'RC Sınavım Backend is running (FastAPI)'}
+
+Testing Questions...
+GET /questions/fvONBB2Q7VWvYScicu4CLiWXjrI2: 200
+Unexpected response format: <class 'list'>
+
+Testing Analiz...
+GET /analizler/fvONBB2Q7VWvYScicu4CLiWXjrI2: 200
+GET /ai-yorumla/fvONBB2Q7VWvYScicu4CLiWXjrI2: 200
+
+Testing Program...
+GET /get-program/fvONBB2Q7VWvYScicu4CLiWXjrI2: 200
+
+Testing User Stats...
+GET /user-stats/fvONBB2Q7VWvYScicu4CLiWXjrI2: 200

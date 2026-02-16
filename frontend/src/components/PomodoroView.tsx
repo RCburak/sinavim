@@ -2,7 +2,7 @@ import React from 'react';
 import { SafeAreaView, TouchableOpacity, StyleSheet, View, StatusBar } from 'react-native';
 import { PomodoroTimer } from './PomodoroTimer';
 import { Ionicons } from '@expo/vector-icons';
-import { PomodoroMode } from '../hooks/usePomodoro';
+import { PomodoroMode, PomodoroHook, Theme } from '../types';
 
 // Renk paleti
 const THEME_COLORS = {
@@ -11,48 +11,53 @@ const THEME_COLORS = {
   longBreak: '#397097',  // Mavi
 };
 
-export const PomodoroView = ({ 
-  timer, isActive, mode, completedSessions, 
-  toggleTimer, resetTimer, changeMode, formatTime, onBack 
-}: any) => {
-  
+interface PomodoroViewProps extends PomodoroHook {
+  onBack: () => void;
+  theme: Theme;
+}
+
+export const PomodoroView = ({
+  timer, isActive, mode, completedSessions,
+  toggleTimer, resetTimer, changeMode, formatTime, onBack, theme
+}: PomodoroViewProps) => {
+
   const currentTheme = THEME_COLORS[mode as PomodoroMode] || THEME_COLORS.focus;
 
   return (
     <SafeAreaView style={[styles.fullScreen, { backgroundColor: currentTheme }]}>
       <StatusBar barStyle="light-content" backgroundColor={currentTheme} />
-      
+
       <View style={styles.container}>
-          {/* Geri Butonu: Sadece İkon */}
-          <TouchableOpacity onPress={onBack} style={styles.backBtn}>
-            <Ionicons name="chevron-back" size={28} color="#fff" />
-          </TouchableOpacity>
-          
-          <PomodoroTimer 
-              timer={timer} 
-              isActive={isActive} 
-              mode={mode}
-              completedSessions={completedSessions}
-              onToggle={toggleTimer} 
-              onReset={resetTimer} 
-              onChangeMode={changeMode}
-              formatTime={formatTime} 
-          />
+        {/* Geri Butonu: Sadece İkon */}
+        <TouchableOpacity onPress={onBack} style={styles.backBtn}>
+          <Ionicons name="chevron-back" size={28} color="#fff" />
+        </TouchableOpacity>
+
+        <PomodoroTimer
+          timer={timer}
+          isActive={isActive}
+          mode={mode}
+          completedSessions={completedSessions}
+          onToggle={toggleTimer}
+          onReset={resetTimer}
+          onChangeMode={changeMode}
+          formatTime={formatTime}
+        />
       </View>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  fullScreen: { flex: 1 }, 
+  fullScreen: { flex: 1 },
   container: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  
+
   // Geri butonu stili güncellendi: Yuvarlak ve sadece ikon
-  backBtn: { 
-    position: 'absolute', 
-    top: 50, 
-    left: 20, 
-    zIndex: 10, 
+  backBtn: {
+    position: 'absolute',
+    top: 50,
+    left: 20,
+    zIndex: 10,
     width: 45, // Kare/Yuvarlak olması için sabit genişlik/yükseklik
     height: 45,
     justifyContent: 'center', // İkonu ortala

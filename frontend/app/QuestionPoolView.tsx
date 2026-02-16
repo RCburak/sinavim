@@ -20,14 +20,15 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS } from '../src/constants/theme';
-import { useQuestions, Question } from '../src/hooks/useQuestions';
+import { useQuestions } from '../src/hooks/useQuestions';
+import { Question, Theme } from '../src/types';
 
 const { width, height } = Dimensions.get('window');
 const FlashListComponent = FlashList as any;
 
 const LESSONS = ["Matematik", "Geometri", "Fizik", "Kimya", "Biyoloji", "Türkçe", "Tarih", "Coğrafya", "Felsefe", "Din", "İngilizce"];
 
-export const QuestionPoolView = ({ onBack, theme = COLORS.light }: any) => {
+export const QuestionPoolView = ({ onBack, theme = COLORS.light }: { onBack: () => void, theme: Theme }) => {
     const {
         questions,
         loading,

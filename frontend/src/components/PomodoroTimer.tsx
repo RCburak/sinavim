@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
 import { COLORS } from '../constants/theme';
-import { PomodoroMode } from '../hooks/usePomodoro';
+import { PomodoroMode } from '../types';
 import { Ionicons } from '@expo/vector-icons';
 
 interface Props {
@@ -17,13 +17,13 @@ interface Props {
 
 const { width } = Dimensions.get('window');
 
-export const PomodoroTimer = ({ 
-  timer, isActive, mode, completedSessions, 
-  onToggle, onReset, onChangeMode, formatTime 
+export const PomodoroTimer = ({
+  timer, isActive, mode, completedSessions,
+  onToggle, onReset, onChangeMode, formatTime
 }: Props) => {
 
   const getStatusText = () => {
-    switch(mode) {
+    switch (mode) {
       case 'focus': return "ODAKLANMA";
       case 'shortBreak': return "KISA MOLA";
       case 'longBreak': return "UZUN MOLA";
@@ -46,9 +46,9 @@ export const PomodoroTimer = ({
       </View>
 
       <Text style={styles.status}>{getStatusText()}</Text>
-      
+
       <View style={styles.timerContainer}>
-          <Text style={styles.timer}>{formatTime(timer)}</Text>
+        <Text style={styles.timer}>{formatTime(timer)}</Text>
       </View>
 
       {/* İstatistik */}
@@ -58,19 +58,19 @@ export const PomodoroTimer = ({
       </View>
 
       <View style={styles.actions}>
-        <TouchableOpacity 
-          style={[styles.btn, { backgroundColor: '#fff' }]} 
+        <TouchableOpacity
+          style={[styles.btn, { backgroundColor: '#fff' }]}
           onPress={onToggle}
           activeOpacity={0.8}
         >
           {/* DÜZELTME: COLORS.primary yerine COLORS.light.primary kullanıldı */}
           <Text style={[styles.btnText, { color: COLORS.light.primary }]}>
-              {isActive ? "Durdur" : "Başlat"}
+            {isActive ? "Durdur" : "Başlat"}
           </Text>
         </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={[styles.btn, styles.resetBtn]} 
+
+        <TouchableOpacity
+          style={[styles.btn, styles.resetBtn]}
           onPress={onReset}
         >
           <Ionicons name="refresh" size={24} color="#fff" />
@@ -82,7 +82,7 @@ export const PomodoroTimer = ({
 
 const styles = StyleSheet.create({
   center: { alignItems: 'center', justifyContent: 'center', padding: 20, width: '100%' },
-  
+
   modeSelector: {
     flexDirection: 'row',
     backgroundColor: 'rgba(0,0,0,0.2)',
@@ -113,14 +113,14 @@ const styles = StyleSheet.create({
   },
 
   status: { color: '#fff', fontSize: 18, fontWeight: 'bold', letterSpacing: 4, opacity: 0.9, marginBottom: 10 },
-  
+
   timerContainer: {
     marginVertical: 20,
     justifyContent: 'center',
     alignItems: 'center',
   },
   timer: { color: '#fff', fontSize: 90, fontWeight: '700', fontFamily: 'System', letterSpacing: -2 },
-  
+
   statsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -134,19 +134,19 @@ const styles = StyleSheet.create({
   statsText: { color: '#fff', fontWeight: '600' },
 
   actions: { flexDirection: 'row', gap: 15, alignItems: 'center' },
-  btn: { 
-    paddingVertical: 18, 
-    paddingHorizontal: 40, 
-    borderRadius: 24, 
-    minWidth: 160, 
+  btn: {
+    paddingVertical: 18,
+    paddingHorizontal: 40,
+    borderRadius: 24,
+    minWidth: 160,
     alignItems: 'center',
     elevation: 5,
     shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 5,
   },
   btnText: { fontWeight: 'bold', fontSize: 18 },
-  resetBtn: { 
-    backgroundColor: 'rgba(255,255,255,0.2)', 
-    borderWidth: 1, 
+  resetBtn: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.4)',
     minWidth: 60,
     paddingHorizontal: 0,
