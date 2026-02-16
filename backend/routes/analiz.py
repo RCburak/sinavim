@@ -1,61 +1,48 @@
-"""Deneme analizi ve AI yorum rotaları."""
-from flask import Blueprint, request, jsonify
+"""Deneme analizi ve AI yorum rotaları (FastAPI)."""
+from typing import List, Dict, Any
+from fastapi import APIRouter
 from utils.responses import success_response, error_response
-from utils.validators import require_keys
-from errors import ValidationError
 from services.analiz_service import analiz_service
+from schemas import AddAnalizRequest
 
-analiz_bp = Blueprint("analiz", __name__)
+analiz_router = APIRouter()
 
 
-@analiz_bp.route("/analizler/<user_id>", methods=["GET"])
-def get_analizler(user_id):
+@analiz_router.get("/analizler/{user_id}")
+def get_analizler(user_id: str) -> List[Dict[str, Any]]:
     """Kullanıcının deneme sonuçlarını getirir (frontend uyumluluk için ham array)."""
     rows = analiz_service.get_all(user_id)
-    return jsonify(rows)
+    return rows
 
 
-@analiz_bp.route("/analiz-ekle", methods=["POST"])
-def analiz_ekle():
+@analiz_router.post("/analiz-ekle")
+def analiz_ekle(req: AddAnalizRequest):
     """Yeni analiz ekler."""
-    data = request.get_json(silent=True) or {}
-    try:
-        require_keys(data, ["user_id", "ad", "net"])
-    except ValidationError as e:
-        return error_response(e.message, 400)
-
-    try:
-        net = float(data["net"])
-    except (ValueError, TypeError):
-        return error_response("Geçersiz net değeri", 400)
-    
-    exam_type = data.get("type", "Diğer")
-    date_val = data.get("date", None) # Optional, service handles defaults
-
-    ok, err = analiz_service.add(data["user_id"], data["ad"], net, exam_type, date_val)
+    ok, err = analiz_service.add(req.user_id, req.ad, req.net, req.type, req.date)
     if err:
         return error_response(err, 500)
     return success_response(message="Eklendi", status_code=201)
 
 
-@analiz_bp.route("/analiz-sil/<analiz_id>", methods=["DELETE"])
-def analiz_sil(analiz_id):
-    """Analizi siler (user_id query param gerekli)."""
-    user_id = request.args.get("user_id")
-    if not user_id:
-        return error_response("user_id parametresi gerekli", 400)
-        
+@analiz_router.delete("/analiz-sil/{analiz_id}")
+def analiz_sil(analiz_id: str, user_id: str):
+    """Analizi siler."""
     ok, err = analiz_service.delete(user_id, analiz_id)
     if err:
         return error_response(err, 500)
     return success_response()
 
 
-@analiz_bp.route("/ai-yorumla/<user_id>", methods=["GET"])
-def ai_yorumla(user_id):
+@analiz_router.get("/ai-yorumla/{user_id}")
+def ai_yorumla(user_id: str) -> Dict[str, Any]:
     """AI ile deneme yorumu üretir (frontend uyumluluk için ham object)."""
     try:
         yorum = analiz_service.get_ai_yorum(user_id)
-        return jsonify({"yorum": yorum})
+        return {"yorum": yorum}
     except Exception as e:
+        # We can return a JSONResponse with error, but frontend might expect 200 with error info?
+        # Flask code returned error_response(..., 500).
+        # We can raise HTTPException or return error_response.
+        # Let's return error_response but signature says Dict.
+        # If we return JSONResponse, it overrides the response_model/signature.
         return error_response(f"Yorum hatası: {str(e)}", 500)

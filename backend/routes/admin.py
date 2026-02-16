@@ -1,116 +1,90 @@
-"""Yönetici (Admin / Kurum Sahibi) paneli rotaları."""
-from flask import Blueprint, request, render_template
+"""Yönetici (Admin / Kurum Sahibi) paneli rotaları (FastAPI)."""
+from fastapi import APIRouter, Request
+from fastapi.templating import Jinja2Templates
 from utils.responses import success_response, error_response
-from utils.validators import require_keys
-from errors import ValidationError
 from services.admin_service import admin_service
+from schemas import (
+    AdminLoginRequest,
+    CreateTeacherRequest,
+    DeleteTeacherRequest,
+    CompleteRegistrationRequest,
+    UpdateInviteCodeRequest,
+)
 
-admin_bp = Blueprint("admin", __name__)
+admin_router = APIRouter()
+templates = Jinja2Templates(directory="templates")
 
 
-@admin_bp.route("/panel", methods=["GET"])
-def admin_panel():
+@admin_router.get("/panel")
+def admin_panel(request: Request):
     """Admin web panelini sunar."""
-    return render_template("admin_panel.html")
+    return templates.TemplateResponse("admin_panel.html", {"request": request})
 
 
-@admin_bp.route("/login", methods=["POST"])
-def admin_login():
-    """Kurum sahibi girişi (institutions koleksiyonundan)."""
-    data = request.get_json(silent=True) or {}
-    try:
-        require_keys(data, ["email", "password"])
-    except ValidationError as e:
-        return error_response(e.message, 400)
-
-    admin, err = admin_service.login(data["email"], data["password"])
+@admin_router.post("/login")
+def admin_login(req: AdminLoginRequest):
+    """Kurum sahibi girişi."""
+    admin, err = admin_service.login(req.email, req.password)
     if err:
         return error_response(err, 401)
     return success_response({"admin": admin})
 
 
-@admin_bp.route("/teachers", methods=["GET"])
-def list_teachers():
+@admin_router.get("/teachers")
+def list_teachers(admin_id: str):
     """Kurum sahibine ait öğretmen listesi."""
-    admin_id = request.args.get("admin_id")
     if not admin_id:
         return error_response("admin_id gerekli.", 400)
     teachers = admin_service.list_teachers(admin_id)
     return success_response({"teachers": teachers})
 
 
-@admin_bp.route("/create-teacher", methods=["POST"])
-def create_teacher():
-    """Yeni öğretmen oluşturma (admin_id ile bağlı)."""
-    data = request.get_json(silent=True) or {}
-    try:
-        require_keys(data, ["admin_id", "name"])
-    except ValidationError as e:
-        return error_response(e.message, 400)
-
-    teacher, err = admin_service.create_teacher(
-        data["admin_id"], data["name"]
-    )
+@admin_router.post("/create-teacher")
+def create_teacher(req: CreateTeacherRequest):
+    """Yeni öğretmen oluşturma."""
+    teacher, err = admin_service.create_teacher(req.admin_id, req.name)
     if err:
         return error_response(err, 400)
     return success_response({"teacher": teacher}, status_code=201)
 
 
-@admin_bp.route("/delete-teacher", methods=["POST"])
-def delete_teacher():
-    """Öğretmen silme (sadece kendi kurumundakileri)."""
-    data = request.get_json(silent=True) or {}
-    teacher_id = data.get("teacher_id")
-    admin_id = data.get("admin_id")
-    if not teacher_id or not admin_id:
-        return error_response("teacher_id ve admin_id gerekli.", 400)
-
-    ok, err = admin_service.delete_teacher(teacher_id, admin_id)
+@admin_router.post("/delete-teacher")
+def delete_teacher(req: DeleteTeacherRequest):
+    """Öğretmen silme."""
+    ok, err = admin_service.delete_teacher(req.teacher_id, req.admin_id)
     if not ok:
         return error_response(err, 400)
     return success_response(message="Öğretmen silindi.")
 
 
-@admin_bp.route("/register/<token>", methods=["GET"])
-def teacher_register_page(token):
+@admin_router.get("/register/{token}")
+def teacher_register_page(request: Request, token: str):
     """Öğretmen kayıt sayfasını gösterir."""
     teacher, err = admin_service.get_teacher_by_token(token)
+    context = {"request": request, "token": token}
     if err:
-        return render_template("teacher_register.html", error=err, teacher=None, token=token)
-    return render_template("teacher_register.html", error=None, teacher=teacher, token=token)
+        context.update({"error": err, "teacher": None})
+    else:
+        context.update({"error": None, "teacher": teacher})
+    return templates.TemplateResponse("teacher_register.html", context)
 
 
-@admin_bp.route("/complete-registration", methods=["POST"])
-def complete_registration():
+@admin_router.post("/complete-registration")
+def complete_registration(req: CompleteRegistrationRequest):
     """Öğretmen kaydını tamamlar."""
-    data = request.get_json(silent=True) or {}
-    try:
-        require_keys(data, ["token", "email", "password"])
-    except ValidationError as e:
-        return error_response(e.message, 400)
-
-    if len(data["password"]) < 6:
-        return error_response("Şifre en az 6 karakter olmalı.", 400)
-
     ok, err = admin_service.register_teacher(
-        data["token"], data["email"], data["password"]
+        req.token, req.email, req.password
     )
     if not ok:
         return error_response(err, 400)
     return success_response(message="Kayıt başarıyla tamamlandı! Artık giriş yapabilirsiniz.")
 
 
-@admin_bp.route("/update-invite-code", methods=["POST"])
-def update_invite_code():
+@admin_router.post("/update-invite-code")
+def update_invite_code(req: UpdateInviteCodeRequest):
     """Öğretmen davet kodunu güncelleme."""
-    data = request.get_json(silent=True) or {}
-    try:
-        require_keys(data, ["teacher_id", "admin_id", "new_code"])
-    except ValidationError as e:
-        return error_response(e.message, 400)
-
     ok, err = admin_service.update_invite_code(
-        data["teacher_id"], data["admin_id"], data["new_code"]
+        req.teacher_id, req.admin_id, req.new_code
     )
     if not ok:
         return error_response(err, 400)

@@ -6,7 +6,9 @@ export const analizService = {
   // 1. Kullanıcıya özel analizleri çeker
   getAll: async (userId: string) => {
     try {
-      const response = await fetch(`${API_URL}/analizler/${userId}`, {
+      const url = `${API_URL}/analizler/${userId}`;
+      console.log("Fetching Analiz URL:", url);
+      const response = await fetch(url, {
         method: 'GET',
         headers: defaultHeaders
       });

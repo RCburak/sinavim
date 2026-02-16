@@ -1,26 +1,19 @@
-"""Kurum katılım rotaları."""
-from flask import Blueprint, request
+"""Kurum katılım rotaları (FastAPI)."""
+from fastapi import APIRouter
 from utils.responses import success_response, error_response
-from utils.validators import require_keys
-from errors import ValidationError
 from services.teacher_service import teacher_service
+from schemas import JoinInstitutionRequest, LeaveInstitutionRequest
 
-institution_bp = Blueprint("institution", __name__)
+institution_router = APIRouter()
 
 
-@institution_bp.route("/join-institution", methods=["POST"])
-def join_institution():
+@institution_router.post("/join-institution")
+def join_institution(req: JoinInstitutionRequest):
     """Kullanıcıyı kuruma bağlar (kod ile)."""
-    data = request.get_json(silent=True) or {}
-    try:
-        require_keys(data, ["code"])
-    except ValidationError as e:
-        return error_response(e.message, 400)
-
     institution, err = teacher_service.join_institution(
-        data["code"],
-        user_id=data.get("user_id"),
-        email=data.get("email"),
+        req.code,
+        user_id=req.user_id,
+        email=req.email,
     )
     if err:
         return error_response(err, 404 if "Geçersiz" in err else 400)
@@ -30,16 +23,10 @@ def join_institution():
     )
 
 
-@institution_bp.route("/leave-institution", methods=["POST"])
-def leave_institution():
+@institution_router.post("/leave-institution")
+def leave_institution(req: LeaveInstitutionRequest):
     """Kullanıcıyı kurumdan ayırır."""
-    data = request.get_json(silent=True) or {}
-    try:
-        require_keys(data, ["user_id"])
-    except ValidationError as e:
-        return error_response(e.message, 400)
-
-    ok, err = teacher_service.leave_institution(data["user_id"])
+    ok, err = teacher_service.leave_institution(req.user_id)
     if not ok:
         return error_response(err or "Kurumdan ayrılırken bir hata oluştu.", 500)
 

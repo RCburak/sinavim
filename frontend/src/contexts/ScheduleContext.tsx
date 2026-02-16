@@ -2,13 +2,7 @@ import React, { createContext, useContext, useState, useCallback } from "react";
 import { auth } from "../services/firebaseConfig";
 import { API_URL, API_HEADERS } from "../config/api";
 
-export interface ScheduleItem {
-  gun: string;
-  task: string;
-  duration: string;
-  completed: boolean;
-  questions: number;
-}
+import { ScheduleItem } from '../types';
 
 interface ScheduleContextType {
   schedule: ScheduleItem[];
@@ -71,6 +65,7 @@ export function ScheduleProvider({ children }: { children: React.ReactNode }) {
   const toggleTask = useCallback(
     async (index: number) => {
       const newSchedule = [...schedule];
+      if (!newSchedule[index]) return;
       newSchedule[index].completed = !newSchedule[index].completed;
       setSchedule(newSchedule);
       await saveScheduleToCloud(newSchedule);
@@ -83,6 +78,7 @@ export function ScheduleProvider({ children }: { children: React.ReactNode }) {
       if (index === undefined || index === null) return;
       const qCount = parseInt(count, 10) || 0;
       const newSchedule = [...schedule];
+      if (!newSchedule[index]) return;
       newSchedule[index].questions = qCount;
       setSchedule(newSchedule);
       await saveScheduleToCloud(newSchedule);

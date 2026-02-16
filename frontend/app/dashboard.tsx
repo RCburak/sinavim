@@ -20,8 +20,12 @@ import { API_URL, API_HEADERS } from '../src/config/api';
 
 const { width } = Dimensions.get('window');
 
+import { DashboardViewProps, Theme } from '../src/types';
+
+// ... (imports remain the same)
+
 // --- ALT NAVİGASYON ÇUBUĞU ---
-const BottomTabBar = ({ setView, theme }: any) => {
+const BottomTabBar = ({ setView, theme }: { setView: (view: string) => void; theme: Theme }) => {
   return (
     <View style={[styles.bottomBar, { backgroundColor: theme.surface }]}>
       <TouchableOpacity style={styles.tabItem} activeOpacity={0.8}>
@@ -43,7 +47,7 @@ const BottomTabBar = ({ setView, theme }: any) => {
   );
 };
 
-const DashboardHeader = ({ username, theme }: any) => {
+const DashboardHeader = ({ username, theme }: { username: string | null; theme: Theme }) => {
   const today = new Date().toLocaleDateString('tr-TR', {
     month: 'long',
     day: 'numeric',
@@ -94,7 +98,7 @@ const DashboardHeader = ({ username, theme }: any) => {
   );
 };
 
-export const DashboardView = ({ username, onLogout, setView, schedule, analiz, pomodoro, theme, institution, refreshInstitution }: any) => {
+export const DashboardView = ({ username, onLogout, setView, schedule, analiz, pomodoro, theme, institution, refreshInstitution }: DashboardViewProps) => {
   const [refreshing, setRefreshing] = useState(false);
   const [teacherModalVisible, setTeacherModalVisible] = useState(false);
 

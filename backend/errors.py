@@ -1,6 +1,9 @@
-"""Özel istisna sınıfları ve merkezi hata işleyicileri."""
 import logging
-from flask import jsonify
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from pydantic import ValidationError as PydanticValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -10,7 +13,7 @@ class AppError(Exception):
     status_code = 500
     message = "Sunucu hatası oluştu."
 
-    def __init__(self, message=None, status_code=None):
+    def __init__(self, message: str = None, status_code: int = None):
         super().__init__()
         if message:
             self.message = message
@@ -36,36 +39,78 @@ class UnauthorizedError(AppError):
     message = "Yetkisiz erişim."
 
 
-def register_error_handlers(app):
-    """Flask uygulamasına hata işleyicilerini kaydeder."""
+def register_error_handlers(app: FastAPI):
+    """FastAPI uygulamasına hata işleyicilerini kaydeder."""
     
-    @app.errorhandler(ValidationError)
-    def handle_validation_error(error):
-        logger.warning("Validation error: %s", error.message)
-        return jsonify({"status": "error", "message": error.message}), error.status_code
+    @app.exception_handler(ValidationError)
+    async def handle_validation_error(request: Request, exc: ValidationError):
+        logger.warning("Validation error: %s", exc.message)
+        return JSONResponse(
+            content={"status": "error", "message": exc.message},
+            status_code=exc.status_code
+        )
 
-    @app.errorhandler(NotFoundError)
-    def handle_not_found(error):
-        return jsonify({"status": "error", "message": error.message}), error.status_code
+    @app.exception_handler(PydanticValidationError)
+    async def handle_pydantic_validation_error(request: Request, exc: PydanticValidationError):
+        logger.warning("Pydantic validation error: %s", exc)
+        messages = []
+        for err in exc.errors():
+            field = str(err["loc"][-1]) if err["loc"] else "Unknown"
+            msg = err["msg"]
+            messages.append(f"{field}: {msg}")
+        return JSONResponse(
+            content={"status": "error", "message": "; ".join(messages)},
+            status_code=400
+        )
 
-    @app.errorhandler(UnauthorizedError)
-    def handle_unauthorized(error):
-        return jsonify({"status": "error", "message": error.message}), error.status_code
+    @app.exception_handler(RequestValidationError)
+    async def handle_request_validation_error(request: Request, exc: RequestValidationError):
+        logger.warning("Request validation error: %s", exc)
+        messages = []
+        for err in exc.errors():
+            # loc includes ('body', 'field') or ('query', 'field')
+            loc_str = " -> ".join([str(l) for l in err["loc"]])
+            msg = err["msg"]
+            messages.append(f"{loc_str}: {msg}")
+        return JSONResponse(
+            content={"status": "error", "message": "; ".join(messages)},
+            status_code=422
+        )
 
-    @app.errorhandler(AppError)
-    def handle_app_error(error):
-        logger.error("App error: %s", error.message)
-        return jsonify({"status": "error", "message": error.message}), error.status_code
+    @app.exception_handler(NotFoundError)
+    async def handle_not_found(request: Request, exc: NotFoundError):
+        return JSONResponse(
+            content={"status": "error", "message": exc.message},
+            status_code=exc.status_code
+        )
 
-    @app.errorhandler(400)
-    def handle_bad_request(error):
-        return jsonify({"status": "error", "message": error.description or "Hatalı istek"}), 400
+    @app.exception_handler(UnauthorizedError)
+    async def handle_unauthorized(request: Request, exc: UnauthorizedError):
+        return JSONResponse(
+            content={"status": "error", "message": exc.message},
+            status_code=exc.status_code
+        )
 
-    @app.errorhandler(404)
-    def handle_not_found_default(error):
-        return jsonify({"status": "error", "message": "Kaynak bulunamadı"}), 404
+    @app.exception_handler(AppError)
+    async def handle_app_error(request: Request, exc: AppError):
+        logger.error("App error: %s", exc.message)
+        return JSONResponse(
+            content={"status": "error", "message": exc.message},
+            status_code=exc.status_code
+        )
 
-    @app.errorhandler(500)
-    def handle_server_error(error):
+    @app.exception_handler(StarletteHTTPException)
+    async def handle_http_exception(request: Request, exc: StarletteHTTPException):
+        # Handle 404/500 from Starlette/FastAPI
+        return JSONResponse(
+            content={"status": "error", "message": exc.detail},
+            status_code=exc.status_code
+        )
+
+    @app.exception_handler(Exception)
+    async def handle_server_error(request: Request, exc: Exception):
         logger.exception("Internal server error")
-        return jsonify({"status": "error", "message": "Sunucu hatası"}), 500
+        return JSONResponse(
+            content={"status": "error", "message": "Sunucu hatası"},
+            status_code=500
+        )

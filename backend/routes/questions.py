@@ -1,67 +1,62 @@
-"""Soru havuzu rotaları."""
-from flask import Blueprint, request, jsonify
+"""Soru havuzu rotaları (FastAPI)."""
+from typing import List, Dict, Any, Optional
+from fastapi import APIRouter, UploadFile, File, Form
 from utils.responses import success_response, error_response
-from utils.validators import require_keys
-from errors import ValidationError
 from services.question_service import question_service
+from schemas import UpdateQuestionStatusRequest
 
-print("Loading questions_bp...")
-questions_bp = Blueprint("questions", __name__)
+print("Loading questions_router...")
+questions_router = APIRouter()
 
-@questions_bp.route("/questions/add", methods=["POST"])
-def add_question():
+@questions_router.post("/add")
+def add_question(
+    image: UploadFile = File(...),
+    user_id: str = Form(...),
+    lesson: str = Form(...),
+    topic: str = Form(""),
+    notes: str = Form("")
+):
     """Yeni soru ekler (Multipart form: image, user_id, lesson...)."""
-    # Multipart form data
-    if 'image' not in request.files:
-        return error_response("Resim dosyası gerekli (key: image)", 400)
+    # Service expects 'file' object with .read(), .filename etc.
+    # FastAPI UploadFile provides .file (SpooledTemporaryFile) which works similar to Flask's file
+    # However, we might need to pass `image.file` or just `image`.
+    # Let's check question_service.add. It likely passes it to Firebase Storage.
+    # If the service expects a file-like object with .read() and .content_type, UploadFile has .file and .content_type
     
-    file = request.files['image']
-    user_id = request.form.get('user_id')
-    lesson = request.form.get('lesson')
-    topic = request.form.get('topic', '')
-    notes = request.form.get('notes', '')
-
-    if not user_id or not lesson:
-        return error_response("user_id ve lesson gerekli", 400)
-
-    result, err = question_service.add(user_id, file, lesson, topic, notes)
+    # We might need to ensure the service handles FastAPI's UploadFile correctly.
+    # Ideally, we should update the service or pass a compatible object.
+    # For now, let's pass `image` and assume we might need to tweak service if it uses specific Flask-File attributes.
+    # UploadFile has .filename, .content_type, .file
+    
+    # We pass the file-like object (SpoolTemporaryFile) and content_type explicitly
+    result, err = question_service.add(user_id, image.file, lesson, topic, notes, content_type=image.content_type)
     if err:
         return error_response(err, 500)
     
     return success_response(result, message="Soru havuza eklendi!", status_code=201)
 
-@questions_bp.route("/questions/<user_id>", methods=["GET"])
-def get_questions(user_id):
+@questions_router.get("/{user_id}")
+def get_questions(
+    user_id: str,
+    lesson: Optional[str] = None,
+    status: Optional[str] = None
+) -> List[Dict[str, Any]]:
     """Soru listesini getirir."""
-    lesson = request.args.get("lesson")
-    status = request.args.get("status") # solved, unsolved
-    
     questions = question_service.get_all(user_id, lesson, status)
-    return jsonify(questions)
+    return questions
 
-@questions_bp.route("/questions/<question_id>/status", methods=["PUT"])
-def update_status(question_id):
+@questions_router.put("/{question_id}/status")
+def update_status(question_id: str, req: UpdateQuestionStatusRequest):
     """Soru durumunu günceller (Solved/Unsolved)."""
-    data = request.get_json(silent=True) or {}
-    user_id = data.get("user_id")
-    solved = data.get("solved")
-
-    if not user_id or solved is None:
-        return error_response("user_id ve solved parametresi gerekli", 400)
-
-    ok, err = question_service.update_status(user_id, question_id, solved)
+    ok, err = question_service.update_status(req.user_id, question_id, req.solved)
     if not ok:
         return error_response(err, 500)
     
     return success_response(message="Soru durumu güncellendi.")
 
-@questions_bp.route("/questions/<question_id>", methods=["DELETE"])
-def delete_question(question_id):
+@questions_router.delete("/{question_id}")
+def delete_question(question_id: str, user_id: str):
     """Soruyu siler."""
-    user_id = request.args.get("user_id")
-    if not user_id:
-        return error_response("user_id gerekli", 400)
-        
     ok, err = question_service.delete(user_id, question_id)
     if not ok:
         return error_response(err, 500)

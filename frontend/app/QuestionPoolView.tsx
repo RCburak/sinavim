@@ -4,7 +4,6 @@ import {
     Text,
     StyleSheet,
     TouchableOpacity,
-    FlatList,
     Image,
     Dimensions,
     Modal,
@@ -15,6 +14,7 @@ import {
     ScrollView,
     Platform
 } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -23,6 +23,7 @@ import { COLORS } from '../src/constants/theme';
 import { useQuestions, Question } from '../src/hooks/useQuestions';
 
 const { width, height } = Dimensions.get('window');
+const FlashListComponent = FlashList as any;
 
 const LESSONS = ["Matematik", "Geometri", "Fizik", "Kimya", "Biyoloji", "Türkçe", "Tarih", "Coğrafya", "Felsefe", "Din", "İngilizce"];
 
@@ -196,13 +197,14 @@ export const QuestionPoolView = ({ onBack, theme = COLORS.light }: any) => {
             {loading ? (
                 <ActivityIndicator size="large" color={theme.primary} style={{ marginTop: 50 }} />
             ) : (
-                <FlatList
+                <FlashListComponent
                     data={questions}
                     renderItem={renderItem}
-                    keyExtractor={item => item.id}
+                    keyExtractor={(item: any) => item.id}
                     numColumns={2}
                     contentContainerStyle={styles.listContent}
                     showsVerticalScrollIndicator={false}
+                    estimatedItemSize={220}
                     ListEmptyComponent={
                         <View style={{ alignItems: 'center', marginTop: 50 }}>
                             <Text style={{ color: theme.textSecondary }}> {filterStatus === 'solved' ? 'Henüz çözülmüş soru yok.' : 'Harika! Yapamadığın soru yok.'}</Text>

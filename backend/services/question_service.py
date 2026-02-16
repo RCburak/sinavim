@@ -22,7 +22,7 @@ def _doc_to_dict(doc) -> dict:
             d[key] = d[key].isoformat()
     return d
 
-def add_question(user_id: str, image_file, lesson: str, topic: str = "", notes: str = "") -> tuple[dict | None, str | None]:
+def add_question(user_id: str, image_file, lesson: str, topic: str = "", notes: str = "", content_type: str = None) -> tuple[dict | None, str | None]:
     """Soru ekler (Resim yükler + Firestore kaydeder)."""
     try:
         # 1. Upload Image
@@ -30,8 +30,11 @@ def add_question(user_id: str, image_file, lesson: str, topic: str = "", notes: 
         filename = f"questions/{user_id}/{uuid.uuid4()}.jpg"
         blob = bucket.blob(filename)
         
-        # image_file Flask FileStorage objesidir, stream olarak yukleyelim
-        blob.upload_from_file(image_file, content_type=image_file.content_type)
+        # image_file bir file-like object olmalidir (read() metodu olan)
+        # content_type parametresi opsiyonel, yoksa objeden okumaya calisir
+        final_content_type = content_type or getattr(image_file, "content_type", "image/jpeg")
+        
+        blob.upload_from_file(image_file, content_type=final_content_type)
         
         # Public URL (veya signed URL)
         # Not: Public yapmak icin bucket ayarlarinin izin vermesi gerekir.
