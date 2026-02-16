@@ -191,13 +191,47 @@ def delete_teacher(teacher_id: str, admin_id: str) -> tuple[bool, str | None]:
         return False, str(e)
 
 
+def update_teacher_code(teacher_id: str, admin_id: str, new_code: str) -> tuple[bool, str | None]:
+    """Öğretmenin davet kodunu günceller."""
+    try:
+        db = get_firestore()
+        # Kodun benzersiz olup olmadığını kontrol et
+        code_check = (
+            db.collection(COLLECTION_INSTITUTIONS)
+            .where("invite_code", "==", new_code)
+            .limit(1)
+            .get()
+        )
+        if code_check:
+            # Eğer kod başka birine aitse hata ver
+            if code_check[0].id != teacher_id:
+                return False, "Bu kod zaten kullanımda."
+
+        ref = db.collection(COLLECTION_INSTITUTIONS).document(teacher_id)
+        snap = ref.get()
+        if not snap.exists:
+            return False, "Öğretmen bulunamadı."
+        
+        # Eğer kendi kodunu güncelliyorsa (Kurum sahibi) admin_id kontrolüne takılmasın
+        if teacher_id != admin_id:
+            data = snap.to_dict()
+            if data.get("admin_id") != admin_id:
+                return False, "Bu işlemi yapmaya yetkiniz yok."
+
+        ref.update({"invite_code": new_code})
+        return True, None
+    except Exception as e:
+        logger.exception("Davet kodu guncelleme hatasi")
+        return False, str(e)
+
+
 class AdminService:
     login = staticmethod(admin_login)
     create_teacher = staticmethod(create_teacher)
     list_teachers = staticmethod(list_teachers)
     get_teacher_by_token = staticmethod(get_teacher_by_token)
-    register_teacher = staticmethod(register_teacher)
     delete_teacher = staticmethod(delete_teacher)
+    update_invite_code = staticmethod(update_teacher_code)
 
 
 admin_service = AdminService()

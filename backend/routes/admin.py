@@ -98,3 +98,20 @@ def complete_registration():
     if not ok:
         return error_response(err, 400)
     return success_response(message="Kayıt başarıyla tamamlandı! Artık giriş yapabilirsiniz.")
+
+
+@admin_bp.route("/update-invite-code", methods=["POST"])
+def update_invite_code():
+    """Öğretmen davet kodunu güncelleme."""
+    data = request.get_json(silent=True) or {}
+    try:
+        require_keys(data, ["teacher_id", "admin_id", "new_code"])
+    except ValidationError as e:
+        return error_response(e.message, 400)
+
+    ok, err = admin_service.update_invite_code(
+        data["teacher_id"], data["admin_id"], data["new_code"]
+    )
+    if not ok:
+        return error_response(err, 400)
+    return success_response(message="Davet kodu güncellendi.")

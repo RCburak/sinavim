@@ -188,10 +188,10 @@ def assign_program(student_id: str, program: list[dict]) -> tuple[bool, str | No
         for p in program:
             items.append({
                 "gun": p.get("gun", "Pazartesi"),
-                "task": p.get("task", "Ders"),
+                "task": p.get("task") or f"{p.get('subject', '')} - {p.get('topic', '')}".strip() or "Ders",
                 "duration": p.get("duration", "45 dk"),
                 "completed": False,
-                "questions": int(p.get("questions", 0)),
+                "questions": int(p.get("questions") or p.get("questionCount") or 0),
             })
         db.collection(COLLECTION_PROGRAMS).document(student_id).set({"items": items})
         return True, None

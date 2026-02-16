@@ -65,6 +65,8 @@ export default function TeacherDashboard() {
   // Detay Modalı State
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [studentAnaliz, setStudentAnaliz] = useState<Analiz[]>([]);
+  const [studentHistory, setStudentHistory] = useState<any[]>([]);
+  const [expandedHistoryId, setExpandedHistoryId] = useState<string | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
 
@@ -185,14 +187,22 @@ export default function TeacherDashboard() {
     setSelectedStudent(student);
     setModalVisible(true);
     setLoadingDetail(true);
+    setLoadingDetail(true);
     try {
-      const res = await fetch(`${API_URL}/analizler?uid=${student.id}`);
-      const data = await res.json();
-      if (Array.isArray(data)) setStudentAnaliz(data);
-      else setStudentAnaliz([]);
+      const [analizRes, historyRes] = await Promise.all([
+        fetch(`${API_URL}/analizler/${student.id}`), // Fixed: use path param
+        fetch(`${API_URL}/get-history/${student.id}`)
+      ]);
+
+      const analizData = await analizRes.json();
+      const historyData = await historyRes.json();
+
+      setStudentAnaliz(Array.isArray(analizData) ? analizData : []);
+      setStudentHistory(Array.isArray(historyData) ? historyData : []);
     } catch (error) {
       console.error(error);
       setStudentAnaliz([]);
+      setStudentHistory([]);
     } finally {
       setLoadingDetail(false);
     }
@@ -285,15 +295,24 @@ export default function TeacherDashboard() {
                   <Text style={styles.itemSub}>{item.email}</Text>
                 </View>
               </View>
-              <TouchableOpacity
-                style={[styles.badge, { backgroundColor: '#FEE2E2' }]}
-                onPress={() => {
-                  assignClassToStudent(null, item.id); // Sınıftan çıkar
-                }}
-              >
-                <Ionicons name="remove-circle-outline" size={16} color="#EF4444" style={{ marginRight: 5 }} />
-                <Text style={{ color: '#EF4444', fontWeight: '600', fontSize: 12 }}>Çıkar</Text>
-              </TouchableOpacity>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <TouchableOpacity
+                  style={[styles.badge, { backgroundColor: '#DBEAFE' }]}
+                  onPress={() => openStudentDetail(item)}
+                >
+                  <Ionicons name="eye-outline" size={16} color="#2563EB" style={{ marginRight: 5 }} />
+                  <Text style={{ color: '#2563EB', fontWeight: '600', fontSize: 12 }}>İncele</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.badge, { backgroundColor: '#FEE2E2' }]}
+                  onPress={() => {
+                    assignClassToStudent(null, item.id); // Sınıftan çıkar
+                  }}
+                >
+                  <Ionicons name="remove-circle-outline" size={16} color="#EF4444" style={{ marginRight: 5 }} />
+                  <Text style={{ color: '#EF4444', fontWeight: '600', fontSize: 12 }}>Çıkar</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           )}
           ListEmptyComponent={
@@ -590,6 +609,53 @@ export default function TeacherDashboard() {
                 ) : (
                   <Text style={styles.emptyText}>Henüz veri yok.</Text>
                 )}
+
+                <Text style={[styles.sectionTitle, { marginTop: 24 }]}>Geçmiş Ödev & Programlar</Text>
+                {studentHistory.length > 0 ? (
+                  studentHistory.map((h, i) => (
+
+                    <View key={i} style={{ marginBottom: 12 }}>
+                      <TouchableOpacity
+                        style={[styles.analizRow, { marginBottom: 0, borderBottomWidth: expandedHistoryId === h.id ? 0 : 1 }]}
+                        onPress={() => setExpandedHistoryId(expandedHistoryId === h.id ? null : h.id)}
+                      >
+                        <View style={[styles.analizScore, { backgroundColor: '#D1FAE5' }]}>
+                          <Ionicons name={expandedHistoryId === h.id ? "chevron-up" : "chevron-down"} size={16} color="#059669" />
+                        </View>
+                        <View>
+                          <Text style={styles.analizName}>{h.program_type === 'teacher_assigned' ? 'Öğretmen Ödevi' : 'Program'}</Text>
+                          <Text style={styles.analizDate}>{new Date(h.archive_date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}</Text>
+                        </View>
+                        <View style={{ marginLeft: 'auto' }}>
+                          <Text style={{ fontSize: 12, color: '#6B7280' }}>
+                            {h.program_data?.length || 0} Ders
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+
+                      {expandedHistoryId === h.id && (
+                        <View style={{ backgroundColor: '#F9FAFB', padding: 12, borderRadius: 12, marginTop: 4 }}>
+                          {h.program_data?.map((task: any, idx: number) => (
+                            <View key={idx} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' }}>
+                              <View style={[styles.statusDot, { backgroundColor: task.completed ? '#10B981' : '#F59E0B', width: 8, height: 8, borderRadius: 4, marginRight: 10 }]} />
+                              <View style={{ flex: 1 }}>
+                                <Text style={{ fontSize: 13, fontWeight: '600', color: '#374151' }}>{task.task}</Text>
+                                <Text style={{ fontSize: 11, color: '#6B7280' }}>{task.gun} • {task.duration}</Text>
+                              </View>
+                              {task.questions > 0 && (
+                                <View style={{ paddingHorizontal: 8, paddingVertical: 4, backgroundColor: '#E0E7FF', borderRadius: 6 }}>
+                                  <Text style={{ fontSize: 11, color: '#4338CA', fontWeight: 'bold' }}>{task.questions} Soru</Text>
+                                </View>
+                              )}
+                            </View>
+                          ))}
+                        </View>
+                      )}
+                    </View>
+                  ))
+                ) : (
+                  <Text style={styles.emptyText}>Henüz geçmiş kaydı yok.</Text>
+                )}
               </ScrollView>
             )}
           </View>
@@ -759,5 +825,6 @@ const styles = StyleSheet.create({
 
   optionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 14, borderRadius: 12, backgroundColor: '#F9FAFB', marginBottom: 8 },
   optionRowActive: { backgroundColor: '#EFF6FF', borderColor: COLORS.light.primary, borderWidth: 1 },
-  optionText: { color: '#374151', fontSize: 14 }
+  optionText: { color: '#374151', fontSize: 14 },
+  statusDot: { width: 8, height: 8, borderRadius: 4, marginRight: 10 }
 });

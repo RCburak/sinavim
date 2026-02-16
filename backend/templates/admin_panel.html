@@ -596,10 +596,15 @@
                     <div style="font-size: 22px; font-weight: 700; letter-spacing: 3px; margin-top: 5px;"
                         id="inviteCodeDisplay">—</div>
                 </div>
-                <button
-                    onclick="navigator.clipboard.writeText(document.getElementById('inviteCodeDisplay').textContent); showToast('Kurum kodu kopyalandı! 📋')"
-                    style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 14px;">📋
-                    Kopyala</button>
+                <div style="display: flex; gap: 8px;">
+                    <button onclick="openEditCodeModal()"
+                        style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 14px;">✏️
+                        Düzenle</button>
+                    <button
+                        onclick="navigator.clipboard.writeText(document.getElementById('inviteCodeDisplay').textContent); showToast('Kurum kodu kopyalandı! 📋')"
+                        style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 14px;">📋
+                        Kopyala</button>
+                </div>
             </div>
 
             <!-- Teacher List -->
@@ -632,6 +637,22 @@
             <div class="modal-actions">
                 <button class="modal-cancel" onclick="closeCreateModal()">Vazgeç</button>
                 <button class="modal-save" id="createSubmitBtn" onclick="createTeacher()">Oluştur</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ EDIT CODE MODAL ═══ -->
+    <div class="modal-overlay" id="editCodeModal">
+        <div class="modal">
+            <h3>✏️ Davet Kodunu Düzenle</h3>
+            <div class="modal-sub">Yeni kurum kodunu girin. Bu kod benzersiz olmalıdır.</div>
+
+            <label>Yeni Kod</label>
+            <input type="text" id="newInviteCode" placeholder="Örn: MAT-101" style="text-transform: uppercase;" />
+
+            <div class="modal-actions">
+                <button class="modal-cancel" onclick="closeEditCodeModal()">Vazgeç</button>
+                <button class="modal-save" id="updateCodeBtn" onclick="updateInviteCode()">Güncelle</button>
             </div>
         </div>
     </div>
@@ -799,8 +820,9 @@
             }
 
             const btn = document.getElementById('createSubmitBtn');
-            btn.disabled = true;
+            const originalText = btn.textContent;
             btn.textContent = 'Oluşturuluyor...';
+            btn.disabled = true;
 
             try {
                 const res = await fetch(`${API_BASE}/admin/create-teacher`, {
@@ -818,10 +840,61 @@
                     showToast(data.message || 'Bir hata oluştu.', 'error');
                 }
             } catch (e) {
-                showToast('Sunucuya bağlanılamadı.', 'error');
+                showToast('Sunucu hatası.', 'error');
             } finally {
+                btn.textContent = originalText;
                 btn.disabled = false;
-                btn.textContent = 'Oluştur';
+            }
+        }
+
+        // ─── UPDATE INVITE CODE ───
+        function openEditCodeModal() {
+            document.getElementById('editCodeModal').classList.add('active');
+            document.getElementById('newInviteCode').value = currentAdmin.invite_code || '';
+        }
+
+        function closeEditCodeModal() {
+            document.getElementById('editCodeModal').classList.remove('active');
+        }
+
+        async function updateInviteCode() {
+            const newCode = document.getElementById('newInviteCode').value.trim();
+            if (!newCode) {
+                showToast('Lütfen yeni bir kod girin.', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('updateCodeBtn');
+            const originalText = btn.textContent;
+            btn.textContent = 'Güncelleniyor...';
+            btn.disabled = true;
+
+            try {
+                // Admin kendi kodunu güncelliyor -> teacher_id = admin_id
+                const res = await fetch(`${API_BASE}/admin/update-invite-code`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        teacher_id: currentAdmin.id,
+                        admin_id: currentAdmin.id,
+                        new_code: newCode
+                    })
+                });
+                const data = await res.json();
+
+                if (data.status === 'success') {
+                    showToast('Davet kodu güncellendi! 🎉');
+                    currentAdmin.invite_code = newCode;
+                    document.getElementById('inviteCodeDisplay').textContent = newCode;
+                    closeEditCodeModal();
+                } else {
+                    showToast(data.message || 'Güncellenemedi.', 'error');
+                }
+            } catch (e) {
+                showToast('Sunucu hatası.', 'error');
+            } finally {
+                btn.textContent = originalText;
+                btn.disabled = false;
             }
         }
 

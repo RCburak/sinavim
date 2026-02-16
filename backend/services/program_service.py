@@ -51,10 +51,10 @@ def save_program(user_id: str, program: list[dict]) -> tuple[bool, str | None]:
         for p in program:
             items.append({
                 "gun": p.get("gun", "Pazartesi"),
-                "task": p.get("task", "Ders"),
+                "task": p.get("task") or f"{p.get('subject', '')} - {p.get('topic', '')}".strip() or "Ders",
                 "duration": p.get("duration", "1 Saat"),
                 "completed": bool(p.get("completed")),
-                "questions": int(p.get("questions", 0)),
+                "questions": int(p.get("questions") or p.get("questionCount") or 0),
             })
         db.collection(COLLECTION_PROGRAMS).document(user_id).set({"items": items})
         return True, None
@@ -110,6 +110,11 @@ def get_history(user_id: str) -> list[dict]:
             d["id"] = doc.id
             if "archive_date" in d and hasattr(d["archive_date"], "isoformat"):
                 d["archive_date"] = d["archive_date"].isoformat()
+            if "program_data" in d and isinstance(d["program_data"], str):
+                try:
+                    d["program_data"] = json.loads(d["program_data"])
+                except:
+                    d["program_data"] = []
             out.append(d)
         out.sort(key=lambda x: x.get("archive_date", ""), reverse=True)
         return out
