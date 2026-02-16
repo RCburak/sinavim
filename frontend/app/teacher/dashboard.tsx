@@ -76,6 +76,10 @@ export default function TeacherDashboard() {
 
   const [activeTab, setActiveTab] = useState<'students' | 'classes'>('students');
 
+  // Class Detail State
+  const [selectedClass, setSelectedClass] = useState<ClassItem | null>(null);
+  const [addStudentModalVisible, setAddStudentModalVisible] = useState(false);
+
   useEffect(() => {
     try {
       if (typeof window !== 'undefined') {
@@ -83,7 +87,9 @@ export default function TeacherDashboard() {
         if (stored) {
           const parsed = JSON.parse(stored);
           setTeacherData(parsed);
-          fetchData(parsed.id);
+          // Öğrenciler admin'in institution_id'si ile bağlanır
+          const institutionId = parsed.admin_id || parsed.id;
+          fetchData(institutionId);
           return;
         }
       }
@@ -126,13 +132,27 @@ export default function TeacherDashboard() {
     } catch (e) { console.error(e); }
   };
 
+  const rejectStudent = async (studentId: string) => {
+    try {
+      const res = await fetch(`${API_URL}/leave-institution`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: studentId }),
+      });
+      if (res.ok) {
+        setStudents(prev => prev.filter(s => s.id !== studentId));
+      }
+    } catch (e) { console.error(e); }
+  };
+
   const createClass = async () => {
-    if (!newClassName || !teacherData?.id) return;
+    const instId = teacherData?.admin_id || teacherData?.id;
+    if (!newClassName || !instId) return;
     try {
       const res = await fetch(`${API_URL}/teacher/create-class`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ institution_id: teacherData.id, name: newClassName }),
+        body: JSON.stringify({ institution_id: instId, name: newClassName }),
       });
       const data = await res.json();
       if (data.id) {
@@ -143,16 +163,18 @@ export default function TeacherDashboard() {
     } catch (e) { console.error(e); }
   };
 
-  const assignClassToStudent = async (classId: string | null) => {
-    if (!studentToAssign) return;
+  const assignClassToStudent = async (classId: string | null, studentId?: string) => {
+    const targetStudentId = studentId || studentToAssign?.id;
+    if (!targetStudentId) return;
+
     try {
       const res = await fetch(`${API_URL}/teacher/assign-class`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ student_id: studentToAssign.id, class_id: classId }),
+        body: JSON.stringify({ student_id: targetStudentId, class_id: classId }),
       });
       if (res.ok) {
-        setStudents(prev => prev.map(s => s.id === studentToAssign.id ? { ...s, class_id: classId } : s));
+        setStudents(prev => prev.map(s => s.id === targetStudentId ? { ...s, class_id: classId } : s));
         setAssignClassModal(false);
         setStudentToAssign(null);
       }
@@ -204,10 +226,16 @@ export default function TeacherDashboard() {
         </TouchableOpacity>
 
         {item.status === 'pending' ? (
-          <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#10B981' }]} onPress={() => approveStudent(item.id)}>
-            <Ionicons name="checkmark" size={16} color="#fff" style={{ marginRight: 5 }} />
-            <Text style={styles.actionBtnText}>Onayla</Text>
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#10B981' }]} onPress={() => approveStudent(item.id)}>
+              <Ionicons name="checkmark" size={16} color="#fff" style={{ marginRight: 3 }} />
+              <Text style={styles.actionBtnText}>Onayla</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#EF4444' }]} onPress={() => rejectStudent(item.id)}>
+              <Ionicons name="close" size={16} color="#fff" style={{ marginRight: 3 }} />
+              <Text style={styles.actionBtnText}>Reddet</Text>
+            </TouchableOpacity>
+          </View>
         ) : (
           <TouchableOpacity style={styles.actionBtn} onPress={() => openStudentDetail(item)}>
             <Text style={styles.actionBtnText}>İncele</Text>
@@ -218,48 +246,165 @@ export default function TeacherDashboard() {
     </View>
   );
 
-  const renderClassesTab = () => (
-    <View style={styles.tabContent}>
-      <View style={styles.tabHeader}>
-        <View>
-          <Text style={styles.sectionTitle}>Sınıflar</Text>
-          <Text style={styles.sectionSub}>{classes.length} aktif sınıf</Text>
-        </View>
-        <TouchableOpacity style={styles.primaryBtn} onPress={() => setShowClassModal(true)}>
-          <Ionicons name="add" size={20} color="#fff" />
-          <Text style={styles.primaryBtnText}>Yeni Sınıf</Text>
-        </TouchableOpacity>
-      </View>
+  const renderClassDetail = () => {
+    if (!selectedClass) return null;
+    const classStudents = students.filter(s => s.class_id === selectedClass.id);
+    // Öğrencileri listele (bu sınıfta olmayanlar)
+    const availableStudents = students.filter(s => s.class_id !== selectedClass.id && s.status !== 'pending');
 
-      <View style={styles.grid}>
-        {classes.map(c => (
-          <View key={c.id} style={styles.gridCard}>
-            <View style={styles.gridHeader}>
-              <View style={[styles.iconBox, { backgroundColor: '#EDE9FE' }]}>
-                <Ionicons name="school" size={24} color={COLORS.light.primary} />
+    return (
+      <View style={styles.tabContent}>
+        <View style={styles.tabHeader}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <TouchableOpacity onPress={() => setSelectedClass(null)} style={styles.iconBtn}>
+              <Ionicons name="arrow-back" size={24} color="#374151" />
+            </TouchableOpacity>
+            <View>
+              <Text style={styles.sectionTitle}>{selectedClass.name}</Text>
+              <Text style={styles.sectionSub}>{classStudents.length} Öğrenci</Text>
+            </View>
+          </View>
+          <TouchableOpacity style={styles.primaryBtn} onPress={() => setAddStudentModalVisible(true)}>
+            <Ionicons name="person-add" size={20} color="#fff" />
+            <Text style={styles.primaryBtnText}>Öğrenci Ekle</Text>
+          </TouchableOpacity>
+        </View>
+
+        <FlatList
+          data={classStudents}
+          keyExtractor={item => item.id}
+          contentContainerStyle={{ paddingBottom: 20 }}
+          renderItem={({ item }) => (
+            <View style={styles.cardItem}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                <LinearGradient colors={['#8B5CF6', '#6C3CE1']} style={styles.avatarPlaceholder}>
+                  <Text style={styles.avatarText}>{item.name.charAt(0).toUpperCase()}</Text>
+                </LinearGradient>
+                <View style={{ marginLeft: 15 }}>
+                  <Text style={styles.itemName}>{item.name}</Text>
+                  <Text style={styles.itemSub}>{item.email}</Text>
+                </View>
               </View>
-              <TouchableOpacity>
-                <Ionicons name="ellipsis-horizontal" size={20} color="#9CA3AF" />
+              <TouchableOpacity
+                style={[styles.badge, { backgroundColor: '#FEE2E2' }]}
+                onPress={() => {
+                  assignClassToStudent(null, item.id); // Sınıftan çıkar
+                }}
+              >
+                <Ionicons name="remove-circle-outline" size={16} color="#EF4444" style={{ marginRight: 5 }} />
+                <Text style={{ color: '#EF4444', fontWeight: '600', fontSize: 12 }}>Çıkar</Text>
               </TouchableOpacity>
             </View>
-            <Text style={styles.gridTitle}>{c.name}</Text>
-            <Text style={styles.gridSub}>
-              {students.filter(s => s.class_id === c.id).length} Öğrenci
-            </Text>
-            <View style={styles.progressBar}>
-              <View style={[styles.progressFill, { width: '60%' }]} />
+          )}
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <Ionicons name="people-outline" size={48} color="#D1D5DB" />
+              <Text style={styles.emptyText}>Bu sınıfta henüz öğrenci yok.</Text>
+            </View>
+          }
+        />
+
+        {/* Add Student Modal */}
+        <Modal visible={addStudentModalVisible} animationType="slide" transparent>
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalContent, { maxHeight: '80%' }]}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Sınıfa Öğrenci Ekle</Text>
+                <TouchableOpacity onPress={() => setAddStudentModalVisible(false)}>
+                  <Ionicons name="close" size={24} color="#374151" />
+                </TouchableOpacity>
+              </View>
+
+              <Text style={{ marginBottom: 10, color: '#6B7280' }}>
+                Listeden öğrenci seçerek {selectedClass.name} sınıfına ekleyebilirsiniz.
+              </Text>
+
+              <FlatList
+                data={availableStudents}
+                keyExtractor={item => item.id}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={[styles.cardItem, { marginBottom: 8 }]}
+                    onPress={() => {
+                      assignClassToStudent(selectedClass.id, item.id);
+                      setAddStudentModalVisible(false);
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                      <LinearGradient colors={['#E5E7EB', '#D1D5DB']} style={styles.avatarPlaceholder}>
+                        <Text style={[styles.avatarText, { color: '#374151' }]}>{item.name.charAt(0).toUpperCase()}</Text>
+                      </LinearGradient>
+                      <View style={{ marginLeft: 15 }}>
+                        <Text style={styles.itemName}>{item.name}</Text>
+                        <Text style={[styles.itemSub, { color: item.class_id ? '#D97706' : '#10B981' }]}>
+                          {item.class_id ? `Mevcut: ${classes.find(c => c.id === item.class_id)?.name}` : 'Sınıfsız'}
+                        </Text>
+                      </View>
+                    </View>
+                    <Ionicons name="add-circle" size={24} color={COLORS.light.primary} />
+                  </TouchableOpacity>
+                )}
+                ListEmptyComponent={
+                  <Text style={{ textAlign: 'center', color: '#9CA3AF', marginTop: 20 }}>
+                    Eklenebilecek öğrenci bulunamadı.
+                  </Text>
+                }
+              />
             </View>
           </View>
-        ))}
-        {classes.length === 0 && (
-          <View style={styles.emptyState}>
-            <Ionicons name="school-outline" size={48} color="#D1D5DB" />
-            <Text style={styles.emptyText}>Henüz hiç sınıf oluşturulmadı.</Text>
-          </View>
-        )}
+        </Modal>
       </View>
-    </View>
-  );
+    );
+  };
+
+  const renderClassesTab = () => {
+    if (selectedClass) return renderClassDetail();
+
+    return (
+      <View style={styles.tabContent}>
+        <View style={styles.tabHeader}>
+          <View>
+            <Text style={styles.sectionTitle}>Sınıflar</Text>
+            <Text style={styles.sectionSub}>{classes.length} aktif sınıf</Text>
+          </View>
+          <TouchableOpacity style={styles.primaryBtn} onPress={() => setShowClassModal(true)}>
+            <Ionicons name="add" size={20} color="#fff" />
+            <Text style={styles.primaryBtnText}>Yeni Sınıf</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.grid}>
+          {classes.map(c => (
+            <View key={c.id} style={styles.gridCard}>
+              <View style={styles.gridHeader}>
+                <View style={[styles.iconBox, { backgroundColor: '#EDE9FE' }]}>
+                  <Ionicons name="school" size={24} color={COLORS.light.primary} />
+                </View>
+                <TouchableOpacity onPress={() => setSelectedClass(c)}>
+                  <Text style={{ color: COLORS.light.primary, fontWeight: '600' }}>Detay</Text>
+                </TouchableOpacity>
+              </View>
+              <TouchableOpacity onPress={() => setSelectedClass(c)}>
+                <Text style={styles.gridTitle}>{c.name}</Text>
+              </TouchableOpacity>
+              <Text style={styles.gridSub}>
+                {students.filter(s => s.class_id === c.id).length} Öğrenci
+              </Text>
+              <View style={styles.progressBar}>
+                <View style={[styles.progressFill, { width: '60%' }]} />
+              </View>
+            </View>
+          ))}
+          {classes.length === 0 && (
+            <View style={styles.emptyState}>
+              <Ionicons name="school-outline" size={48} color="#D1D5DB" />
+              <Text style={styles.emptyText}>Henüz hiç sınıf oluşturulmadı.</Text>
+            </View>
+          )}
+        </View>
+      </View>
+    );
+  };
 
   const renderStats = () => (
     <View style={styles.statsRow}>
@@ -301,7 +446,7 @@ export default function TeacherDashboard() {
           <View style={styles.brandLogo}>
             <Text style={styles.brandText}>RC</Text>
           </View>
-          <Text style={styles.brandTitle}>Yönetim Paneli</Text>
+          <Text style={styles.brandTitle}>Öğretmen Paneli</Text>
         </View>
 
         <TouchableOpacity

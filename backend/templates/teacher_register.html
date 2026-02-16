@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RC Sınavım - Öğretmen Kayıt</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0F0F1A 0%, #1A1A2E 50%, #16213E 100%);
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 28px;
+            padding: 48px;
+            width: 460px;
+            max-width: 90vw;
+            backdrop-filter: blur(20px);
+        }
+
+        .card h1 {
+            font-size: 26px;
+            font-weight: 800;
+            margin-bottom: 8px;
+        }
+
+        .card .subtitle {
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 14px;
+            margin-bottom: 32px;
+            line-height: 1.6;
+        }
+
+        .info-box {
+            background: rgba(108, 60, 225, 0.1);
+            border: 1px solid rgba(108, 60, 225, 0.2);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 28px;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 0;
+        }
+
+        .info-label {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.5);
+            font-weight: 500;
+        }
+
+        .info-value {
+            font-size: 14px;
+            font-weight: 600;
+            color: #A78BFA;
+        }
+
+        label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.6);
+            margin-bottom: 8px;
+            margin-top: 20px;
+        }
+
+        input {
+            width: 100%;
+            padding: 16px 18px;
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.08);
+            color: #fff;
+            font-size: 15px;
+            outline: none;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+
+        input:focus {
+            border-color: #6C3CE1;
+        }
+
+        input::placeholder {
+            color: rgba(255, 255, 255, 0.3);
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 16px;
+            border-radius: 14px;
+            border: none;
+            background: linear-gradient(135deg, #6C3CE1, #4A1DB5);
+            color: #fff;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 28px;
+            transition: opacity 0.2s;
+            font-family: inherit;
+        }
+
+        .submit-btn:hover {
+            opacity: 0.9;
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .error-msg {
+            color: #EF4444;
+            font-size: 13px;
+            margin-top: 12px;
+            text-align: center;
+            display: none;
+        }
+
+        .success-msg {
+            color: #10B981;
+            font-size: 14px;
+            margin-top: 16px;
+            text-align: center;
+            display: none;
+            line-height: 1.6;
+        }
+
+        .error-page {
+            text-align: center;
+        }
+
+        .error-page .icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .error-page h2 {
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: #EF4444;
+        }
+
+        .error-page p {
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .password-hint {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.3);
+            margin-top: 6px;
+        }
+    </style>
+</head>
+
+<body>
+
+    {% if error %}
+    <!-- Error State -->
+    <div class="card">
+        <div class="error-page">
+            <div class="icon">⚠️</div>
+            <h2>Kayıt Yapılamıyor</h2>
+            <p>{{ error }}</p>
+        </div>
+    </div>
+    {% else %}
+    <!-- Registration Form -->
+    <div class="card" id="registerCard">
+        <h1>🎓 Öğretmen Kaydı</h1>
+        <p class="subtitle">Yöneticiniz tarafından bir öğretmen hesabı oluşturuldu. Bilgilerinizi girerek kaydınızı
+            tamamlayın.</p>
+
+        <div class="info-box">
+            <div class="info-row">
+                <span class="info-label">Ad Soyad</span>
+                <span class="info-value">{{ teacher.name }}</span>
+            </div>
+        </div>
+
+        <label>E-posta Adresi</label>
+        <input type="email" id="email" placeholder="ornek@email.com" />
+
+        <label>Şifre</label>
+        <input type="password" id="password" placeholder="En az 6 karakter" />
+        <div class="password-hint">Şifreniz en az 6 karakter olmalıdır.</div>
+
+        <label>Şifre Tekrar</label>
+        <input type="password" id="passwordConfirm" placeholder="Şifrenizi tekrar girin" />
+
+        <button class="submit-btn" id="submitBtn" onclick="completeRegistration()">Kaydı Tamamla</button>
+        <div class="error-msg" id="errorMsg"></div>
+        <div class="success-msg" id="successMsg"></div>
+    </div>
+    {% endif %}
+
+    <script>
+        const API_BASE = window.location.origin;
+        const TOKEN = "{{ token }}";
+
+        async function completeRegistration() {
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const passwordConfirm = document.getElementById('passwordConfirm').value;
+            const errorEl = document.getElementById('errorMsg');
+            const successEl = document.getElementById('successMsg');
+            const btn = document.getElementById('submitBtn');
+
+            errorEl.style.display = 'none';
+            successEl.style.display = 'none';
+
+            if (!email || !password || !passwordConfirm) {
+                errorEl.textContent = 'Lütfen tüm alanları doldurun.';
+                errorEl.style.display = 'block';
+                return;
+            }
+
+            if (password.length < 6) {
+                errorEl.textContent = 'Şifre en az 6 karakter olmalıdır.';
+                errorEl.style.display = 'block';
+                return;
+            }
+
+            if (password !== passwordConfirm) {
+                errorEl.textContent = 'Şifreler eşleşmiyor.';
+                errorEl.style.display = 'block';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Kaydediliyor...';
+
+            try {
+                const res = await fetch(`${API_BASE}/admin/complete-registration`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token: TOKEN, email, password })
+                });
+                const data = await res.json();
+
+                if (data.status === 'success') {
+                    successEl.innerHTML = '✅ Kaydınız başarıyla tamamlandı!<br>Artık uygulamadan veya öğretmen panelinden giriş yapabilirsiniz.';
+                    successEl.style.display = 'block';
+                    btn.style.display = 'none';
+                    document.getElementById('email').disabled = true;
+                    document.getElementById('password').disabled = true;
+                    document.getElementById('passwordConfirm').disabled = true;
+                } else {
+                    errorEl.textContent = data.message || 'Bir hata oluştu.';
+                    errorEl.style.display = 'block';
+                    btn.disabled = false;
+                    btn.textContent = 'Kaydı Tamamla';
+                }
+            } catch (e) {
+                errorEl.textContent = 'Sunucuya bağlanılamadı.';
+                errorEl.style.display = 'block';
+                btn.disabled = false;
+                btn.textContent = 'Kaydı Tamamla';
+            }
+        }
+
+        // Enter ile gönder
+        document.addEventListener('DOMContentLoaded', () => {
+            const confirmInput = document.getElementById('passwordConfirm');
+            if (confirmInput) {
+                confirmInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') completeRegistration();
+                });
+            }
+        });
+    </script>
+
+</body>
+
+</html>

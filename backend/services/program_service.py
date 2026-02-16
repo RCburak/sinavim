@@ -150,6 +150,7 @@ def get_user_stats(user_id: str) -> dict:
         if user_snap.exists:
             user_data = user_snap.to_dict()
             inst_id = user_data.get("institution_id")
+            user_status = user_data.get("status")
             if inst_id:
                 # Kurum adını al
                 inst_ref = db.collection("institutions").document(inst_id)
@@ -157,7 +158,8 @@ def get_user_stats(user_id: str) -> dict:
                 if inst_snap.exists:
                     institution = {
                         "id": inst_id,
-                        "name": inst_snap.to_dict().get("name", "Bilinmeyen Kurum")
+                        "name": inst_snap.to_dict().get("name", "Bilinmeyen Kurum"),
+                        "status": user_status or "approved"
                     }
 
         return {

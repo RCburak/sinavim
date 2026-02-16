@@ -45,7 +45,7 @@ def join_institution(
             ref = db.collection(COLLECTION_USERS).document(user_id)
             snap = ref.get()
             if snap.exists:
-                ref.update({"institution_id": inst_id})
+                ref.update({"institution_id": inst_id, "status": "pending", "class_id": None})
             else:
                 # sync-user henüz çağrılmamış olabilir, dokümanı oluştur
                 ref.set({

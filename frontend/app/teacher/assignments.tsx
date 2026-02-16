@@ -65,7 +65,8 @@ export default function AssignmentBuilder() {
         if (stored) {
           const parsed = JSON.parse(stored);
           setTeacherData(parsed);
-          fetchData(parsed.id);
+          const institutionId = parsed.admin_id || parsed.id;
+          fetchData(institutionId);
           return;
         }
       }

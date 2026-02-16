@@ -11,7 +11,7 @@ import { API_URL, API_HEADERS } from '../config/api';
 import { authService } from '../services/authService';
 
 export const useProfile = (initialName: string) => {
-  const [stats, setStats] = useState({ total_hours: 0, total_tasks: 0, institution: null as { id: string, name: string } | null });
+  const [stats, setStats] = useState({ total_hours: 0, total_tasks: 0, institution: null as { id: string, name: string, status?: string } | null });
   const [loading, setLoading] = useState(true);
   const [newName, setNewName] = useState(initialName || '');
 

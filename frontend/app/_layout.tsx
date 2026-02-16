@@ -31,6 +31,8 @@ export default function RootLayout() {
               <Stack.Screen name="teacher/login" options={{ headerShown: false }} />
               <Stack.Screen name="teacher/dashboard" options={{ headerShown: false }} />
               <Stack.Screen name="teacher/assignments" options={{ headerShown: false }} />
+              <Stack.Screen name="admin/login" options={{ headerShown: false }} />
+              <Stack.Screen name="admin/dashboard" options={{ headerShown: false }} />
             </Stack>
           </ScheduleProvider>
         </ThemeProvider>

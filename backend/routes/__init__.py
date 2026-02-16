@@ -6,6 +6,7 @@ from .teacher import teacher_bp
 from .program import program_bp
 from .analiz import analiz_bp
 from .questions import questions_bp
+from .admin import admin_bp
 
 
 def register_blueprints(app: Flask) -> None:
@@ -16,3 +17,4 @@ def register_blueprints(app: Flask) -> None:
     app.register_blueprint(program_bp)
     app.register_blueprint(analiz_bp)
     app.register_blueprint(questions_bp)
+    app.register_blueprint(admin_bp, url_prefix="/admin")

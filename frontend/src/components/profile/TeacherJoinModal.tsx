@@ -39,7 +39,7 @@ export const TeacherJoinModal = ({ visible, onClose, theme, userEmail, onSuccess
     setLoading(false);
 
     if (result.status === 'success') {
-      Alert.alert("Tebrikler!", result.message);
+      Alert.alert("Başvurun Alındı!", "Kuruma katılma talebiniz iletildi. Öğretmeniniz onayladıktan sonra kuruma dahil olacaksınız.");
       setCode('');
       if (onSuccess) onSuccess(result.institution?.name);
       onClose();
@@ -54,7 +54,7 @@ export const TeacherJoinModal = ({ visible, onClose, theme, userEmail, onSuccess
         <View style={[styles.container, { backgroundColor: theme.surface }]}>
           {/* Header */}
           <View style={styles.header}>
-            <Text style={[styles.title, { color: theme.text }]}>Öğretmenine Bağlan</Text>
+            <Text style={[styles.title, { color: theme.text }]}>Kuruma Bağlan</Text>
             <TouchableOpacity onPress={onClose}>
               <Ionicons name="close" size={24} color={theme.textSecondary} />
             </TouchableOpacity>
@@ -67,7 +67,7 @@ export const TeacherJoinModal = ({ visible, onClose, theme, userEmail, onSuccess
             </View>
 
             <Text style={[styles.description, { color: theme.textSecondary }]}>
-              Öğretmeninin veya kurumunun sana verdiği davet kodunu girerek sınıfına katılabilirsin.
+              Kurumunun sana verdiği davet kodunu girerek sınıfına katılabilirsin.
             </Text>
 
             <View style={[styles.inputContainer, { borderColor: theme.border, backgroundColor: theme.background }]}>
@@ -90,7 +90,7 @@ export const TeacherJoinModal = ({ visible, onClose, theme, userEmail, onSuccess
               {loading ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text style={styles.joinButtonText}>Sınıfa Katıl</Text>
+                <Text style={styles.joinButtonText}>Kuruma Katıl</Text>
               )}
             </TouchableOpacity>
           </View>
