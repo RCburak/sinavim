@@ -100,6 +100,12 @@ class AddAnalizRequest(BaseModel):
     type: str = "Diğer"
     date: Optional[str] = None
 
+    @field_validator('net', mode='after')
+    def validate_net_positive(cls, v):
+        if v < 0:
+            raise ValueError("Net value cannot be negative")
+        return v
+    
     @field_validator('net', mode='before')
     def parse_net(cls, v):
         if isinstance(v, str):
