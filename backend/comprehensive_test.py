@@ -184,22 +184,47 @@ def test_institution_and_stats():
         print_test_result(name, False, str(e))
         return False
 
-def test_question_status():
-    name = "Test: Soru Durumu (Update Status)"
-    payload = {
-        "user_id": USER_ID,
-        "solved": True
-    }
+def test_question_lifecycle():
+    name = "Test: Soru Döngüsü (Ekle -> Güncelle -> Sil)"
     try:
-        # Question ID is not strictly enforced in the route path for this specific endpoint in some variations, 
-        # but let's assume a generic update for the user.
-        resp = requests.post(f"{BASE_URL}/questions/update-status", json=payload)
-        if resp.status_code == 200:
-            print_test_result(name, True)
-            return True
-        else:
-            print_test_result(name, False, f"Status: {resp.status_code}")
+        # 1. Soru Ekle (Multipart Form)
+        with open("test_image.png", "rb") as f:
+            files = {"image": ("test_image.png", f, "image/png")}
+            data = {
+                "user_id": USER_ID,
+                "lesson": "Test Dersi",
+                "topic": "Test Konusu",
+                "notes": "Test Notu"
+            }
+            add_resp = requests.post(f"{BASE_URL}/questions/add", files=files, data=data)
+        
+        if add_resp.status_code != 201:
+            print_test_result(name, False, f"Soru ekleme hatası: {add_resp.status_code}")
             return False
+            
+        added_question = add_resp.json().get('data', {})
+        q_id = added_question.get('id')
+        if not q_id:
+            # Bazı durumlarda dönen JSON yapısı farklı olabilir
+            list_resp = requests.get(f"{BASE_URL}/questions/{USER_ID}")
+            q_id = list_resp.json()[0].get('id')
+
+        # 2. Durum Güncelle (PUT)
+        update_payload = {"user_id": USER_ID, "solved": True}
+        update_resp = requests.put(f"{BASE_URL}/questions/{q_id}/status", json=update_payload)
+        if update_resp.status_code != 200:
+            print_test_result(name, False, f"Durum güncelleme hatası: {update_resp.status_code}")
+            return False
+            
+        # 3. Sil (DELETE)
+        del_resp = requests.delete(f"{BASE_URL}/questions/{q_id}?user_id={USER_ID}")
+        if del_resp.status_code != 200:
+            print_test_result(name, False, f"Silme hatası: {del_resp.status_code}")
+            return False
+            
+        print_test_result(name, True, "Ekle -> Güncelle -> Sil döngüsü başarılı.")
+        return True
+            
     except Exception as e:
         print_test_result(name, False, str(e))
         return False
@@ -209,8 +234,6 @@ def test_admin_teacher_connectivity():
     try:
         # 1. Admin Panel
         admin_resp = requests.get(f"{BASE_URL}/admin/panel")
-        # 2. Teacher Login Page (if exists as a GET route)
-        # Assuming we just check if the routers are responding
         if admin_resp.status_code == 200:
             print_test_result(name, True)
             return True
@@ -238,8 +261,8 @@ if __name__ == "__main__":
     # Kurum & İstatistik
     test_institution_and_stats()
     
-    # Sorular
-    test_question_status()
+    # Sorular (Düzeltildi)
+    test_question_lifecycle()
     
     # Yönetim
     test_admin_teacher_connectivity()

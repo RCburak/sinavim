@@ -26,7 +26,7 @@ def add_question(user_id: str, image_file, lesson: str, topic: str = "", notes: 
     """Soru ekler (Resim yükler + Firestore kaydeder)."""
     try:
         # 1. Upload Image
-        bucket = storage.bucket(BUCKET_NAME)
+        bucket = storage.bucket()
         filename = f"questions/{user_id}/{uuid.uuid4()}.jpg"
         blob = bucket.blob(filename)
         
@@ -36,10 +36,12 @@ def add_question(user_id: str, image_file, lesson: str, topic: str = "", notes: 
         
         blob.upload_from_file(image_file, content_type=final_content_type)
         
-        # Public URL (veya signed URL)
-        # Not: Public yapmak icin bucket ayarlarinin izin vermesi gerekir.
-        # Eger hata verirse, signed URL kullanilabilir.
-        blob.make_public() 
+        # Try to make public, but don't fail if it's restricted
+        try:
+            blob.make_public()
+        except Exception as bucket_err:
+            logger.warning(f"Could not make blob public: {bucket_err}")
+            
         image_url = blob.public_url
 
         # 2. Save Metadata

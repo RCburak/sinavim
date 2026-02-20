@@ -46,7 +46,9 @@ def initialize_firebase():
         )
 
     cred = credentials.Certificate(cred_path)
-    firebase_admin.initialize_app(cred)
+    firebase_admin.initialize_app(cred, {
+        'storageBucket': 'rcsinavim.appspot.com'
+    })
     _db = firestore.client()
     logger.info("Firebase (Firestore) basariyla baslatildi.")
     return _db
