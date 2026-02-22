@@ -6,7 +6,7 @@ from services.admin_service import (
     admin_service, get_dashboard_stats, get_teacher_detail,
     get_notifications, update_settings, get_performance_report,
 )
-from middleware.auth import create_token, require_admin
+from middleware.auth import create_token, require_admin, require_staff
 from schemas import (
     AdminLoginRequest,
     CreateTeacherRequest,
@@ -100,7 +100,7 @@ def update_invite_code(req: UpdateInviteCodeRequest, auth: dict = Depends(requir
 # ─── Yeni Dashboard Endpointleri ──────────────────────────
 
 @admin_router.get("/dashboard-stats")
-def dashboard_stats(admin_id: str, auth: dict = Depends(require_admin)):
+def dashboard_stats(admin_id: str, auth: dict = Depends(require_staff)):
     """Kurum geneli istatistikler."""
     stats = get_dashboard_stats(admin_id)
     return success_response(stats)
@@ -116,7 +116,7 @@ def teacher_detail(teacher_id: str, admin_id: str, auth: dict = Depends(require_
 
 
 @admin_router.get("/notifications")
-def notifications(admin_id: str, auth: dict = Depends(require_admin)):
+def notifications(admin_id: str, auth: dict = Depends(require_staff)):
     """Son aktiviteler / bildirimler."""
     items = get_notifications(admin_id)
     return success_response({"notifications": items})
@@ -137,7 +137,7 @@ def admin_update_settings(req: UpdateSettingsRequest, auth: dict = Depends(requi
 
 
 @admin_router.get("/performance")
-def performance_report(admin_id: str, auth: dict = Depends(require_admin)):
+def performance_report(admin_id: str, auth: dict = Depends(require_staff)):
     """Kurum geneli performans raporu."""
     report = get_performance_report(admin_id)
     return success_response(report)

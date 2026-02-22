@@ -646,15 +646,17 @@ export default function RehberDashboard() {
         );
     };
 
-    // ─── TAB: Performance ──────────────────────────
     const renderPerformance = () => (
         <>
             <View style={styles.tabHeader}>
                 <Text style={styles.headerTitle}>📈 Performans Raporu</Text>
             </View>
             {perfLoading ? (
-                <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: 60 }} />
-            ) : performance ? (
+                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 60 }}>
+                    <ActivityIndicator size="large" color={COLORS.primary} />
+                    <Text style={{ marginTop: 12, color: '#6B7280' }}>Veriler hazırlanıyor...</Text>
+                </View>
+            ) : (performance && performance.total_exams > 0) ? (
                 <>
                     {/* Summary */}
                     <View style={styles.statsRow}>
@@ -729,8 +731,9 @@ export default function RehberDashboard() {
                 </>
             ) : (
                 <View style={styles.emptyState}>
-                    <Ionicons name="analytics-outline" size={48} color="#D1D5DB" />
-                    <Text style={styles.emptyText}>Performans verisi yok.</Text>
+                    <Ionicons name="stats-chart-outline" size={64} color="#D1D5DB" />
+                    <Text style={styles.emptyText}>Henüz performans verisi bulunamadı.</Text>
+                    <Text style={{ color: '#9CA3AF', marginTop: 8, textAlign: 'center' }}>Öğrenciler deneme sonuçlarını ekledikçe burada raporlar oluşacaktır.</Text>
                 </View>
             )}
         </>

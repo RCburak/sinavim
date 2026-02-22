@@ -79,3 +79,16 @@ def require_admin(
             detail="Bu işlem için yönetici yetkisi gereklidir.",
         )
     return payload
+
+
+def require_staff(
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
+) -> dict:
+    """'admin' veya 'teacher' rolüne izin verir."""
+    payload = _decode_token(credentials)
+    if payload.get("role") not in ["admin", "teacher"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Bu işlem için yetki gereklidir.",
+        )
+    return payload
