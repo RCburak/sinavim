@@ -29,13 +29,15 @@ const getAuthHeaders = () => {
   };
 };
 
+type TabType = 'overview' | 'students' | 'classes';
+
 interface Student {
   id: string;
   name: string;
   email: string;
   avatar: string | null;
   created_at: string;
-  status?: string; // pending | approved
+  status?: string;
   class_id?: string | null;
 }
 
@@ -51,45 +53,51 @@ interface Analiz {
   tarih: string;
 }
 
+interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  time: string;
+  type: 'info' | 'success' | 'warning';
+}
+
 export default function TeacherDashboard() {
   const router = useRouter();
-  const [students, setStudents] = useState<Student[]>([]);
-  const [classes, setClasses] = useState<ClassItem[]>([]);
+  // Main State
+  const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [loading, setLoading] = useState(true);
   const [teacherData, setTeacherData] = useState<any>(null);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [classes, setClasses] = useState<ClassItem[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
 
-  // Search State
+  // Search & Filters
   const [searchQuery, setSearchQuery] = useState("");
+  const [classFilter, setClassFilter] = useState("ALL");
 
-  // Filtered Lists
-  const pendingStudents = students.filter(s => s.status === 'pending');
-  const approvedStudents = students.filter(s => s.status !== 'pending');
+  // Modern Stats (derived)
+  const stats = {
+    totalStudents: students.filter(s => s.status !== 'pending').length,
+    totalClasses: classes.length,
+    avgNet: 0, // Mock for now
+    activeAssignments: 12, // Mock for now
+  };
 
-  // Search Logic
-  const filteredApproved = approvedStudents.filter(s =>
-    s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    s.email.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  // Detay Modalı State
+  // UI State
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [studentAnaliz, setStudentAnaliz] = useState<Analiz[]>([]);
   const [studentHistory, setStudentHistory] = useState<any[]>([]);
-  const [expandedHistoryId, setExpandedHistoryId] = useState<string | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
-
-  // Class Management States
   const [showClassModal, setShowClassModal] = useState(false);
   const [newClassName, setNewClassName] = useState("");
-  const [assignClassModal, setAssignClassModal] = useState(false);
-  const [studentToAssign, setStudentToAssign] = useState<Student | null>(null);
-
-  const [activeTab, setActiveTab] = useState<'students' | 'classes'>('students');
-
-  // Class Detail State
   const [selectedClass, setSelectedClass] = useState<ClassItem | null>(null);
   const [addStudentModalVisible, setAddStudentModalVisible] = useState(false);
+
+  // Additional UI State
+  const [expandedHistoryId, setExpandedHistoryId] = useState<number | null>(null);
+  const [assignClassModal, setAssignClassModal] = useState(false);
+  const [studentToAssign, setStudentToAssign] = useState<Student | null>(null);
 
   useEffect(() => {
     try {
@@ -124,7 +132,10 @@ export default function TeacherDashboard() {
         headers: getAuthHeaders(),
       });
       const data = await response.json();
-      if (Array.isArray(data)) setStudents(data);
+      if (Array.isArray(data)) {
+        // Otomatik onayla veya sadece onaylıları göster (User isteği üzerine onaylama kalktı)
+        setStudents(data);
+      }
     } catch (error) { console.error(error); }
   };
 
@@ -136,32 +147,6 @@ export default function TeacherDashboard() {
       const data = await response.json();
       if (Array.isArray(data)) setClasses(data);
     } catch (error) { console.error(error); }
-  };
-
-  const approveStudent = async (studentId: string) => {
-    try {
-      const res = await fetch(`${API_URL}/teacher/approve-student`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ student_id: studentId }),
-      });
-      if (res.ok) {
-        setStudents(prev => prev.map(s => s.id === studentId ? { ...s, status: 'approved' } : s));
-      }
-    } catch (e) { console.error(e); }
-  };
-
-  const rejectStudent = async (studentId: string) => {
-    try {
-      const res = await fetch(`${API_URL}/leave-institution`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ user_id: studentId }),
-      });
-      if (res.ok) {
-        setStudents(prev => prev.filter(s => s.id !== studentId));
-      }
-    } catch (e) { console.error(e); }
   };
 
   const createClass = async () => {
@@ -182,20 +167,17 @@ export default function TeacherDashboard() {
     } catch (e) { console.error(e); }
   };
 
-  const assignClassToStudent = async (classId: string | null, studentId?: string) => {
-    const targetStudentId = studentId || studentToAssign?.id;
-    if (!targetStudentId) return;
+  const assignClassToStudent = async (classId: string | null, studentId: string) => {
+    if (!studentId) return;
 
     try {
       const res = await fetch(`${API_URL}/teacher/assign-class`, {
         method: 'POST',
         headers: getAuthHeaders(),
-        body: JSON.stringify({ student_id: targetStudentId, class_id: classId }),
+        body: JSON.stringify({ student_id: studentId, class_id: classId }),
       });
       if (res.ok) {
-        setStudents(prev => prev.map(s => s.id === targetStudentId ? { ...s, class_id: classId } : s));
-        setAssignClassModal(false);
-        setStudentToAssign(null);
+        setStudents(prev => prev.map(s => s.id === studentId ? { ...s, class_id: classId } : s));
       }
     } catch (e) { console.error(e); }
   };
@@ -244,243 +226,264 @@ export default function TeacherDashboard() {
     }
   };
 
-  const renderStudentRow = ({ item, index }: { item: Student, index: number }) => (
-    <View style={styles.cardItem}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+  // ─── TAB: Overview ────────────────────────────
+  const renderOverview = () => (
+    <View style={styles.tabContent}>
+      <View style={styles.welcomeCard}>
         <LinearGradient
-          colors={['#8B5CF6', '#6C3CE1']}
-          style={styles.avatarPlaceholder}
+          colors={['#4F46E5', '#7C3AED']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.welcomeGradient}
         >
-          <Text style={styles.avatarText}>{item.name.charAt(0).toUpperCase()}</Text>
-        </LinearGradient>
-        <View style={{ marginLeft: 15 }}>
-          <Text style={styles.itemName}>{item.name}</Text>
-          <Text style={styles.itemSub}>{item.email}</Text>
-        </View>
-      </View>
-
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 15 }}>
-        {/* Class Badge */}
-        {/* Class Badge - Normal öğretmenler sadece görüntüleyebilir */}
-        <View
-          style={[styles.badge, { backgroundColor: '#F3F4F6' }]}
-        >
-          <Ionicons name="people-outline" size={14} color="#4B5563" style={{ marginRight: 5 }} />
-          <Text style={styles.badgeText}>
-            {classes.find(c => c.id === item.class_id)?.name || "Sınıf Yok"}
-          </Text>
-        </View>
-
-        {item.status === 'pending' ? (
-          <View style={{ flexDirection: 'row', gap: 8 }}>
-            <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#10B981' }]} onPress={() => approveStudent(item.id)}>
-              <Ionicons name="checkmark" size={16} color="#fff" style={{ marginRight: 3 }} />
-              <Text style={styles.actionBtnText}>Onayla</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#EF4444' }]} onPress={() => rejectStudent(item.id)}>
-              <Ionicons name="close" size={16} color="#fff" style={{ marginRight: 3 }} />
-              <Text style={styles.actionBtnText}>Reddet</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.welcomeTitle}>Merhaba, {teacherData?.name || 'Hocam'} 👋</Text>
+            <Text style={styles.welcomeSub}>Bugün öğrencileriniz için yeni fırsatlar yaratma zamanı.</Text>
+            <TouchableOpacity style={styles.welcomeBtn} onPress={() => setActiveTab('students')}>
+              <Text style={styles.welcomeBtnText}>Öğrencilere Göz At</Text>
             </TouchableOpacity>
           </View>
-        ) : (
-          <TouchableOpacity style={styles.actionBtn} onPress={() => openStudentDetail(item)}>
-            <Text style={styles.actionBtnText}>İncele</Text>
-            <Ionicons name="chevron-forward" size={16} color="#fff" />
-          </TouchableOpacity>
-        )}
+          <Image
+            source={{ uri: 'https://cdn-icons-png.flaticon.com/512/3429/3429113.png' }}
+            style={styles.welcomeImage}
+          />
+        </LinearGradient>
+      </View>
+
+      <View style={styles.statsRow}>
+        {[
+          { icon: 'people', color: '#3B82F6', bg: '#DBEAFE', value: stats.totalStudents, label: 'Öğrenci' },
+          { icon: 'layers', color: '#8B5CF6', bg: '#EDE9FE', value: stats.totalClasses, label: 'Sınıf' },
+          { icon: 'trending-up', color: '#10B981', bg: '#D1FAE5', value: stats.avgNet || '-', label: 'Ort. Net' },
+          { icon: 'time', color: '#F59E0B', bg: '#FEF3C7', value: stats.activeAssignments, label: 'Bekleyen' },
+        ].map((s, i) => (
+          <View key={i} style={styles.statCard}>
+            <View style={[styles.statIcon, { backgroundColor: s.bg }]}>
+              <Ionicons name={s.icon as any} size={24} color={s.color} />
+            </View>
+            <View>
+              <Text style={styles.statValue}>{s.value}</Text>
+              <Text style={styles.statLabel}>{s.label}</Text>
+            </View>
+          </View>
+        ))}
+      </View>
+
+      <View style={{ flexDirection: 'row', gap: 24, marginTop: 8 }}>
+        <View style={[styles.sectionCard, { flex: 1 }]}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>Duyurular & Aktivite</Text>
+            <TouchableOpacity><Text style={styles.seeAllText}>Tümünü Gör</Text></TouchableOpacity>
+          </View>
+          {notifications.length > 0 ? (
+            notifications.map(n => (
+              <View key={n.id} style={styles.notifRow}>
+                <View style={[styles.notifDot, { backgroundColor: n.type === 'success' ? '#10B981' : '#3B82F6' }]} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.notifTitle}>{n.title}</Text>
+                  <Text style={styles.notifText} numberOfLines={1}>{n.message}</Text>
+                </View>
+                <Text style={styles.notifTime}>{n.time}</Text>
+              </View>
+            ))
+          ) : (
+            <View style={styles.emptyActivity}>
+              <Ionicons name="notifications-off-outline" size={40} color="#D1D5DB" />
+              <Text style={styles.emptyActivityText}>Şu an için yeni bir bildirim yok.</Text>
+            </View>
+          )}
+        </View>
+
+        <View style={{ width: 300, gap: 20 }}>
+          <View style={styles.sectionCard}>
+            <Text style={styles.cardTitle}>Hızlı Erişim</Text>
+            <TouchableOpacity style={styles.quickAction} onPress={() => router.push('/teacher/assignments')}>
+              <View style={[styles.actionIcon, { backgroundColor: '#EDE9FE' }]}>
+                <Ionicons name="add" size={20} color="#8B5CF6" />
+              </View>
+              <Text style={styles.actionText}>Ödev Programı Hazırla</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.quickAction} onPress={() => setActiveTab('classes')}>
+              <View style={[styles.actionIcon, { backgroundColor: '#DBEAFE' }]}>
+                <Ionicons name="layers" size={20} color="#3B82F6" />
+              </View>
+              <Text style={styles.actionText}>Sınıfları Düzenle</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.inviteCard}>
+            <Text style={styles.inviteTitle}>Öğrenci Davet Et</Text>
+            <Text style={styles.inviteSub}>Kurum kodunuzu paylaşarak öğrencilerinizi ekleyin.</Text>
+            <View style={styles.codeBox}>
+              <Text style={styles.inviteCode}>{teacherData?.invite_code || '---'}</Text>
+              <TouchableOpacity style={styles.copyBtn}>
+                <Ionicons name="copy-outline" size={18} color={COLORS.light.primary} />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
       </View>
     </View>
   );
 
-  const renderClassDetail = () => {
-    if (!selectedClass) return null;
-    const classStudents = students.filter(s => s.class_id === selectedClass.id);
-    // Öğrencileri listele (bu sınıfta olmayanlar)
-    const availableStudents = students.filter(s => s.class_id !== selectedClass.id && s.status !== 'pending');
+
+  const renderStudents = () => {
+    const filtered = students.filter(s =>
+      (s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        s.email.toLowerCase().includes(searchQuery.toLowerCase())) &&
+      (classFilter === 'ALL' || s.class_id === classFilter)
+    );
 
     return (
       <View style={styles.tabContent}>
-        <View style={styles.tabHeader}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            <TouchableOpacity onPress={() => setSelectedClass(null)} style={styles.iconBtn}>
-              <Ionicons name="arrow-back" size={24} color="#374151" />
-            </TouchableOpacity>
-            <View>
-              <Text style={styles.sectionTitle}>{selectedClass.name}</Text>
-              <Text style={styles.sectionSub}>{classStudents.length} Öğrenci</Text>
-            </View>
+        <View style={styles.toolbar}>
+          <View style={styles.searchContainer}>
+            <Ionicons name="search" size={20} color="#9CA3AF" />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Öğrenci ismi veya e-posta ile ara..."
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
           </View>
-          {/* Öğrenci ekleme yetkisi sadece rehber öğretmenlerde */}
+          <View style={styles.filterContainer}>
+            <Ionicons name="filter" size={18} color="#6B7280" />
+            <Text style={styles.filterLabel}>Sınıf:</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginLeft: 10 }}>
+              <TouchableOpacity
+                style={[styles.filterChip, classFilter === 'ALL' && styles.filterChipActive]}
+                onPress={() => setClassFilter('ALL')}
+              >
+                <Text style={[styles.filterChipText, classFilter === 'ALL' && styles.filterChipTextActive]}>Tümü</Text>
+              </TouchableOpacity>
+              {classes.map(c => (
+                <TouchableOpacity
+                  key={c.id}
+                  style={[styles.filterChip, classFilter === c.id && styles.filterChipActive]}
+                  onPress={() => setClassFilter(c.id)}
+                >
+                  <Text style={[styles.filterChipText, classFilter === c.id && styles.filterChipTextActive]}>{c.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
         </View>
 
         <FlatList
-          data={classStudents}
+          data={filtered}
+          numColumns={2}
           keyExtractor={item => item.id}
-          contentContainerStyle={{ paddingBottom: 20 }}
+          columnWrapperStyle={{ gap: 20 }}
+          contentContainerStyle={{ paddingBottom: 40 }}
           renderItem={({ item }) => (
-            <View style={styles.cardItem}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                <LinearGradient colors={['#8B5CF6', '#6C3CE1']} style={styles.avatarPlaceholder}>
-                  <Text style={styles.avatarText}>{item.name.charAt(0).toUpperCase()}</Text>
+            <TouchableOpacity style={styles.studentCard} onPress={() => openStudentDetail(item)}>
+              <View style={styles.studentCardHeader}>
+                <LinearGradient colors={['#8B5CF6', '#6C3CE1']} style={styles.studentAvatar}>
+                  <Text style={styles.studentAvatarText}>{item.name.charAt(0).toUpperCase()}</Text>
                 </LinearGradient>
-                <View style={{ marginLeft: 15 }}>
-                  <Text style={styles.itemName}>{item.name}</Text>
-                  <Text style={styles.itemSub}>{item.email}</Text>
+                <TouchableOpacity style={styles.moreBtn}>
+                  <Ionicons name="ellipsis-vertical" size={18} color="#9CA3AF" />
+                </TouchableOpacity>
+              </View>
+              <Text style={styles.studentName} numberOfLines={1}>{item.name}</Text>
+              <Text style={styles.studentEmail} numberOfLines={1}>{item.email}</Text>
+              <View style={styles.studentFooter}>
+                <View style={styles.classBadge}>
+                  <Text style={styles.classBadgeText}>
+                    {classes.find(c => c.id === item.class_id)?.name || 'Sınıfsız'}
+                  </Text>
+                </View>
+                <View style={styles.detailBtn}>
+                  <Text style={styles.detailBtnText}>Görüntüle</Text>
+                  <Ionicons name="chevron-forward" size={14} color={COLORS.light.primary} />
                 </View>
               </View>
-              <View style={{ flexDirection: 'row', gap: 8 }}>
-                <TouchableOpacity
-                  style={[styles.badge, { backgroundColor: '#DBEAFE' }]}
-                  onPress={() => openStudentDetail(item)}
-                >
-                  <Ionicons name="eye-outline" size={16} color="#2563EB" style={{ marginRight: 5 }} />
-                  <Text style={{ color: '#2563EB', fontWeight: '600', fontSize: 12 }}>İncele</Text>
-                </TouchableOpacity>
-                {/* Sınıftan çıkarma yetkisi sadece rehber öğretmenlerde */}
-              </View>
-            </View>
+            </TouchableOpacity>
           )}
           ListEmptyComponent={
             <View style={styles.emptyState}>
-              <Ionicons name="people-outline" size={48} color="#D1D5DB" />
-              <Text style={styles.emptyText}>Bu sınıfta henüz öğrenci yok.</Text>
+              <Ionicons name="people-outline" size={64} color="#D1D5DB" />
+              <Text style={styles.emptyStateTitle}>Öğrenci Bulunamadı</Text>
+              <Text style={styles.emptyStateSub}>Arama kriterlerinize uygun öğrenci yok.</Text>
             </View>
           }
         />
-
-        {/* Add Student Modal */}
-        <Modal visible={addStudentModalVisible} animationType="slide" transparent>
-          <View style={styles.modalOverlay}>
-            <View style={[styles.modalContent, { maxHeight: '80%' }]}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Sınıfa Öğrenci Ekle</Text>
-                <TouchableOpacity onPress={() => setAddStudentModalVisible(false)}>
-                  <Ionicons name="close" size={24} color="#374151" />
-                </TouchableOpacity>
-              </View>
-
-              <Text style={{ marginBottom: 10, color: '#6B7280' }}>
-                Listeden öğrenci seçerek {selectedClass.name} sınıfına ekleyebilirsiniz.
-              </Text>
-
-              <FlatList
-                data={availableStudents}
-                keyExtractor={item => item.id}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={[styles.cardItem, { marginBottom: 8 }]}
-                    onPress={() => {
-                      assignClassToStudent(selectedClass.id, item.id);
-                      setAddStudentModalVisible(false);
-                    }}
-                  >
-                    <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                      <LinearGradient colors={['#E5E7EB', '#D1D5DB']} style={styles.avatarPlaceholder}>
-                        <Text style={[styles.avatarText, { color: '#374151' }]}>{item.name.charAt(0).toUpperCase()}</Text>
-                      </LinearGradient>
-                      <View style={{ marginLeft: 15 }}>
-                        <Text style={styles.itemName}>{item.name}</Text>
-                        <Text style={[styles.itemSub, { color: item.class_id ? '#D97706' : '#10B981' }]}>
-                          {item.class_id ? `Mevcut: ${classes.find(c => c.id === item.class_id)?.name}` : 'Sınıfsız'}
-                        </Text>
-                      </View>
-                    </View>
-                    <Ionicons name="add-circle" size={24} color={COLORS.light.primary} />
-                  </TouchableOpacity>
-                )}
-                ListEmptyComponent={
-                  <Text style={{ textAlign: 'center', color: '#9CA3AF', marginTop: 20 }}>
-                    Eklenebilecek öğrenci bulunamadı.
-                  </Text>
-                }
-              />
-            </View>
-          </View>
-        </Modal>
       </View>
     );
   };
 
-  const renderClassesTab = () => {
-    if (selectedClass) return renderClassDetail();
+  const renderClasses = () => {
+    if (selectedClass) {
+      const classStudents = students.filter(s => s.class_id === selectedClass.id);
+      return (
+        <View style={styles.tabContent}>
+          <View style={styles.detailHeader}>
+            <TouchableOpacity style={styles.backBtn} onPress={() => setSelectedClass(null)}>
+              <Ionicons name="arrow-back" size={20} color="#374151" />
+              <Text style={styles.backBtnText}>Sınıflara Dön</Text>
+            </TouchableOpacity>
+            <View style={styles.headerTitleRow}>
+              <Text style={styles.detailTitle}>{selectedClass.name}</Text>
+              <View style={styles.memberCount}>
+                <Text style={styles.memberCountText}>{classStudents.length} Öğrenci</Text>
+              </View>
+            </View>
+          </View>
+
+          <FlatList
+            data={classStudents}
+            keyExtractor={item => item.id}
+            renderItem={({ item }) => (
+              <TouchableOpacity style={styles.studentRow} onPress={() => openStudentDetail(item)}>
+                <LinearGradient colors={['#F3F4F6', '#E5E7EB']} style={styles.rowAvatar}>
+                  <Text style={styles.rowAvatarText}>{item.name.charAt(0).toUpperCase()}</Text>
+                </LinearGradient>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.rowName}>{item.name}</Text>
+                  <Text style={styles.rowEmail}>{item.email}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color="#D1D5DB" />
+              </TouchableOpacity>
+            )}
+            ListEmptyComponent={
+              <View style={styles.emptyState}>
+                <Ionicons name="school-outline" size={64} color="#D1D5DB" />
+                <Text style={styles.emptyStateTitle}>Sınıf Boş</Text>
+                <Text style={styles.emptyStateSub}>Bu sınıfa henüz öğrenci atanmamış.</Text>
+              </View>
+            }
+          />
+        </View>
+      );
+    }
 
     return (
       <View style={styles.tabContent}>
-        <View style={styles.tabHeader}>
-          <View>
-            <Text style={styles.sectionTitle}>Sınıflar</Text>
-            <Text style={styles.sectionSub}>{classes.length} aktif sınıf</Text>
-          </View>
-          {/* Sınıf oluşturma yetkisi sadece rehber öğretmenlerde */}
+        <View style={styles.classHeader}>
+          <Text style={styles.sectionTitle}>Sınıf Listesi</Text>
+          {/* Sınıf oluşturma yetkisi sadece rehber/admin panellerinde ama burada da hızlı erişim için bırakıyoruz (logic aynı) */}
         </View>
-
-        <View style={styles.grid}>
-          {classes.map(c => (
-            <View key={c.id} style={styles.gridCard}>
-              <View style={styles.gridHeader}>
-                <View style={[styles.iconBox, { backgroundColor: '#EDE9FE' }]}>
-                  <Ionicons name="school" size={24} color={COLORS.light.primary} />
+        <View style={styles.classGrid}>
+          {classes.map(c => {
+            const count = students.filter(s => s.class_id === c.id).length;
+            return (
+              <TouchableOpacity key={c.id} style={styles.classCard} onPress={() => setSelectedClass(c)}>
+                <View style={styles.classIconBg}>
+                  <Ionicons name="school" size={28} color={COLORS.light.primary} />
                 </View>
-                <View style={{ flexDirection: 'row', gap: 8 }}>
-                  <TouchableOpacity onPress={() => setSelectedClass(c)}>
-                    <Text style={{ color: COLORS.light.primary, fontWeight: '600' }}>Detay</Text>
-                  </TouchableOpacity>
-                  {/* Sınıf silme yetkisi sadece rehber öğretmenlerde */}
+                <Text style={styles.className}>{c.name}</Text>
+                <Text style={styles.classCount}>{count} Öğrenci Kayıtlı</Text>
+                <View style={styles.classCardFooter}>
+                  <Text style={styles.viewClassText}>Detayları Gör</Text>
+                  <Ionicons name="arrow-forward" size={16} color={COLORS.light.primary} />
                 </View>
-              </View>
-              <TouchableOpacity onPress={() => setSelectedClass(c)}>
-                <Text style={styles.gridTitle}>{c.name}</Text>
               </TouchableOpacity>
-              <Text style={styles.gridSub}>
-                {students.filter(s => s.class_id === c.id).length} Öğrenci
-              </Text>
-              <View style={styles.progressBar}>
-                <View style={[styles.progressFill, { width: `${Math.min(100, (students.filter(s => s.class_id === c.id).length / Math.max(1, students.length)) * 100)}%` }]} />
-              </View>
-            </View>
-          ))}
-          {classes.length === 0 && (
-            <View style={styles.emptyState}>
-              <Ionicons name="school-outline" size={48} color="#D1D5DB" />
-              <Text style={styles.emptyText}>Henüz hiç sınıf oluşturulmadı.</Text>
-            </View>
-          )}
+            );
+          })}
         </View>
       </View>
     );
   };
-
-  const renderStats = () => (
-    <View style={styles.statsRow}>
-      <View style={styles.statCard}>
-        <View style={[styles.statIcon, { backgroundColor: '#DBEAFE' }]}>
-          <Ionicons name="people" size={24} color="#2563EB" />
-        </View>
-        <View>
-          <Text style={styles.statValue}>{students.length}</Text>
-          <Text style={styles.statLabel}>Toplam Öğrenci</Text>
-        </View>
-      </View>
-      <View style={styles.statCard}>
-        <View style={[styles.statIcon, { backgroundColor: '#FEF3C7' }]}>
-          <Ionicons name="alert-circle" size={24} color="#D97706" />
-        </View>
-        <View>
-          <Text style={styles.statValue}>{pendingStudents.length}</Text>
-          <Text style={styles.statLabel}>Onay Bekleyen</Text>
-        </View>
-      </View>
-      <View style={styles.statCard}>
-        <View style={[styles.statIcon, { backgroundColor: '#D1FAE5' }]}>
-          <Ionicons name="layers" size={24} color="#059669" />
-        </View>
-        <View>
-          <Text style={styles.statValue}>{classes.length}</Text>
-          <Text style={styles.statLabel}>Aktif Sınıf</Text>
-        </View>
-      </View>
-    </View>
-  );
 
   return (
     <View style={styles.container}>
@@ -492,6 +495,14 @@ export default function TeacherDashboard() {
           </View>
           <Text style={styles.brandTitle}>Öğretmen Paneli</Text>
         </View>
+
+        <TouchableOpacity
+          style={[styles.menuItem, activeTab === 'overview' && styles.menuItemActive]}
+          onPress={() => setActiveTab('overview')}
+        >
+          <Ionicons name="grid-outline" size={20} color={activeTab === 'overview' ? "#fff" : "#9CA3AF"} />
+          <Text style={[styles.menuText, activeTab === 'overview' && styles.menuTextActive]}>Genel Bakış</Text>
+        </TouchableOpacity>
 
         <TouchableOpacity
           style={[styles.menuItem, activeTab === 'students' && styles.menuItemActive]}
@@ -543,60 +554,22 @@ export default function TeacherDashboard() {
         <View style={styles.header}>
           <View>
             <Text style={styles.headerTitle}>
-              {activeTab === 'students' ? 'Öğrenci Listesi' : 'Sınıf Yönetimi'}
+              {activeTab === 'overview' ? 'Kontrol Paneli' : activeTab === 'students' ? 'Öğrenci Listesi' : 'Sınıf Yönetimi'}
             </Text>
             <Text style={styles.headerDate}>{new Date().toLocaleDateString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long' })}</Text>
           </View>
           <View style={styles.headerActions}>
             <TouchableOpacity style={styles.iconBtn}>
               <Ionicons name="notifications-outline" size={20} color="#6B7280" />
-              {pendingStudents.length > 0 && <View style={styles.notifDot} />}
+              {notifications.some(n => n.type === 'warning') && <View style={styles.headerNotifDot} />}
             </TouchableOpacity>
           </View>
         </View>
 
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-          {renderStats()}
-
-          {activeTab === 'classes' ? renderClassesTab() : (
-            <View style={styles.tabContent}>
-              {/* Search & Filter Bar */}
-              <View style={styles.toolbar}>
-                <View style={styles.searchBar}>
-                  <Ionicons name="search" size={20} color="#9CA3AF" />
-                  <TextInput
-                    style={styles.searchInput}
-                    placeholder="Öğrenci ara..."
-                    placeholderTextColor="#9CA3AF"
-                    value={searchQuery}
-                    onChangeText={setSearchQuery}
-                  />
-                </View>
-              </View>
-
-              {pendingStudents.length > 0 && (
-                <View style={styles.pendingSection}>
-                  <Text style={styles.sectionHeader}>Onay Bekleyenler ({pendingStudents.length})</Text>
-                  {pendingStudents.map((item, index) => (
-                    <View key={item.id} style={{ marginBottom: 10 }}>
-                      {renderStudentRow({ item, index })}
-                    </View>
-                  ))}
-                </View>
-              )}
-
-              <Text style={styles.sectionHeader}>Onaylı Öğrenciler ({filteredApproved.length})</Text>
-              {loading ? (
-                <ActivityIndicator size="large" color={COLORS.light.primary} style={{ marginTop: 20 }} />
-              ) : (
-                <View style={{ gap: 10 }}>
-                  {filteredApproved.map((item, index) => (
-                    <View key={item.id}>{renderStudentRow({ item, index })}</View>
-                  ))}
-                </View>
-              )}
-            </View>
-          )}
+          {activeTab === 'overview' && renderOverview()}
+          {activeTab === 'students' && renderStudents()}
+          {activeTab === 'classes' && renderClasses()}
           <View style={{ height: 50 }} />
         </ScrollView>
       </View>
@@ -725,7 +698,7 @@ export default function TeacherDashboard() {
             <ScrollView style={{ maxHeight: 250, marginVertical: 15 }}>
               <TouchableOpacity
                 style={[styles.optionRow, !studentToAssign?.class_id && styles.optionRowActive]}
-                onPress={() => assignClassToStudent(null)}
+                onPress={() => studentToAssign && assignClassToStudent(null, studentToAssign.id)}
               >
                 <Text style={[styles.optionText, !studentToAssign?.class_id && { color: COLORS.light.primary, fontWeight: 'bold' }]}>Sınıfsız</Text>
                 {!studentToAssign?.class_id && <Ionicons name="checkmark" size={18} color={COLORS.light.primary} />}
@@ -734,7 +707,7 @@ export default function TeacherDashboard() {
                 <TouchableOpacity
                   key={c.id}
                   style={[styles.optionRow, studentToAssign?.class_id === c.id && styles.optionRowActive]}
-                  onPress={() => assignClassToStudent(c.id)}
+                  onPress={() => studentToAssign && assignClassToStudent(c.id, studentToAssign.id)}
                 >
                   <Text style={[styles.optionText, studentToAssign?.class_id === c.id && { color: COLORS.light.primary, fontWeight: 'bold' }]}>{c.name}</Text>
                   {studentToAssign?.class_id === c.id && <Ionicons name="checkmark" size={18} color={COLORS.light.primary} />}
@@ -778,70 +751,478 @@ const styles = StyleSheet.create({
   headerDate: { color: '#6B7280', fontSize: 14, marginTop: 4 },
   headerActions: { flexDirection: 'row', gap: 12 },
   iconBtn: { padding: 8, borderRadius: 8, backgroundColor: '#F3F4F6', position: 'relative' },
-  notifDot: { position: 'absolute', top: 8, right: 8, width: 8, height: 8, borderRadius: 4, backgroundColor: COLORS.danger },
+  headerNotifDot: { position: 'absolute', top: 8, right: 8, width: 8, height: 8, borderRadius: 4, backgroundColor: COLORS.danger },
 
   content: { flex: 1, padding: 32 },
 
-  // STATS
+  // ─── OVERVIEW COMPONENTS ──────────────────────
+  welcomeCard: {
+    marginBottom: 32,
+    borderRadius: 24,
+    overflow: 'hidden',
+    ...COLORS.light.cardShadow,
+  },
+  welcomeGradient: {
+    padding: 32,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 20,
+  },
+  welcomeTitle: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#fff',
+    marginBottom: 8,
+  },
+  welcomeSub: {
+    fontSize: 16,
+    color: 'rgba(255,255,255,0.8)',
+    marginBottom: 20,
+    maxWidth: '80%',
+  },
+  welcomeBtn: {
+    backgroundColor: '#fff',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+  },
+  welcomeBtnText: {
+    color: '#4F46E5',
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  welcomeImage: {
+    width: 140,
+    height: 140,
+    opacity: 0.9,
+  },
+
   statsRow: { flexDirection: 'row', gap: 20, marginBottom: 32 },
-  statCard: { flex: 1, backgroundColor: '#fff', padding: 20, borderRadius: 20, flexDirection: 'row', alignItems: 'center', gap: 16, ...COLORS.light.cardShadow },
-  statIcon: { width: 48, height: 48, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
+  statCard: {
+    flex: 1,
+    backgroundColor: '#fff',
+    padding: 20,
+    borderRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    ...COLORS.light.cardShadow,
+  },
+  statIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   statValue: { fontSize: 24, fontWeight: '800', color: '#111827' },
   statLabel: { fontSize: 13, color: '#6B7280', fontWeight: '500' },
 
-  // TAB CONTENT
+  sectionCard: {
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    padding: 24,
+    ...COLORS.light.cardShadow,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  seeAllText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.light.primary,
+  },
+
+  notifRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+    gap: 12,
+  },
+  notifDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  notifTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  notifText: {
+    fontSize: 13,
+    color: '#6B7280',
+  },
+  notifTime: {
+    fontSize: 12,
+    color: '#9CA3AF',
+  },
+  emptyActivity: {
+    alignItems: 'center',
+    padding: 40,
+  },
+  emptyActivityText: {
+    color: '#9CA3AF',
+    marginTop: 12,
+    fontSize: 14,
+  },
+
+  quickAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 16,
+    backgroundColor: '#F9FAFB',
+    marginBottom: 10,
+    gap: 12,
+  },
+  actionIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  actionText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+  },
+
+  inviteCard: {
+    backgroundColor: '#EEF2FF',
+    borderRadius: 24,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: '#E0E7FF',
+  },
+  inviteTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#312E81',
+    marginBottom: 4,
+  },
+  inviteSub: {
+    fontSize: 13,
+    color: '#4338CA',
+    marginBottom: 16,
+    lineHeight: 18,
+  },
+  codeBox: {
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 12,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+  },
+  inviteCode: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#4F46E5',
+    letterSpacing: 1,
+  },
+  copyBtn: {
+    padding: 4,
+  },
+
+  // ─── STUDENTS TAB ───────────────────────────
+  toolbar: {
+    flexDirection: 'row',
+    gap: 16,
+    marginBottom: 24,
+    alignItems: 'center',
+  },
+  searchContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    height: 52,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    gap: 12,
+  },
+  filterContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    height: 52,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    minWidth: 200,
+  },
+  filterLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6B7280',
+    marginLeft: 8,
+  },
+  filterChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 10,
+    backgroundColor: '#F3F4F6',
+    marginRight: 8,
+  },
+  filterChipActive: {
+    backgroundColor: '#F3E8FF',
+  },
+  filterChipText: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontWeight: '600',
+  },
+  filterChipTextActive: {
+    color: '#8B5CF6',
+  },
+
+  studentCard: {
+    flex: 0.5,
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    padding: 20,
+    marginBottom: 20,
+    ...COLORS.light.cardShadow,
+  },
+  studentCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+  },
+  studentAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  studentAvatarText: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: '800',
+  },
+  moreBtn: {
+    padding: 4,
+  },
+  studentName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 4,
+  },
+  studentEmail: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginBottom: 16,
+  },
+  studentFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+  },
+  classBadge: {
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  classBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  detailBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  detailBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.light.primary,
+  },
+
+  emptyStateTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#374151',
+    marginTop: 16,
+  },
+  emptyStateSub: {
+    fontSize: 14,
+    color: '#9CA3AF',
+    marginTop: 8,
+  },
+
+  // ─── CLASSES TAB ────────────────────────────
+  classHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  classGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 20,
+  },
+  classCard: {
+    width: 240,
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    padding: 24,
+    ...COLORS.light.cardShadow,
+  },
+  classIconBg: {
+    width: 56,
+    height: 56,
+    borderRadius: 20,
+    backgroundColor: '#EEF2FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  className: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 4,
+  },
+  classCount: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginBottom: 20,
+  },
+  classCardFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+  },
+  viewClassText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.light.primary,
+  },
+
+  detailHeader: {
+    marginBottom: 32,
+  },
+  backBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 16,
+  },
+  backBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  headerTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  detailTitle: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: '#111827',
+  },
+  memberCount: {
+    backgroundColor: '#EDE9FE',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  memberCountText: {
+    color: '#8B5CF6',
+    fontWeight: '700',
+    fontSize: 13,
+  },
+
+  studentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 20,
+    marginBottom: 12,
+    gap: 16,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+  },
+  rowAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  rowAvatarText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#374151',
+  },
+  rowName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  rowEmail: {
+    fontSize: 13,
+    color: '#6B7280',
+  },
+
+  // ─── LEGACY & UTILS ──────────────────────────
   tabContent: { flex: 1 },
   tabHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   sectionTitle: { fontSize: 20, fontWeight: '700', color: '#111827' },
   sectionSub: { fontSize: 14, color: '#6B7280' },
   sectionHeader: { fontSize: 16, fontWeight: '600', color: '#374151', marginBottom: 12, marginTop: 24 },
 
-  // Toolbar
-  toolbar: { flexDirection: 'row', marginBottom: 20 },
-  searchBar: { flex: 1, height: 48, backgroundColor: '#fff', borderRadius: 12, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, gap: 12, borderWidth: 1, borderColor: '#E5E7EB' },
-  searchInput: { flex: 1, fontSize: 14, color: '#111827' },
-
-  // CARDS
   cardItem: { backgroundColor: '#fff', padding: 16, borderRadius: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2, ...COLORS.light.cardShadow },
   avatarPlaceholder: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
   avatarText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
-  itemName: { fontSize: 15, fontWeight: '700', color: '#111827' },
-  itemSub: { fontSize: 13, color: '#6B7280' },
+
   badge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20 },
   badgeText: { fontSize: 12, color: '#374151', fontWeight: '600' },
 
-  // BUTTONS
-  primaryBtn: { backgroundColor: COLORS.light.primary, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10, flexDirection: 'row', alignItems: 'center', gap: 6 },
-  primaryBtnText: { color: '#fff', fontWeight: '600', fontSize: 14 },
-  secondaryBtn: { backgroundColor: '#F3F4F6', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10 },
-  secondaryBtnText: { color: '#374151', fontWeight: '600', fontSize: 14 },
   actionBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.light.primary, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, gap: 4 },
   actionBtnText: { color: '#fff', fontSize: 12, fontWeight: '600' },
 
-  // GRID
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 20 },
-  gridCard: { width: 220, backgroundColor: '#fff', borderRadius: 20, padding: 20, ...COLORS.light.cardShadow },
-  gridHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 },
-  iconBox: { width: 48, height: 48, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
-  gridTitle: { fontSize: 18, fontWeight: '700', color: '#111827', marginBottom: 4 },
-  gridSub: { fontSize: 13, color: '#6B7280', marginBottom: 16 },
-  progressBar: { height: 6, backgroundColor: '#F3F4F6', borderRadius: 3 },
-  progressFill: { height: '100%', backgroundColor: COLORS.light.secondary, borderRadius: 3 },
-
-  pendingSection: { marginBottom: 20 },
-
-  // EMPTY
   emptyState: { width: '100%', alignItems: 'center', padding: 40 },
   emptyText: { color: '#9CA3AF', marginTop: 10 },
 
-  // MODAL
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
   modalContent: { backgroundColor: '#fff', borderRadius: 24, padding: 24, width: 450, maxWidth: '90%', ...COLORS.light.cardShadow },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   modalTitle: { fontSize: 20, fontWeight: '800', color: '#111827' },
   closeIcon: { padding: 4 },
-  modalInput: { borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, padding: 12, fontSize: 15, color: '#111827', backgroundColor: '#F9FAFB' },
-  modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 12 },
 
   modalSection: { marginBottom: 20, padding: 16, backgroundColor: '#F9FAFB', borderRadius: 16 },
   modalLabel: { fontSize: 12, fontWeight: '600', color: '#6B7280', marginBottom: 8, textTransform: 'uppercase' },
@@ -854,8 +1235,24 @@ const styles = StyleSheet.create({
   analizName: { color: '#111827', fontWeight: '600' },
   analizDate: { color: '#6B7280', fontSize: 12 },
 
+  statusDot: { width: 8, height: 8, borderRadius: 4, marginRight: 10 },
+
+  // SEARCH & BAR UTILS
+  searchInput: { flex: 1, fontSize: 14, color: '#111827' },
+  searchBar: { flex: 1, height: 48, backgroundColor: '#fff', borderRadius: 12, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, gap: 12, borderWidth: 1, borderColor: '#E5E7EB' },
+
+  // MODAL UTILS
+  modalInput: { borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, padding: 12, fontSize: 15, color: '#111827', backgroundColor: '#F9FAFB' },
+  modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 12, marginTop: 20 },
+
+  // BUTTON UTILS
+  primaryBtn: { backgroundColor: COLORS.light.primary, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  primaryBtnText: { color: '#fff', fontWeight: '600', fontSize: 14 },
+  secondaryBtn: { backgroundColor: '#F3F4F6', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10 },
+  secondaryBtnText: { color: '#374151', fontWeight: '600', fontSize: 14 },
+
+  // OPTION UTILS
   optionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 14, borderRadius: 12, backgroundColor: '#F9FAFB', marginBottom: 8 },
   optionRowActive: { backgroundColor: '#EFF6FF', borderColor: COLORS.light.primary, borderWidth: 1 },
-  optionText: { color: '#374151', fontSize: 14 },
-  statusDot: { width: 8, height: 8, borderRadius: 4, marginRight: 10 }
+  optionText: { color: '#374151', fontSize: 14 }
 });
