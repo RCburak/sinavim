@@ -68,14 +68,17 @@ class ApproveStudentRequest(BaseModel):
 class CreateClassRequest(BaseModel):
     institution_id: str
     name: str
+    teacher_type: str = "teacher"
 
 class DeleteClassRequest(BaseModel):
     institution_id: str
     class_id: str
+    teacher_type: str = "teacher"
 
 class AssignClassRequest(BaseModel):
     student_id: str
     class_id: Optional[str] = None
+    teacher_type: str = "teacher"
 
 # --- Question Schemas ---
 

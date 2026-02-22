@@ -78,7 +78,9 @@ def get_classes_route(
 
 @teacher_router.post("/assign-class")
 def assign_class(req: AssignClassRequest, auth: dict = Depends(require_teacher)):
-    """Öğrenciyi sınıfa atama."""
+    """Öğrenciyi sınıfa atama (sadece rehber öğretmen)."""
+    if req.teacher_type != "rehber":
+        return error_response("Sadece rehber öğretmenler öğrenciyi sınıfa atayabilir.", 403)
     ok, err = teacher_service.update_student_class(req.student_id, req.class_id)
     if not ok:
         return error_response(err, 500)

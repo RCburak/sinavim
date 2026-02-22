@@ -261,15 +261,15 @@ export default function TeacherDashboard() {
 
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 15 }}>
         {/* Class Badge */}
-        <TouchableOpacity
+        {/* Class Badge - Normal öğretmenler sadece görüntüleyebilir */}
+        <View
           style={[styles.badge, { backgroundColor: '#F3F4F6' }]}
-          onPress={() => { setStudentToAssign(item); setAssignClassModal(true); }}
         >
           <Ionicons name="people-outline" size={14} color="#4B5563" style={{ marginRight: 5 }} />
           <Text style={styles.badgeText}>
             {classes.find(c => c.id === item.class_id)?.name || "Sınıf Yok"}
           </Text>
-        </TouchableOpacity>
+        </View>
 
         {item.status === 'pending' ? (
           <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -310,10 +310,7 @@ export default function TeacherDashboard() {
               <Text style={styles.sectionSub}>{classStudents.length} Öğrenci</Text>
             </View>
           </View>
-          <TouchableOpacity style={styles.primaryBtn} onPress={() => setAddStudentModalVisible(true)}>
-            <Ionicons name="person-add" size={20} color="#fff" />
-            <Text style={styles.primaryBtnText}>Öğrenci Ekle</Text>
-          </TouchableOpacity>
+          {/* Öğrenci ekleme yetkisi sadece rehber öğretmenlerde */}
         </View>
 
         <FlatList
@@ -339,15 +336,7 @@ export default function TeacherDashboard() {
                   <Ionicons name="eye-outline" size={16} color="#2563EB" style={{ marginRight: 5 }} />
                   <Text style={{ color: '#2563EB', fontWeight: '600', fontSize: 12 }}>İncele</Text>
                 </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.badge, { backgroundColor: '#FEE2E2' }]}
-                  onPress={() => {
-                    assignClassToStudent(null, item.id); // Sınıftan çıkar
-                  }}
-                >
-                  <Ionicons name="remove-circle-outline" size={16} color="#EF4444" style={{ marginRight: 5 }} />
-                  <Text style={{ color: '#EF4444', fontWeight: '600', fontSize: 12 }}>Çıkar</Text>
-                </TouchableOpacity>
+                {/* Sınıftan çıkarma yetkisi sadece rehber öğretmenlerde */}
               </View>
             </View>
           )}

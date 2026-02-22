@@ -84,6 +84,12 @@ export default function RehberDashboard() {
     const [studentHistory, setStudentHistory] = useState<any[]>([]);
     const [loadingDetail, setLoadingDetail] = useState(false);
 
+    // Class/Student Assignment
+    const [assignClassModal, setAssignClassModal] = useState(false);
+    const [studentToAssign, setStudentToAssign] = useState<Student | null>(null);
+    const [selectedClassDetail, setSelectedClassDetail] = useState<ClassItem | null>(null);
+    const [showAddStudentModal, setShowAddStudentModal] = useState(false);
+
     // Program Modal
     const [showProgramModal, setShowProgramModal] = useState(false);
     const [programStudent, setProgramStudent] = useState<Student | null>(null);
@@ -290,6 +296,31 @@ export default function RehberDashboard() {
         } catch (e) { console.error(e); }
     };
 
+    const assignClassToStudent = async (classId: string | null, studentId?: string) => {
+        const targetStudentId = studentId || studentToAssign?.id;
+        if (!targetStudentId) return;
+
+        try {
+            const res = await fetch(`${API_URL}/teacher/assign-class`, {
+                method: 'POST',
+                headers: getAuthHeaders(),
+                body: JSON.stringify({
+                    student_id: targetStudentId,
+                    class_id: classId,
+                    teacher_type: 'rehber'
+                }),
+            });
+            if (res.ok) {
+                setStudents(prev => prev.map(s => s.id === targetStudentId ? { ...s, class_id: classId || undefined } : s));
+                setAssignClassModal(false);
+                setStudentToAssign(null);
+                setShowAddStudentModal(false);
+            } else {
+                showAlert("Hata", "Atama işlemi başarısız oldu.");
+            }
+        } catch (e) { console.error(e); }
+    };
+
     // Stats calculations
     const approvedCount = students.filter(s => s.status === 'approved').length;
     const pendingCount = students.filter(s => s.status === 'pending').length;
@@ -437,6 +468,22 @@ export default function RehberDashboard() {
                                         {student.status === 'approved' ? '✅ Onaylı' : '⏳ Bekliyor'}
                                     </Text>
                                 </View>
+                                <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+                                    <TouchableOpacity
+                                        style={[styles.badge, { backgroundColor: '#F3F4F6' }]}
+                                        onPress={(e) => { e.stopPropagation(); setStudentToAssign(student); setAssignClassModal(true); }}
+                                    >
+                                        <Text style={[styles.badgeText, { color: '#4B5563' }]}>
+                                            {classes.find(c => c.id === student.class_id)?.name || "Sınıf Yok"}
+                                        </Text>
+                                    </TouchableOpacity>
+                                    {student.status === 'approved' && (
+                                        <TouchableOpacity style={styles.programBtn} onPress={(e) => { e.stopPropagation(); openProgramModal(student); }}>
+                                            <Ionicons name="create-outline" size={14} color={COLORS.primary} />
+                                            <Text style={{ color: COLORS.primary, fontSize: 12, fontWeight: '600' }}>Ödev</Text>
+                                        </TouchableOpacity>
+                                    )}
+                                </View>
                                 {student.status === 'pending' && (
                                     <View style={{ flexDirection: 'row', gap: 6 }}>
                                         <TouchableOpacity style={styles.approveBtn} onPress={(e) => { e.stopPropagation(); approveStudent(student.id); }}>
@@ -462,50 +509,112 @@ export default function RehberDashboard() {
     );
 
     // ─── TAB: Classes ──────────────────────────────
-    const renderClasses = () => (
-        <>
-            <View style={styles.tabHeader}>
-                <View>
-                    <Text style={styles.headerTitle}>📚 Sınıf Yönetimi</Text>
-                    <Text style={styles.headerSub}>{classes.length} aktif sınıf</Text>
-                </View>
-                <TouchableOpacity style={styles.primaryBtn} onPress={() => setShowClassModal(true)}>
-                    <Ionicons name="add" size={20} color="#fff" />
-                    <Text style={styles.primaryBtnText}>Yeni Sınıf</Text>
-                </TouchableOpacity>
-            </View>
+    const renderClasses = () => {
+        if (selectedClassDetail) return renderClassDetail();
 
-            <View style={styles.grid}>
-                {classes.map(c => {
-                    const studentCount = students.filter(s => s.class_id === c.id).length;
-                    return (
-                        <View key={c.id} style={[styles.studentCard, { width: 280 }]}>
-                            <View style={[styles.cardTop, { justifyContent: 'space-between' }]}>
-                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                                    <View style={[styles.avatar, { backgroundColor: '#EDE9FE' }]}>
-                                        <Ionicons name="school" size={20} color={COLORS.secondary} />
-                                    </View>
-                                    <View>
-                                        <Text style={styles.cardName}>{c.name}</Text>
-                                        <Text style={styles.cardEmail}>{studentCount} Öğrenci</Text>
+        return (
+            <>
+                <View style={styles.tabHeader}>
+                    <View>
+                        <Text style={styles.headerTitle}>📚 Sınıf Yönetimi</Text>
+                        <Text style={styles.headerSub}>{classes.length} aktif sınıf</Text>
+                    </View>
+                    <TouchableOpacity style={styles.primaryBtn} onPress={() => setShowClassModal(true)}>
+                        <Ionicons name="add" size={20} color="#fff" />
+                        <Text style={styles.primaryBtnText}>Yeni Sınıf</Text>
+                    </TouchableOpacity>
+                </View>
+
+                <View style={styles.grid}>
+                    {classes.map(c => {
+                        const studentCount = students.filter(s => s.class_id === c.id).length;
+                        return (
+                            <View key={c.id} style={[styles.studentCard, { width: 280 }]}>
+                                <View style={[styles.cardTop, { justifyContent: 'space-between' }]}>
+                                    <TouchableOpacity
+                                        style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}
+                                        onPress={() => setSelectedClassDetail(c)}
+                                    >
+                                        <View style={[styles.avatar, { backgroundColor: '#EDE9FE' }]}>
+                                            <Ionicons name="school" size={20} color={COLORS.secondary} />
+                                        </View>
+                                        <View>
+                                            <Text style={styles.cardName}>{c.name}</Text>
+                                            <Text style={styles.cardEmail}>{studentCount} Öğrenci</Text>
+                                        </View>
+                                    </TouchableOpacity>
+                                    <View style={{ flexDirection: 'row', gap: 8 }}>
+                                        <TouchableOpacity onPress={() => setSelectedClassDetail(c)}>
+                                            <Text style={{ color: COLORS.primary, fontWeight: '600', fontSize: 12 }}>Detay</Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity onPress={() => deleteClass(c.id, c.name)}>
+                                            <Ionicons name="trash-outline" size={18} color="#EF4444" />
+                                        </TouchableOpacity>
                                     </View>
                                 </View>
-                                <TouchableOpacity onPress={() => deleteClass(c.id, c.name)}>
-                                    <Ionicons name="trash-outline" size={18} color="#EF4444" />
+                            </View>
+                        );
+                    })}
+                    {classes.length === 0 && (
+                        <View style={styles.emptyState}>
+                            <Ionicons name="school-outline" size={48} color="#D1D5DB" />
+                            <Text style={styles.emptyText}>Henüz hiç sınıf oluşturulmadı.</Text>
+                        </View>
+                    )}
+                </View>
+            </>
+        );
+    };
+
+    const renderClassDetail = () => {
+        if (!selectedClassDetail) return null;
+        const classStudents = students.filter(s => s.class_id === selectedClassDetail.id);
+
+        return (
+            <>
+                <View style={styles.tabHeader}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                        <TouchableOpacity onPress={() => setSelectedClassDetail(null)} style={styles.backBtn}>
+                            <Ionicons name="arrow-back" size={24} color="#111827" />
+                        </TouchableOpacity>
+                        <View>
+                            <Text style={styles.headerTitle}>{selectedClassDetail.name}</Text>
+                            <Text style={styles.headerSub}>{classStudents.length} Öğrenci</Text>
+                        </View>
+                    </View>
+                    <TouchableOpacity style={styles.primaryBtn} onPress={() => setShowAddStudentModal(true)}>
+                        <Ionicons name="person-add" size={20} color="#fff" />
+                        <Text style={styles.primaryBtnText}>Öğrenci Ekle</Text>
+                    </TouchableOpacity>
+                </View>
+
+                <View style={styles.sectionCard}>
+                    <Text style={styles.sectionTitle}>Sınıf Mevcudu</Text>
+                    {classStudents.length === 0 ? (
+                        <Text style={{ color: '#9CA3AF', textAlign: 'center', padding: 20 }}>Bu sınıfta henüz öğrenci yok.</Text>
+                    ) : (
+                        classStudents.map(student => (
+                            <View key={student.id} style={styles.pendingRow}>
+                                <LinearGradient colors={['#3B82F6', '#8B5CF6']} style={[styles.avatar, { width: 32, height: 32 }]}>
+                                    <Text style={[styles.avatarText, { fontSize: 12 }]}>{student.name.charAt(0).toUpperCase()}</Text>
+                                </LinearGradient>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.pendingName}>{student.name}</Text>
+                                    <Text style={styles.pendingEmail}>{student.email || '—'}</Text>
+                                </View>
+                                <TouchableOpacity
+                                    style={[styles.badge, { backgroundColor: '#FEE2E2' }]}
+                                    onPress={() => assignClassToStudent(null, student.id)}
+                                >
+                                    <Text style={{ color: '#EF4444', fontSize: 11, fontWeight: '600' }}>Sınıftan Çıkar</Text>
                                 </TouchableOpacity>
                             </View>
-                        </View>
-                    );
-                })}
-                {classes.length === 0 && (
-                    <View style={styles.emptyState}>
-                        <Ionicons name="school-outline" size={48} color="#D1D5DB" />
-                        <Text style={styles.emptyText}>Henüz hiç sınıf oluşturulmadı.</Text>
-                    </View>
-                )}
-            </View>
-        </>
-    );
+                        ))
+                    )}
+                </View>
+            </>
+        );
+    };
 
     // ─── TAB: Performance ──────────────────────────
     const renderPerformance = () => (
@@ -820,6 +929,90 @@ export default function RehberDashboard() {
                 </View>
             </Modal>
 
+            {/* ─── Assign Class Modal ────────────────── */}
+            <Modal visible={assignClassModal} transparent animationType="fade">
+                <View style={styles.modalOverlay}>
+                    <View style={[styles.modalContent, { width: 400 }]}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Sınıf Ata — {studentToAssign?.name}</Text>
+                            <TouchableOpacity onPress={() => { setAssignClassModal(false); setStudentToAssign(null); }}>
+                                <Ionicons name="close" size={24} color="#4B5563" />
+                            </TouchableOpacity>
+                        </View>
+                        <ScrollView style={{ maxHeight: 300 }}>
+                            <TouchableOpacity
+                                style={[styles.cardItem, { marginBottom: 8, borderColor: !studentToAssign?.class_id ? COLORS.primary : '#E5E7EB', borderWidth: !studentToAssign?.class_id ? 1 : 0.5 }]}
+                                onPress={() => assignClassToStudent(null)}
+                            >
+                                <Text style={{ fontWeight: '600', color: !studentToAssign?.class_id ? COLORS.primary : '#374151' }}>Sınıf Yok / Kaldır</Text>
+                                {!studentToAssign?.class_id && <Ionicons name="checkmark-circle" size={20} color={COLORS.primary} />}
+                            </TouchableOpacity>
+                            {classes.map(c => (
+                                <TouchableOpacity
+                                    key={c.id}
+                                    style={[styles.cardItem, { marginBottom: 8, borderColor: studentToAssign?.class_id === c.id ? COLORS.primary : '#E5E7EB', borderWidth: studentToAssign?.class_id === c.id ? 1 : 0.5 }]}
+                                    onPress={() => assignClassToStudent(c.id)}
+                                >
+                                    <Text style={{ fontWeight: '600', color: studentToAssign?.class_id === c.id ? COLORS.primary : '#374151' }}>{c.name}</Text>
+                                    {studentToAssign?.class_id === c.id && <Ionicons name="checkmark-circle" size={20} color={COLORS.primary} />}
+                                </TouchableOpacity>
+                            ))}
+                        </ScrollView>
+                        <View style={{ marginTop: 20, flexDirection: 'row', justifyContent: 'flex-end' }}>
+                            <TouchableOpacity style={styles.cancelBtn} onPress={() => { setAssignClassModal(false); setStudentToAssign(null); }}>
+                                <Text style={{ color: '#6B7280', fontWeight: '600' }}>İptal</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* ─── Add Student to Class Modal ────────── */}
+            <Modal visible={showAddStudentModal} transparent animationType="fade">
+                <View style={styles.modalOverlay}>
+                    <View style={[styles.modalContent, { width: 440, maxHeight: '80%' }]}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Sınıfa Öğrenci Ekle</Text>
+                            <TouchableOpacity onPress={() => setShowAddStudentModal(false)}>
+                                <Ionicons name="close" size={24} color="#4B5563" />
+                            </TouchableOpacity>
+                        </View>
+                        <Text style={{ marginBottom: 16, color: '#6B7280', fontSize: 13 }}>
+                            {selectedClassDetail?.name} sınıfına eklemek istediğiniz öğrencileri seçin.
+                        </Text>
+                        <FlatList
+                            data={students.filter(s => s.status === 'approved' && s.class_id !== selectedClassDetail?.id)}
+                            keyExtractor={item => item.id}
+                            renderItem={({ item }) => (
+                                <TouchableOpacity
+                                    style={[styles.pendingRow, { paddingHorizontal: 4 }]}
+                                    onPress={() => assignClassToStudent(selectedClassDetail?.id || null, item.id)}
+                                >
+                                    <LinearGradient colors={['#E5E7EB', '#D1D5DB']} style={[styles.avatar, { width: 32, height: 32 }]}>
+                                        <Text style={[styles.avatarText, { fontSize: 12, color: '#374151' }]}>{item.name.charAt(0).toUpperCase()}</Text>
+                                    </LinearGradient>
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={styles.pendingName}>{item.name}</Text>
+                                        <Text style={[styles.pendingEmail, { color: item.class_id ? '#D97706' : '#10B981' }]}>
+                                            {item.class_id ? `Mevcut: ${classes.find(c => c.id === item.class_id)?.name}` : 'Sınıfsız'}
+                                        </Text>
+                                    </View>
+                                    <Ionicons name="add-circle" size={24} color={COLORS.primary} />
+                                </TouchableOpacity>
+                            )}
+                            ListEmptyComponent={
+                                <Text style={{ textAlign: 'center', color: '#9CA3AF', marginVertical: 20 }}>Eklenebilecek öğrenci bulunamadı.</Text>
+                            }
+                        />
+                        <View style={{ marginTop: 20, flexDirection: 'row', justifyContent: 'flex-end' }}>
+                            <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowAddStudentModal(false)}>
+                                <Text style={{ color: '#6B7280', fontWeight: '600' }}>Kapat</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+
             {/* ─── Class Modal ───────────────────────── */}
             <Modal visible={showClassModal} transparent animationType="fade">
                 <View style={styles.modalOverlay}>
@@ -881,6 +1074,7 @@ const styles = StyleSheet.create({
     userName: { color: '#fff', fontSize: 13, fontWeight: '600' },
     userRole: { color: '#94A3B8', fontSize: 11 },
     main: { flex: 1 },
+    backBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#E5E7EB' },
 
     // TABS
     tabHeader: { marginBottom: 24 },
@@ -923,6 +1117,7 @@ const styles = StyleSheet.create({
     grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
 
     // CARD
+    cardItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 12, backgroundColor: '#F9FAFB', borderRadius: 12, borderWidth: 1, borderColor: '#F3F4F6' },
     studentCard: { width: 260, backgroundColor: '#fff', borderRadius: 18, padding: 18 },
     cardTop: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
     cardName: { fontSize: 15, fontWeight: '700', color: '#111827' },
