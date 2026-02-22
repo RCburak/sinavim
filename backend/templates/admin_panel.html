@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RC Sınavım - Yönetici Paneli</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0F0F1A;
+            color: #fff;
+            min-height: 100vh;
+        }
+
+        /* ─── LOGIN ─── */
+        .login-page {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #0F0F1A 0%, #1A1A2E 50%, #16213E 100%);
+        }
+
+        .login-card {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 28px;
+            padding: 48px;
+            width: 420px;
+            backdrop-filter: blur(20px);
+        }
+
+        .login-card h1 {
+            font-size: 28px;
+            font-weight: 800;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #F59E0B, #EF4444);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .login-card p {
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 14px;
+            margin-bottom: 32px;
+        }
+
+        .login-card input {
+            width: 100%;
+            padding: 16px 18px;
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.08);
+            color: #fff;
+            font-size: 15px;
+            margin-bottom: 14px;
+            outline: none;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+
+        .login-card input:focus {
+            border-color: #F59E0B;
+        }
+
+        .login-card input::placeholder {
+            color: rgba(255, 255, 255, 0.3);
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 16px;
+            border-radius: 14px;
+            border: none;
+            background: linear-gradient(135deg, #F59E0B, #EF4444);
+            color: #fff;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 8px;
+            transition: opacity 0.2s;
+        }
+
+        .login-btn:hover {
+            opacity: 0.9;
+        }
+
+        .login-error {
+            color: #EF4444;
+            font-size: 13px;
+            margin-top: 12px;
+            text-align: center;
+            display: none;
+        }
+
+        /* ─── DASHBOARD ─── */
+        .dashboard {
+            display: none;
+            min-height: 100vh;
+        }
+
+        .topbar {
+            background: linear-gradient(135deg, #F59E0B, #EF4444);
+            padding: 24px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .topbar h2 {
+            font-size: 22px;
+            font-weight: 800;
+        }
+
+        .topbar .info {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .topbar .admin-name {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .topbar .logout-btn {
+            padding: 10px 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            font-size: 13px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+
+        .topbar .logout-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .main-content {
+            padding: 32px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Stats */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 20px;
+            padding: 24px;
+            transition: all 0.25s;
+        }
+
+        .stat-card:hover {
+            border-color: rgba(245, 158, 11, 0.3);
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #F59E0B, #EF4444);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.5);
+            margin-top: 4px;
+            font-weight: 500;
+        }
+
+        /* Section */
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .section-title {
+            font-size: 20px;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-title .count {
+            background: rgba(245, 158, 11, 0.15);
+            color: #F59E0B;
+            padding: 4px 12px;
+            border-radius: 10px;
+            font-size: 13px;
+        }
+
+        .create-btn {
+            padding: 12px 24px;
+            border-radius: 14px;
+            border: none;
+            background: linear-gradient(135deg, #F59E0B, #EF4444);
+            color: #fff;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            font-family: inherit;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .create-btn:hover {
+            opacity: 0.9;
+        }
+
+        /* Teacher Grid */
+        .teacher-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+            gap: 16px;
+        }
+
+        .teacher-card {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 20px;
+            padding: 24px;
+            transition: all 0.25s;
+        }
+
+        .teacher-card:hover {
+            border-color: rgba(245, 158, 11, 0.3);
+            background: rgba(255, 255, 255, 0.06);
+            transform: translateY(-2px);
+        }
+
+        .teacher-top {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 16px;
+        }
+
+        .teacher-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            background: linear-gradient(135deg, #F59E0B, #EF4444);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 20px;
+            font-weight: 800;
+            flex-shrink: 0;
+        }
+
+        .teacher-name {
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        .teacher-email {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.4);
+            margin-top: 2px;
+        }
+
+        .teacher-meta {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+
+        .meta-chip {
+            padding: 6px 14px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .chip-registered {
+            background: rgba(16, 185, 129, 0.15);
+            color: #10B981;
+        }
+
+        .chip-pending {
+            background: rgba(245, 158, 11, 0.15);
+            color: #F59E0B;
+        }
+
+        .chip-code {
+            background: rgba(139, 92, 246, 0.15);
+            color: #A78BFA;
+        }
+
+        .teacher-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .copy-link-btn {
+            flex: 1;
+            padding: 10px;
+            border-radius: 12px;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            background: rgba(245, 158, 11, 0.1);
+            color: #F59E0B;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .copy-link-btn:hover {
+            background: rgba(245, 158, 11, 0.2);
+        }
+
+        .copy-link-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .delete-btn {
+            padding: 10px 16px;
+            border-radius: 12px;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            background: rgba(239, 68, 68, 0.1);
+            color: #EF4444;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .delete-btn:hover {
+            background: rgba(239, 68, 68, 0.2);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: rgba(255, 255, 255, 0.3);
+        }
+
+        .empty-state .icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+        }
+
+        .empty-state p {
+            font-size: 15px;
+            max-width: 380px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        /* ─── MODAL ─── */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: #1A1A2E;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 32px;
+            width: 480px;
+            max-width: 90vw;
+        }
+
+        .modal h3 {
+            font-size: 20px;
+            font-weight: 800;
+            margin-bottom: 4px;
+        }
+
+        .modal .modal-sub {
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 13px;
+            margin-bottom: 24px;
+        }
+
+        .modal label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.6);
+            margin-bottom: 8px;
+            margin-top: 16px;
+        }
+
+        .modal label:first-of-type {
+            margin-top: 0;
+        }
+
+        .modal input {
+            width: 100%;
+            padding: 14px 16px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.06);
+            color: #fff;
+            font-size: 14px;
+            outline: none;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+
+        .modal input:focus {
+            border-color: #F59E0B;
+        }
+
+        .modal input::placeholder {
+            color: rgba(255, 255, 255, 0.3);
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 28px;
+            justify-content: flex-end;
+        }
+
+        .modal-cancel {
+            padding: 12px 24px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: none;
+            color: rgba(255, 255, 255, 0.6);
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        .modal-save {
+            padding: 12px 28px;
+            border-radius: 12px;
+            border: none;
+            background: linear-gradient(135deg, #F59E0B, #EF4444);
+            color: #fff;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 14px;
+        }
+
+        .modal-save:hover {
+            opacity: 0.9;
+        }
+
+        .modal-save:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            padding: 16px 24px;
+            border-radius: 14px;
+            font-weight: 600;
+            font-size: 14px;
+            z-index: 200;
+            animation: slideIn 0.3s ease;
+            font-family: inherit;
+        }
+
+        .toast.success {
+            background: #10B981;
+            color: #fff;
+        }
+
+        .toast.error {
+            background: #EF4444;
+            color: #fff;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateY(20px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- ═══ LOGIN PAGE ═══ -->
+    <div class="login-page" id="loginPage">
+        <div class="login-card">
+            <h1>🛡️ Kurum Yönetim Paneli</h1>
+            <p>Kurum hesabınızla giriş yaparak öğretmenlerinizi yönetin.</p>
+            <input type="email" id="loginEmail" placeholder="E-posta adresiniz" />
+            <input type="password" id="loginPassword" placeholder="Şifreniz" />
+            <button class="login-btn" onclick="handleLogin()">Giriş Yap</button>
+            <div class="login-error" id="loginError"></div>
+        </div>
+    </div>
+
+    <!-- ═══ DASHBOARD ═══ -->
+    <div class="dashboard" id="dashboard">
+        <div class="topbar">
+            <h2>🛡️ <span id="institutionName">Kurum Paneli</span></h2>
+            <div class="info">
+                <span class="admin-name" id="adminName"></span>
+                <button class="logout-btn" onclick="handleLogout()">Çıkış Yap</button>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <!-- Stats -->
+            <div class="stats-row">
+                <div class="stat-card">
+                    <div class="stat-value" id="totalTeachers">0</div>
+                    <div class="stat-label">Toplam Öğretmen</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="registeredTeachers">0</div>
+                    <div class="stat-label">Kayıtlı Öğretmen</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="pendingTeachers">0</div>
+                    <div class="stat-label">Kayıt Bekleyen</div>
+                </div>
+            </div>
+
+            <!-- Kurum Katılım Kodu -->
+            <div
+                style="background: linear-gradient(135deg, #6366F1, #8B5CF6); border-radius: 12px; padding: 15px 20px; margin-bottom: 25px; display: flex; align-items: center; justify-content: space-between; color: white;">
+                <div>
+                    <div style="font-size: 13px; opacity: 0.85;">📋 Kurum Katılım Kodu (Öğrenciler bu kodu kullanarak
+                        katılır)</div>
+                    <div style="font-size: 22px; font-weight: 700; letter-spacing: 3px; margin-top: 5px;"
+                        id="inviteCodeDisplay">—</div>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button onclick="openEditCodeModal()"
+                        style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 14px;">✏️
+                        Düzenle</button>
+                    <button
+                        onclick="navigator.clipboard.writeText(document.getElementById('inviteCodeDisplay').textContent); showToast('Kurum kodu kopyalandı! 📋')"
+                        style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 14px;">📋
+                        Kopyala</button>
+                </div>
+            </div>
+
+            <!-- Teacher List -->
+            <div class="section-header">
+                <div class="section-title">
+                    Öğretmenler <span class="count" id="teacherCount">0</span>
+                </div>
+                <button class="create-btn" onclick="openCreateModal()">
+                    <span>＋</span> Yeni Öğretmen
+                </button>
+            </div>
+
+            <div class="teacher-grid" id="teacherGrid"></div>
+            <div class="empty-state" id="emptyState" style="display:none;">
+                <div class="icon">👨‍🏫</div>
+                <p>Henüz öğretmen oluşturulmadı. "Yeni Öğretmen" butonuna tıklayarak başlayın.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ CREATE TEACHER MODAL ═══ -->
+    <div class="modal-overlay" id="createModal">
+        <div class="modal">
+            <h3>➕ Yeni Öğretmen Oluştur</h3>
+            <div class="modal-sub">Öğretmen adını girin. Kayıt linki otomatik oluşturulacaktır.</div>
+
+            <label>Öğretmen Adı</label>
+            <input type="text" id="teacherName" placeholder="Örn: Ahmet Yılmaz" />
+
+            <div class="modal-actions">
+                <button class="modal-cancel" onclick="closeCreateModal()">Vazgeç</button>
+                <button class="modal-save" id="createSubmitBtn" onclick="createTeacher()">Oluştur</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ EDIT CODE MODAL ═══ -->
+    <div class="modal-overlay" id="editCodeModal">
+        <div class="modal">
+            <h3>✏️ Davet Kodunu Düzenle</h3>
+            <div class="modal-sub">Yeni kurum kodunu girin. Bu kod benzersiz olmalıdır.</div>
+
+            <label>Yeni Kod</label>
+            <input type="text" id="newInviteCode" placeholder="Örn: MAT-101" style="text-transform: uppercase;" />
+
+            <div class="modal-actions">
+                <button class="modal-cancel" onclick="closeEditCodeModal()">Vazgeç</button>
+                <button class="modal-save" id="updateCodeBtn" onclick="updateInviteCode()">Güncelle</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin;
+        let currentAdmin = null;
+        let teachers = [];
+
+        // ─── TOAST ───
+        function showToast(msg, type = 'success') {
+            const el = document.createElement('div');
+            el.className = `toast ${type}`;
+            el.textContent = msg;
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 3000);
+        }
+
+        // ─── LOGIN ───
+        async function handleLogin() {
+            const email = document.getElementById('loginEmail').value.trim();
+            const password = document.getElementById('loginPassword').value.trim();
+            const errorEl = document.getElementById('loginError');
+
+            if (!email || !password) {
+                errorEl.textContent = 'Lütfen tüm alanları doldurun.';
+                errorEl.style.display = 'block';
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API_BASE}/admin/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                const data = await res.json();
+
+                if (data.status === 'success') {
+                    currentAdmin = data.admin;
+                    showDashboard();
+                } else {
+                    errorEl.textContent = data.message || 'Giriş başarısız.';
+                    errorEl.style.display = 'block';
+                }
+            } catch (e) {
+                errorEl.textContent = 'Sunucuya bağlanılamadı.';
+                errorEl.style.display = 'block';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('loginPassword').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') handleLogin();
+            });
+        });
+
+        function handleLogout() {
+            currentAdmin = null;
+            document.getElementById('loginPage').style.display = 'flex';
+            document.getElementById('dashboard').style.display = 'none';
+            document.getElementById('loginEmail').value = '';
+            document.getElementById('loginPassword').value = '';
+        }
+
+        // ─── DASHBOARD ───
+        function showDashboard() {
+            document.getElementById('loginPage').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+            document.getElementById('adminName').textContent = currentAdmin.name || currentAdmin.email;
+            document.getElementById('institutionName').textContent = (currentAdmin.name || 'Kurum') + ' Yönetim Paneli';
+            const inviteCodeEl = document.getElementById('inviteCodeDisplay');
+            if (inviteCodeEl) inviteCodeEl.textContent = currentAdmin.invite_code || '—';
+            loadTeachers();
+        }
+
+        // ─── LOAD TEACHERS ───
+        async function loadTeachers() {
+            const grid = document.getElementById('teacherGrid');
+            const empty = document.getElementById('emptyState');
+            grid.innerHTML = '<div class="loading-spinner"></div>';
+
+            try {
+                const res = await fetch(`${API_BASE}/admin/teachers?admin_id=${currentAdmin.id}`);
+                const data = await res.json();
+                teachers = data.teachers || [];
+
+                // Stats
+                document.getElementById('totalTeachers').textContent = teachers.length;
+                document.getElementById('registeredTeachers').textContent = teachers.filter(t => t.is_registered).length;
+                document.getElementById('pendingTeachers').textContent = teachers.filter(t => !t.is_registered).length;
+                document.getElementById('teacherCount').textContent = teachers.length;
+
+                if (teachers.length === 0) {
+                    grid.innerHTML = '';
+                    empty.style.display = 'block';
+                    return;
+                }
+
+                empty.style.display = 'none';
+                grid.innerHTML = teachers.map(t => {
+                    const isReg = t.is_registered;
+                    const regLink = t.registration_token ? `${window.location.origin}/admin/register/${t.registration_token}` : null;
+                    return `
+                <div class="teacher-card">
+                    <div class="teacher-top">
+                        <div class="teacher-avatar">${(t.name || '?')[0].toUpperCase()}</div>
+                        <div>
+                            <div class="teacher-name">${t.name || 'İsimsiz'}</div>
+                            <div class="teacher-email">${t.email || '—'}</div>
+                        </div>
+                    </div>
+                    <div class="teacher-meta">
+                        <span class="meta-chip ${isReg ? 'chip-registered' : 'chip-pending'}">
+                            ${isReg ? '✅ Kayıtlı' : '⏳ Kayıt Bekliyor'}
+                        </span>
+                    </div>
+                    <div class="teacher-actions">
+                        <button class="copy-link-btn" onclick="copyRegLink('${regLink || ''}')" ${isReg ? 'disabled' : ''}>
+                            ${isReg ? '✅ Kayıt Tamamlandı' : '📋 Kayıt Linkini Kopyala'}
+                        </button>
+                        <button class="delete-btn" onclick="deleteTeacher('${t.id}', '${(t.name || '').replace(/'/g, "\\'")}')">🗑️</button>
+                    </div>
+                </div>
+            `;
+                }).join('');
+            } catch (e) {
+                grid.innerHTML = '<p style="color: #EF4444;">Öğretmen listesi yüklenemedi.</p>';
+            }
+        }
+
+        // ─── COPY REGISTRATION LINK ───
+        function copyRegLink(link) {
+            if (!link) return;
+            navigator.clipboard.writeText(link).then(() => {
+                showToast('Kayıt linki kopyalandı! 📋');
+            }).catch(() => {
+                // Fallback
+                const input = document.createElement('input');
+                input.value = link;
+                document.body.appendChild(input);
+                input.select();
+                document.execCommand('copy');
+                document.body.removeChild(input);
+                showToast('Kayıt linki kopyalandı! 📋');
+            });
+        }
+
+        // ─── CREATE TEACHER ───
+        function openCreateModal() {
+            document.getElementById('createModal').classList.add('active');
+            document.getElementById('teacherName').value = '';
+        }
+
+        function closeCreateModal() {
+            document.getElementById('createModal').classList.remove('active');
+        }
+
+        async function createTeacher() {
+            const name = document.getElementById('teacherName').value.trim();
+
+            if (!name) {
+                showToast('Lütfen öğretmen adını girin.', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('createSubmitBtn');
+            const originalText = btn.textContent;
+            btn.textContent = 'Oluşturuluyor...';
+            btn.disabled = true;
+
+            try {
+                const res = await fetch(`${API_BASE}/admin/create-teacher`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ admin_id: currentAdmin.id, name })
+                });
+                const data = await res.json();
+
+                if (data.status === 'success') {
+                    showToast('Öğretmen başarıyla oluşturuldu! 🎉');
+                    closeCreateModal();
+                    loadTeachers();
+                } else {
+                    showToast(data.message || 'Bir hata oluştu.', 'error');
+                }
+            } catch (e) {
+                showToast('Sunucu hatası.', 'error');
+            } finally {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        // ─── UPDATE INVITE CODE ───
+        function openEditCodeModal() {
+            document.getElementById('editCodeModal').classList.add('active');
+            document.getElementById('newInviteCode').value = currentAdmin.invite_code || '';
+        }
+
+        function closeEditCodeModal() {
+            document.getElementById('editCodeModal').classList.remove('active');
+        }
+
+        async function updateInviteCode() {
+            const newCode = document.getElementById('newInviteCode').value.trim();
+            if (!newCode) {
+                showToast('Lütfen yeni bir kod girin.', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('updateCodeBtn');
+            const originalText = btn.textContent;
+            btn.textContent = 'Güncelleniyor...';
+            btn.disabled = true;
+
+            try {
+                // Admin kendi kodunu güncelliyor -> teacher_id = admin_id
+                const res = await fetch(`${API_BASE}/admin/update-invite-code`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        teacher_id: currentAdmin.id,
+                        admin_id: currentAdmin.id,
+                        new_code: newCode
+                    })
+                });
+                const data = await res.json();
+
+                if (data.status === 'success') {
+                    showToast('Davet kodu güncellendi! 🎉');
+                    currentAdmin.invite_code = newCode;
+                    document.getElementById('inviteCodeDisplay').textContent = newCode;
+                    closeEditCodeModal();
+                } else {
+                    showToast(data.message || 'Güncellenemedi.', 'error');
+                }
+            } catch (e) {
+                showToast('Sunucu hatası.', 'error');
+            } finally {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        // ─── DELETE TEACHER ───
+        async function deleteTeacher(id, name) {
+            if (!confirm(`"${name}" öğretmenini silmek istediğinize emin misiniz?`)) return;
+
+            try {
+                const res = await fetch(`${API_BASE}/admin/delete-teacher`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ teacher_id: id, admin_id: currentAdmin.id })
+                });
+                const data = await res.json();
+
+                if (data.status === 'success') {
+                    showToast('Öğretmen silindi.');
+                    loadTeachers();
+                } else {
+                    showToast(data.message || 'Silinemedi.', 'error');
+                }
+            } catch (e) {
+                showToast('Sunucuya bağlanılamadı.', 'error');
+            }
+        }
+    </script>
+
+</body>
+
+</html>
