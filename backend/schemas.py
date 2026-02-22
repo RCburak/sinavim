@@ -80,6 +80,17 @@ class AssignClassRequest(BaseModel):
     class_id: Optional[str] = None
     teacher_type: str = "teacher"
 
+# --- Assignment Template Schemas ---
+
+class CreateAssignmentTemplateRequest(BaseModel):
+    teacher_id: str
+    name: str # e.g. "TYT Başlangıç Kampı"
+    items: List[Any]
+
+class DeleteAssignmentTemplateRequest(BaseModel):
+    teacher_id: str
+    template_id: str
+
 # --- Question Schemas ---
 
 class UpdateQuestionStatusRequest(BaseModel):
@@ -129,3 +140,36 @@ class AddAnalizRequest(BaseModel):
             except ValueError:
                 raise ValueError("Invalid net value")
         return v
+
+
+# --- Communication Schemas ---
+
+class CreateAnnouncementRequest(BaseModel):
+    institution_id: str
+    author_id: str
+    title: str
+    content: str
+    class_id: Optional[str] = None # If None, it's for the whole institution
+    image_url: Optional[str] = None
+
+class CreateMessageRequest(BaseModel):
+    sender_id: str
+    receiver_id: str
+    content: str
+    # metadata for push notifications etc.
+
+class CreateMaterialRequest(BaseModel):
+    institution_id: str
+    teacher_id: str
+    title: str
+    file_url: str
+    type: str # 'pdf', 'video', 'link'
+    class_id: Optional[str] = None
+
+class CreateCalendarEventRequest(BaseModel):
+    institution_id: str
+    title: str
+    description: Optional[str] = None
+    date: str # ISO format or YYYY-MM-DD
+    type: str # 'trial', 'exam', 'holiday', 'other'
+    class_id: Optional[str] = None

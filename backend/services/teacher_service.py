@@ -10,6 +10,11 @@ logger = logging.getLogger(__name__)
 COLLECTION_INSTITUTIONS = "institutions"
 COLLECTION_USERS = "users"
 COLLECTION_PROGRAMS = "programs"
+COLLECTION_TEMPLATES = "assignment_templates"
+COLLECTION_ANNOUNCEMENTS = "announcements"
+COLLECTION_MESSAGES = "messages"
+COLLECTION_MATERIALS = "materials"
+COLLECTION_CALENDAR = "calendar"
 
 
 def _doc_to_dict(doc) -> dict:
@@ -276,6 +281,203 @@ def delete_class(institution_id: str, class_id: str) -> tuple[bool, str | None]:
         return False, str(e)
 
 
+def create_template(teacher_id: str, name: str, items: list[dict]) -> tuple[dict | None, str | None]:
+    """Yeni ödev şablonu oluşturur."""
+    try:
+        db = get_firestore()
+        ref = db.collection(COLLECTION_TEMPLATES).add({
+            "teacher_id": teacher_id,
+            "name": name,
+            "items": items,
+            "created_at": firestore.SERVER_TIMESTAMP
+        })
+        return {"id": ref[1].id, "name": name}, None
+    except Exception as e:
+        logger.exception("Sablon olusturma hatasi")
+        return None, str(e)
+
+
+def get_templates(teacher_id: str) -> list[dict]:
+    """Öğretmenin ödev şablonlarını getirir."""
+    try:
+        db = get_firestore()
+        snap = db.collection(COLLECTION_TEMPLATES).where("teacher_id", "==", teacher_id).order_by("created_at", direction=firestore.Query.DESCENDING).get()
+        return [{"id": d.id, **d.to_dict()} for d in snap]
+    except Exception as e:
+        logger.exception("Sablon listeleme hatasi")
+        return []
+
+
+def delete_template(teacher_id: str, template_id: str) -> tuple[bool, str | None]:
+    """Ödev şablonunu siler."""
+    try:
+        db = get_firestore()
+        ref = db.collection(COLLECTION_TEMPLATES).document(template_id)
+        snap = ref.get()
+        if not snap.exists or snap.to_dict().get("teacher_id") != teacher_id:
+            return False, "Şablon bulunamadı veya yetkiniz yok."
+        ref.delete()
+        return True, None
+    except Exception as e:
+        logger.exception("Sablon silme hatasi")
+        return False, str(e)
+
+
+def create_announcement(institution_id: str, author_id: str, title: str, content: str, class_id: str | None = None, image_url: str | None = None) -> tuple[dict | None, str | None]:
+    """Yeni duyuru oluşturur."""
+    try:
+        db = get_firestore()
+        data = {
+            "institution_id": institution_id,
+            "author_id": author_id,
+            "title": title,
+            "content": content,
+            "class_id": class_id,
+            "image_url": image_url,
+            "created_at": firestore.SERVER_TIMESTAMP
+        }
+        ref = db.collection(COLLECTION_ANNOUNCEMENTS).add(data)
+        return {"id": ref[1].id, **data}, None
+    except Exception as e:
+        logger.exception("Duyuru olusturma hatasi")
+        return None, str(e)
+
+
+def get_announcements(institution_id: str, class_id: str | None = None) -> list[dict]:
+    """Kurum veya sınıf bazlı duyuruları getirir."""
+    try:
+        db = get_firestore()
+        query = db.collection(COLLECTION_ANNOUNCEMENTS).where("institution_id", "==", institution_id)
+        if class_id:
+            query = query.where("class_id", "==", class_id)
+        
+        snap = query.order_by("created_at", direction=firestore.Query.DESCENDING).get()
+        return [{"id": d.id, **d.to_dict()} for d in snap]
+    except Exception as e:
+        logger.exception("Duyuru listeleme hatasi")
+        return []
+
+
+def send_message(sender_id: str, receiver_id: str, content: str) -> tuple[bool, str | None]:
+    """Hızlı mesaj gönderir."""
+    try:
+        db = get_firestore()
+        db.collection(COLLECTION_MESSAGES).add({
+            "sender_id": sender_id,
+            "receiver_id": receiver_id,
+            "content": content,
+            "created_at": firestore.SERVER_TIMESTAMP,
+            "read": False
+        })
+        return True, None
+    except Exception as e:
+        logger.exception("Mesaj gonderme hatasi")
+        return False, str(e)
+
+
+def create_material(institution_id: str, teacher_id: str, title: str, file_url: str, m_type: str, class_id: str | None = None) -> tuple[dict | None, str | None]:
+    """Sınıfa veya kuruma materyal ekler."""
+    try:
+        db = get_firestore()
+        data = {
+            "institution_id": institution_id,
+            "teacher_id": teacher_id,
+            "title": title,
+            "file_url": file_url,
+            "type": m_type,
+            "class_id": class_id,
+            "created_at": firestore.SERVER_TIMESTAMP
+        }
+        ref = db.collection(COLLECTION_MATERIALS).add(data)
+        return {"id": ref[1].id, **data}, None
+    except Exception as e:
+        logger.exception("Materyal ekleme hatasi")
+        return None, str(e)
+
+
+def get_materials(institution_id: str, class_id: str | None = None) -> list[dict]:
+    """Materyalleri listeler."""
+    try:
+        db = get_firestore()
+        query = db.collection(COLLECTION_MATERIALS).where("institution_id", "==", institution_id)
+        if class_id:
+            query = query.where("class_id", "==", class_id)
+        
+        snap = query.order_by("created_at", direction=firestore.Query.DESCENDING).get()
+        return [{"id": d.id, **d.to_dict()} for d in snap]
+    except Exception as e:
+        logger.exception("Materyal listeleme hatasi")
+        return []
+
+
+def create_event(institution_id: str, title: str, date: str, e_type: str, description: str | None = None, class_id: str | None = None) -> tuple[dict | None, str | None]:
+    """Takvime etkinlik ekler."""
+    try:
+        db = get_firestore()
+        data = {
+            "institution_id": institution_id,
+            "title": title,
+            "date": date,
+            "type": e_type,
+            "description": description,
+            "class_id": class_id,
+            "created_at": firestore.SERVER_TIMESTAMP
+        }
+        ref = db.collection(COLLECTION_CALENDAR).add(data)
+        return {"id": ref[1].id, **data}, None
+    except Exception as e:
+        logger.exception("Etkinlik ekleme hatasi")
+        return None, str(e)
+
+
+def get_events(institution_id: str, class_id: str | None = None) -> list[dict]:
+    """Takvim etkinliklerini getirir."""
+    try:
+        db = get_firestore()
+        query = db.collection(COLLECTION_CALENDAR).where("institution_id", "==", institution_id)
+        if class_id:
+            query = query.where("class_id", "==", class_id)
+        
+        snap = query.order_by("date", direction=firestore.Query.ASCENDING).get()
+        return [{"id": d.id, **d.to_dict()} for d in snap]
+    except Exception as e:
+        logger.exception("Etkinlik listeleme hatasi")
+        return []
+
+
+def get_leaderboard(institution_id: str, class_id: str | None = None) -> list[dict]:
+    """Kurum veya sınıf bazlı başarı sıralamasını getirir."""
+    try:
+        db = get_firestore()
+        # Bu kısım normalde analizlerden hesaplanmalı ancak demo için öğrencilerin ortalamasını alıyoruz
+        # Öğrencileri çek
+        students_query = db.collection("users").where("admin_id", "==", institution_id)
+        if class_id:
+            students_query = students_query.where("class_id", "==", class_id)
+        
+        students_snap = students_query.get()
+        leaderboard = []
+        for doc in students_snap:
+            s_data = doc.to_dict()
+            # Örnek puan hesaplama (normalde DB'den gelmeli)
+            leaderboard.append({
+                "id": doc.id,
+                "name": s_data.get("name", "İsimsiz"),
+                "avg_net": s_data.get("avg_net", 0),
+                "rank": 0
+            })
+        
+        # Sırala ve rank ata
+        leaderboard.sort(key=lambda x: x["avg_net"], reverse=True)
+        for i, item in enumerate(leaderboard):
+            item["rank"] = i + 1
+            
+        return leaderboard[:20] # Top 20
+    except Exception as e:
+        logger.exception("Liderlik tablosu hatasi")
+        return []
+
+
 class TeacherService:
     join_institution = staticmethod(join_institution)
     leave_institution = staticmethod(leave_institution)
@@ -288,6 +490,17 @@ class TeacherService:
     update_student_class = staticmethod(update_student_class)
     delete_class = staticmethod(delete_class)
     get_institution = staticmethod(get_institution)
+    create_template = staticmethod(create_template)
+    get_templates = staticmethod(get_templates)
+    delete_template = staticmethod(delete_template)
+    create_announcement = staticmethod(create_announcement)
+    get_announcements = staticmethod(get_announcements)
+    send_message = staticmethod(send_message)
+    create_material = staticmethod(create_material)
+    get_materials = staticmethod(get_materials)
+    create_event = staticmethod(create_event)
+    get_events = staticmethod(get_events)
+    get_leaderboard = staticmethod(get_leaderboard)
 
 
 teacher_service = TeacherService()
