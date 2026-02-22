@@ -96,3 +96,10 @@ def delete_class(req: DeleteClassRequest, auth: dict = Depends(require_teacher))
     if not ok:
         return error_response(err, 500)
     return success_response(message="Sınıf silindi.")
+@teacher_router.get("/institution/{institution_id}")
+def get_institution_route(institution_id: str, auth: dict = Depends(require_teacher)):
+    """Kurum bilgilerini döner."""
+    inst = teacher_service.get_institution(institution_id)
+    if not inst:
+        return error_response("Kurum bulunamadı.", 404)
+    return success_response(inst)

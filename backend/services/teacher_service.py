@@ -120,6 +120,15 @@ def teacher_login(email: str, password: str) -> tuple[dict | None, str | None]:
         elif stored_pw != password:
             return None, "Hatalı giriş bilgileri"
         out = _doc_to_dict(doc)
+        
+        # Eğer bir admin_id varsa, kurumun (adminin) invite_code'unu döneriz
+        admin_id = out.get("admin_id")
+        if admin_id:
+            admin_doc = db.collection(COLLECTION_INSTITUTIONS).document(admin_id).get()
+            if admin_doc.exists:
+                admin_data = admin_doc.to_dict()
+                out["invite_code"] = admin_data.get("invite_code")
+                
         return out, None
     except Exception as e:
         logger.exception("Ogretmen giris hatasi")
@@ -210,6 +219,18 @@ def get_classes(institution_id: str) -> list[dict]:
     except Exception as e:
         return []
 
+def get_institution(institution_id: str) -> dict | None:
+    """Kurum bilgilerini getirir."""
+    try:
+        db = get_firestore()
+        doc = db.collection(COLLECTION_INSTITUTIONS).document(institution_id).get()
+        if doc.exists:
+            return _doc_to_dict(doc)
+        return None
+    except Exception as e:
+        logger.exception("Kurum bilgisi hatasi")
+        return None
+
 def update_student_class(student_id: str, class_id: str | None) -> tuple[bool, str | None]:
     """Öğrenciyi sınıfa atar."""
     try:
@@ -266,6 +287,7 @@ class TeacherService:
     get_classes = staticmethod(get_classes)
     update_student_class = staticmethod(update_student_class)
     delete_class = staticmethod(delete_class)
+    get_institution = staticmethod(get_institution)
 
 
 teacher_service = TeacherService()

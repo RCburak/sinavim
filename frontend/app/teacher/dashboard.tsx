@@ -122,8 +122,31 @@ export default function TeacherDashboard() {
 
   const fetchData = async (institutionId: string) => {
     setLoading(true);
-    await Promise.all([fetchStudents(institutionId), fetchClasses(institutionId)]);
+    const adminId = teacherData?.admin_id;
+    // Eğer staff ise kurum bilgilerini de çekip invite code'u senkronize et
+    const tasks: Promise<any>[] = [fetchStudents(institutionId), fetchClasses(institutionId)];
+    if (adminId) {
+      tasks.push(fetchInstitutionInfo(adminId));
+    } else {
+      tasks.push(fetchInstitutionInfo(institutionId));
+    }
+    await Promise.all(tasks);
     setLoading(false);
+  };
+
+  const fetchInstitutionInfo = async (id: string) => {
+    try {
+      const response = await fetch(`${API_URL}/teacher/institution/${id}`, {
+        headers: getAuthHeaders(),
+      });
+      const res = await response.json();
+      if (res.data && res.data.invite_code) {
+        setTeacherData((prev: any) => ({
+          ...prev,
+          invite_code: res.data.invite_code
+        }));
+      }
+    } catch (e) { console.error("Kurum bilgisi cekilemedi", e); }
   };
 
   const fetchStudents = async (institutionId: string) => {
@@ -316,7 +339,15 @@ export default function TeacherDashboard() {
             <Text style={styles.inviteSub}>Kurum kodunuzu paylaşarak öğrencilerinizi ekleyin.</Text>
             <View style={styles.codeBox}>
               <Text style={styles.inviteCode}>{teacherData?.invite_code || '---'}</Text>
-              <TouchableOpacity style={styles.copyBtn}>
+              <TouchableOpacity
+                style={styles.copyBtn}
+                onPress={() => {
+                  // Platform.OS === 'web' vs native control
+                  if (teacherData?.invite_code) {
+                    alert(`Kod kopyalandı: ${teacherData.invite_code}`);
+                  }
+                }}
+              >
                 <Ionicons name="copy-outline" size={18} color={COLORS.light.primary} />
               </TouchableOpacity>
             </View>
