@@ -452,14 +452,14 @@ export default function RehberDashboard() {
             ) : (
                 <View style={styles.grid}>
                     {filteredStudents.map(student => (
-                        <TouchableOpacity key={student.id} style={styles.studentCard} onPress={() => openStudentDetail(student)}>
+                        <View key={student.id} style={styles.studentCard}>
                             <View style={styles.cardTop}>
                                 <LinearGradient colors={['#3B82F6', '#8B5CF6']} style={styles.avatar}>
                                     <Text style={styles.avatarText}>{student.name.charAt(0).toUpperCase()}</Text>
                                 </LinearGradient>
                                 <View style={{ flex: 1 }}>
-                                    <Text style={styles.cardName}>{student.name}</Text>
-                                    <Text style={styles.cardEmail}>{student.email || '—'}</Text>
+                                    <Text style={styles.cardName} numberOfLines={1}>{student.name}</Text>
+                                    <Text style={styles.cardEmail} numberOfLines={1}>{student.email || '—'}</Text>
                                 </View>
                             </View>
                             <View style={styles.cardBottom}>
@@ -468,40 +468,41 @@ export default function RehberDashboard() {
                                         {student.status === 'approved' ? '✅ Onaylı' : '⏳ Bekliyor'}
                                     </Text>
                                 </View>
-                                <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
-                                    <TouchableOpacity
-                                        style={[styles.badge, { backgroundColor: '#F3F4F6' }]}
-                                        onPress={(e) => { e.stopPropagation(); setStudentToAssign(student); setAssignClassModal(true); }}
-                                    >
-                                        <Text style={[styles.badgeText, { color: '#4B5563' }]}>
-                                            {classes.find(c => c.id === student.class_id)?.name || "Sınıf Yok"}
-                                        </Text>
-                                    </TouchableOpacity>
-                                    {student.status === 'approved' && (
-                                        <TouchableOpacity style={styles.programBtn} onPress={(e) => { e.stopPropagation(); openProgramModal(student); }}>
-                                            <Ionicons name="create-outline" size={14} color={COLORS.primary} />
-                                            <Text style={{ color: COLORS.primary, fontSize: 12, fontWeight: '600' }}>Ödev</Text>
-                                        </TouchableOpacity>
-                                    )}
-                                </View>
-                                {student.status === 'pending' && (
-                                    <View style={{ flexDirection: 'row', gap: 6 }}>
-                                        <TouchableOpacity style={styles.approveBtn} onPress={(e) => { e.stopPropagation(); approveStudent(student.id); }}>
+                                <TouchableOpacity
+                                    style={[styles.badge, { backgroundColor: '#F3F4F6' }]}
+                                    onPress={() => { setStudentToAssign(student); setAssignClassModal(true); }}
+                                >
+                                    <Text style={[styles.badgeText, { color: '#4B5563' }]}>
+                                        {classes.find(c => c.id === student.class_id)?.name || "Sınıf Yok"}
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+
+                            <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
+                                {student.status === 'pending' ? (
+                                    <>
+                                        <TouchableOpacity style={[styles.smallBtn, { backgroundColor: COLORS.success }]} onPress={() => approveStudent(student.id)}>
                                             <Ionicons name="checkmark" size={16} color="#fff" />
+                                            <Text style={styles.smallBtnText}>Onayla</Text>
                                         </TouchableOpacity>
-                                        <TouchableOpacity style={styles.rejectBtn} onPress={(e) => { e.stopPropagation(); rejectStudent(student.id); }}>
+                                        <TouchableOpacity style={[styles.smallBtn, { backgroundColor: COLORS.danger }]} onPress={() => rejectStudent(student.id)}>
                                             <Ionicons name="close" size={16} color="#fff" />
                                         </TouchableOpacity>
-                                    </View>
-                                )}
-                                {student.status === 'approved' && (
-                                    <TouchableOpacity style={styles.programBtn} onPress={(e) => { e.stopPropagation(); openProgramModal(student); }}>
-                                        <Ionicons name="create-outline" size={14} color={COLORS.primary} />
-                                        <Text style={{ color: COLORS.primary, fontSize: 12, fontWeight: '600' }}>Ödev</Text>
-                                    </TouchableOpacity>
+                                    </>
+                                ) : (
+                                    <>
+                                        <TouchableOpacity style={[styles.smallBtn, { backgroundColor: COLORS.primary, flex: 1 }]} onPress={() => openStudentDetail(student)}>
+                                            <Ionicons name="eye-outline" size={16} color="#fff" />
+                                            <Text style={styles.smallBtnText}>İncele</Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity style={[styles.smallBtn, { backgroundColor: '#EDE9FE' }]} onPress={() => openProgramModal(student)}>
+                                            <Ionicons name="create-outline" size={16} color={COLORS.secondary} />
+                                            <Text style={[styles.smallBtnText, { color: COLORS.secondary }]}>Ödev</Text>
+                                        </TouchableOpacity>
+                                    </>
                                 )}
                             </View>
-                        </TouchableOpacity>
+                        </View>
                     ))}
                 </View>
             )}
@@ -530,27 +531,23 @@ export default function RehberDashboard() {
                         const studentCount = students.filter(s => s.class_id === c.id).length;
                         return (
                             <View key={c.id} style={[styles.studentCard, { width: 280 }]}>
-                                <View style={[styles.cardTop, { justifyContent: 'space-between' }]}>
-                                    <TouchableOpacity
-                                        style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}
-                                        onPress={() => setSelectedClassDetail(c)}
-                                    >
-                                        <View style={[styles.avatar, { backgroundColor: '#EDE9FE' }]}>
-                                            <Ionicons name="school" size={20} color={COLORS.secondary} />
-                                        </View>
-                                        <View>
-                                            <Text style={styles.cardName}>{c.name}</Text>
-                                            <Text style={styles.cardEmail}>{studentCount} Öğrenci</Text>
-                                        </View>
-                                    </TouchableOpacity>
-                                    <View style={{ flexDirection: 'row', gap: 8 }}>
-                                        <TouchableOpacity onPress={() => setSelectedClassDetail(c)}>
-                                            <Text style={{ color: COLORS.primary, fontWeight: '600', fontSize: 12 }}>Detay</Text>
-                                        </TouchableOpacity>
-                                        <TouchableOpacity onPress={() => deleteClass(c.id, c.name)}>
-                                            <Ionicons name="trash-outline" size={18} color="#EF4444" />
-                                        </TouchableOpacity>
+                                <View style={styles.cardTop}>
+                                    <View style={[styles.avatar, { backgroundColor: '#EDE9FE' }]}>
+                                        <Ionicons name="school" size={20} color={COLORS.secondary} />
                                     </View>
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={styles.cardName} numberOfLines={1}>{c.name}</Text>
+                                        <Text style={styles.cardEmail}>{studentCount} Öğrenci</Text>
+                                    </View>
+                                </View>
+                                <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
+                                    <TouchableOpacity style={[styles.smallBtn, { backgroundColor: '#F3F4F6', flex: 1 }]} onPress={() => setSelectedClassDetail(c)}>
+                                        <Ionicons name="eye-outline" size={16} color="#4B5563" />
+                                        <Text style={[styles.smallBtnText, { color: '#4B5563' }]}>Detay</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity style={[styles.smallBtn, { backgroundColor: '#FEE2E2' }]} onPress={() => deleteClass(c.id, c.name)}>
+                                        <Ionicons name="trash-outline" size={16} color={COLORS.danger} />
+                                    </TouchableOpacity>
                                 </View>
                             </View>
                         );
@@ -842,7 +839,7 @@ export default function RehberDashboard() {
             {/* ─── Student Detail Modal ──────────────── */}
             <Modal visible={modalVisible} transparent animationType="fade">
                 <View style={styles.modalOverlay}>
-                    <View style={[styles.modalContent, { width: 520 }]}>
+                    <View style={styles.modalContent}>
                         <View style={styles.modalHeader}>
                             <Text style={styles.modalTitle}>📋 Öğrenci Detayı</Text>
                             <TouchableOpacity onPress={() => { setModalVisible(false); setSelectedStudent(null); }}>
@@ -887,7 +884,7 @@ export default function RehberDashboard() {
             {/* ─── Program Modal ─────────────────────── */}
             <Modal visible={showProgramModal} transparent animationType="fade">
                 <View style={styles.modalOverlay}>
-                    <View style={[styles.modalContent, { width: 480 }]}>
+                    <View style={styles.modalContent}>
                         <View style={styles.modalHeader}>
                             <Text style={styles.modalTitle}>📝 Ödev Ata — {programStudent?.name}</Text>
                             <TouchableOpacity onPress={() => setShowProgramModal(false)}>
@@ -932,7 +929,7 @@ export default function RehberDashboard() {
             {/* ─── Assign Class Modal ────────────────── */}
             <Modal visible={assignClassModal} transparent animationType="fade">
                 <View style={styles.modalOverlay}>
-                    <View style={[styles.modalContent, { width: 400 }]}>
+                    <View style={styles.modalContent}>
                         <View style={styles.modalHeader}>
                             <Text style={styles.modalTitle}>Sınıf Ata — {studentToAssign?.name}</Text>
                             <TouchableOpacity onPress={() => { setAssignClassModal(false); setStudentToAssign(null); }}>
@@ -970,7 +967,7 @@ export default function RehberDashboard() {
             {/* ─── Add Student to Class Modal ────────── */}
             <Modal visible={showAddStudentModal} transparent animationType="fade">
                 <View style={styles.modalOverlay}>
-                    <View style={[styles.modalContent, { width: 440, maxHeight: '80%' }]}>
+                    <View style={styles.modalContent}>
                         <View style={styles.modalHeader}>
                             <Text style={styles.modalTitle}>Sınıfa Öğrenci Ekle</Text>
                             <TouchableOpacity onPress={() => setShowAddStudentModal(false)}>
@@ -1016,7 +1013,7 @@ export default function RehberDashboard() {
             {/* ─── Class Modal ───────────────────────── */}
             <Modal visible={showClassModal} transparent animationType="fade">
                 <View style={styles.modalOverlay}>
-                    <View style={[styles.modalContent, { width: 400 }]}>
+                    <View style={styles.modalContent}>
                         <View style={styles.modalHeader}>
                             <Text style={styles.modalTitle}>📚 Yeni Sınıf Oluştur</Text>
                             <TouchableOpacity onPress={() => setShowClassModal(false)}>
@@ -1154,11 +1151,15 @@ const styles = StyleSheet.create({
 
     // MODAL
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
-    modalContent: { backgroundColor: '#fff', borderRadius: 24, padding: 28, width: 440, maxWidth: '90%', maxHeight: '80%' },
+    modalContent: { backgroundColor: '#fff', borderRadius: 24, padding: 24, width: '90%', maxWidth: 520, maxHeight: '90%' },
     modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
     modalTitle: { fontSize: 18, fontWeight: '800', color: '#111827' },
     formInput: { borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, padding: 12, fontSize: 14, color: '#111827', backgroundColor: '#F9FAFB' },
     cancelBtn: { paddingHorizontal: 20, paddingVertical: 12, borderRadius: 12, backgroundColor: '#F3F4F6' },
     primaryBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 12, backgroundColor: COLORS.primary },
     primaryBtnText: { color: '#fff', fontWeight: '600' },
+
+    // SMALL BUTTONS
+    smallBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10 },
+    smallBtnText: { fontSize: 13, fontWeight: '700', color: '#fff' },
 });
