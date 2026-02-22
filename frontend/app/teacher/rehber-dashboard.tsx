@@ -54,7 +54,7 @@ interface ClassItem {
     name: string;
 }
 
-type TabType = 'overview' | 'students' | 'classes' | 'performance' | 'notifications';
+type TabType = 'overview' | 'students' | 'classes' | 'performance' | 'notifications' | 'assignments';
 
 export default function RehberDashboard() {
     const router = useRouter();
@@ -89,6 +89,11 @@ export default function RehberDashboard() {
     const [studentToAssign, setStudentToAssign] = useState<Student | null>(null);
     const [selectedClassDetail, setSelectedClassDetail] = useState<ClassItem | null>(null);
     const [showAddStudentModal, setShowAddStudentModal] = useState(false);
+
+    // Assignments Tab State
+    const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
+    const [activeClassFilter, setActiveClassFilter] = useState<string>('ALL');
+    const [assignLoading, setAssignLoading] = useState(false);
 
     // Program Modal
     const [showProgramModal, setShowProgramModal] = useState(false);
@@ -242,6 +247,34 @@ export default function RehberDashboard() {
                 setShowProgramModal(false);
             }
         } catch (e) { showAlert("Hata", "Gönderim başarısız."); }
+    };
+
+    const sendBulkProgram = async () => {
+        if (selectedStudentIds.length === 0 || programList.length === 0) return;
+        setAssignLoading(true);
+        let successCount = 0;
+        try {
+            for (const sid of selectedStudentIds) {
+                const res = await fetch(`${API_URL}/teacher/assign-program`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ student_id: sid, program: programList }),
+                });
+                if (res.ok) successCount++;
+            }
+            if (successCount > 0) {
+                showAlert("Başarılı", `${successCount} öğrenciye ödev gönderildi.`);
+                setProgramList([]);
+                setSelectedStudentIds([]);
+            } else {
+                showAlert("Hata", "Gönderim başarısız oldu.");
+            }
+        } catch (e) { console.error(e); }
+        finally { setAssignLoading(false); }
+    };
+
+    const toggleStudentSelection = (id: string) => {
+        setSelectedStudentIds(prev => prev.includes(id) ? prev.filter(sid => sid !== id) : [...prev, id]);
     };
 
     const createClass = async () => {
@@ -703,6 +736,152 @@ export default function RehberDashboard() {
         </>
     );
 
+    // ─── TAB: Assignments (Bulk) ───────────────────
+    const renderAssignments = () => {
+        const filteredForAssignments = activeClassFilter === 'ALL'
+            ? students.filter(s => s.status === 'approved')
+            : students.filter(s => s.status === 'approved' && s.class_id === activeClassFilter);
+
+        return (
+            <View style={{ flex: 1 }}>
+                <View style={styles.tabHeader}>
+                    <Text style={styles.headerTitle}>📝 Toplu Ödev Atama</Text>
+                    <Text style={styles.headerSub}>Birden fazla öğrenciye aynı anda ödev programı gönderin.</Text>
+                </View>
+
+                <View style={{ flexDirection: 'row', gap: 24, flex: 1 }}>
+                    {/* Left: Student Selection */}
+                    <View style={{ flex: 1.2, backgroundColor: '#fff', borderRadius: 24, padding: 24, borderWidth: 1, borderColor: '#E5E7EB' }}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                            <Text style={{ fontSize: 16, fontWeight: '700', color: '#111827' }}>Öğrenci Seçimi</Text>
+                            <TouchableOpacity onPress={() => {
+                                const allIds = filteredForAssignments.map(s => s.id);
+                                const areAllSelected = allIds.every(id => selectedStudentIds.includes(id));
+                                setSelectedStudentIds(areAllSelected ? prev => prev.filter(id => !allIds.includes(id)) : prev => Array.from(new Set([...prev, ...allIds])));
+                            }}>
+                                <Text style={{ color: COLORS.primary, fontWeight: '600', fontSize: 13 }}>Tümünü Seç/Kaldır</Text>
+                            </TouchableOpacity>
+                        </View>
+
+                        {/* Class Filter Chips */}
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 20, maxHeight: 40 }}>
+                            <TouchableOpacity
+                                style={[styles.filterBtn, activeClassFilter === 'ALL' && styles.filterBtnActive, { marginRight: 10 }]}
+                                onPress={() => setActiveClassFilter('ALL')}
+                            >
+                                <Text style={[styles.filterBtnText, activeClassFilter === 'ALL' && { color: '#fff' }]}>Tümü</Text>
+                            </TouchableOpacity>
+                            {classes.map(c => (
+                                <TouchableOpacity
+                                    key={c.id}
+                                    style={[styles.filterBtn, activeClassFilter === c.id && styles.filterBtnActive, { marginRight: 10 }]}
+                                    onPress={() => setActiveClassFilter(c.id)}
+                                >
+                                    <Text style={[styles.filterBtnText, activeClassFilter === c.id && { color: '#fff' }]}>{c.name}</Text>
+                                </TouchableOpacity>
+                            ))}
+                        </ScrollView>
+
+                        <FlatList
+                            data={filteredForAssignments}
+                            keyExtractor={item => item.id}
+                            renderItem={({ item }) => {
+                                const isSelected = selectedStudentIds.includes(item.id);
+                                return (
+                                    <TouchableOpacity
+                                        style={[styles.pendingRow, isSelected && { backgroundColor: '#EFF6FF', borderColor: COLORS.primary }]}
+                                        onPress={() => toggleStudentSelection(item.id)}
+                                    >
+                                        <View style={[styles.statIcon, { width: 32, height: 32, backgroundColor: isSelected ? COLORS.primary : '#F3F4F6' }]}>
+                                            {isSelected ? <Ionicons name="checkmark" size={16} color="#fff" /> : <Text style={{ color: '#9CA3AF', fontWeight: 'bold' }}>{item.name.charAt(0)}</Text>}
+                                        </View>
+                                        <View style={{ flex: 1 }}>
+                                            <Text style={[styles.pendingName, isSelected && { color: COLORS.primary }]}>{item.name}</Text>
+                                            <Text style={styles.pendingEmail}>{classes.find(c => c.id === item.class_id)?.name || 'Sınıfsız'}</Text>
+                                        </View>
+                                    </TouchableOpacity>
+                                );
+                            }}
+                            ListEmptyComponent={<Text style={{ textAlign: 'center', color: '#9CA3AF', marginTop: 40 }}>Öğrenci bulunamadı.</Text>}
+                            style={{ maxHeight: 500 }}
+                        />
+                    </View>
+
+                    {/* Right: Program Builder */}
+                    <View style={{ flex: 1, gap: 20 }}>
+                        <View style={{ backgroundColor: '#fff', borderRadius: 24, padding: 24, borderWidth: 1, borderColor: '#E5E7EB' }}>
+                            <Text style={styles.sectionTitle}>Ödev İçeriği</Text>
+                            <View style={{ gap: 12 }}>
+                                <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+                                    {['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'].map(d => (
+                                        <TouchableOpacity
+                                            key={d}
+                                            style={[styles.badge, day === d ? { backgroundColor: COLORS.primary } : { backgroundColor: '#F3F4F6' }]}
+                                            onPress={() => setDay(d)}
+                                        >
+                                            <Text style={[styles.badgeText, { color: day === d ? '#fff' : '#4B5563' }]}>{d}</Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+                                <TextInput style={styles.formInput} placeholder="Ders (Örn: Matematik)" value={subject} onChangeText={setSubject} placeholderTextColor="#9CA3AF" />
+                                <TextInput style={styles.formInput} placeholder="Konu (Örn: Logaritma)" value={topic} onChangeText={setTopic} placeholderTextColor="#9CA3AF" />
+                                <TextInput style={styles.formInput} placeholder="Soru Sayısı" value={questionCount} onChangeText={setQuestionCount} placeholderTextColor="#9CA3AF" keyboardType="numeric" />
+                                <TouchableOpacity style={styles.primaryBtn} onPress={addToProgram}>
+                                    <Ionicons name="add" size={20} color="#fff" />
+                                    <Text style={styles.primaryBtnText}>Listeye Ekle</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+
+                        {/* Preview & Send */}
+                        <View style={{ backgroundColor: '#fff', borderRadius: 24, padding: 24, borderWidth: 1, borderColor: '#E5E7EB', flex: 1 }}>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                                <Text style={styles.sectionTitle}>Program ({programList.length})</Text>
+                                {programList.length > 0 && (
+                                    <TouchableOpacity onPress={() => setProgramList([])}>
+                                        <Text style={{ color: COLORS.danger, fontSize: 13, fontWeight: '600' }}>Temizle</Text>
+                                    </TouchableOpacity>
+                                )}
+                            </View>
+
+                            <ScrollView style={{ flex: 1, maxHeight: 200 }}>
+                                {programList.map((p, i) => (
+                                    <View key={i} style={styles.pendingRow}>
+                                        <View style={{ flex: 1 }}>
+                                            <Text style={{ fontSize: 11, color: COLORS.primary, fontWeight: '700' }}>{p.gun}</Text>
+                                            <Text style={{ fontSize: 13, fontWeight: '600' }}>{p.task}</Text>
+                                            <Text style={{ fontSize: 12, color: '#6B7280' }}>{p.questions} Soru</Text>
+                                        </View>
+                                        <TouchableOpacity onPress={() => setProgramList(prev => prev.filter((_, idx) => idx !== i))}>
+                                            <Ionicons name="trash-outline" size={18} color={COLORS.danger} />
+                                        </TouchableOpacity>
+                                    </View>
+                                ))}
+                                {programList.length === 0 && <Text style={{ textAlign: 'center', color: '#9CA3AF', marginTop: 20 }}>Henüz ödev eklenmedi.</Text>}
+                            </ScrollView>
+
+                            <View style={{ marginTop: 20, borderTopWidth: 1, borderTopColor: '#F3F4F6', paddingTop: 16 }}>
+                                <Text style={{ fontSize: 13, color: '#6B7280', marginBottom: 12 }}>{selectedStudentIds.length} öğrenci seçildi</Text>
+                                <TouchableOpacity
+                                    style={[styles.primaryBtn, { backgroundColor: '#10B981' }, (selectedStudentIds.length === 0 || programList.length === 0 || assignLoading) && { opacity: 0.5 }]}
+                                    onPress={sendBulkProgram}
+                                    disabled={selectedStudentIds.length === 0 || programList.length === 0 || assignLoading}
+                                >
+                                    {assignLoading ? <ActivityIndicator color="#fff" size="small" /> : (
+                                        <>
+                                            <Ionicons name="send" size={18} color="#fff" />
+                                            <Text style={styles.primaryBtnText}>Programı Gönder</Text>
+                                        </>
+                                    )}
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    </View>
+                </View>
+            </View>
+        );
+    };
+
     // ─── TAB: Notifications ────────────────────────
     const renderNotifications = () => {
         const recentPending = students.filter(s => s.status === 'pending');
@@ -796,11 +975,15 @@ export default function RehberDashboard() {
                 ))}
 
                 <TouchableOpacity
-                    style={styles.menuItem}
-                    onPress={() => router.push('/teacher/assignments' as any)}
+                    style={[styles.menuItem, activeTab === 'assignments' && styles.menuItemActive]}
+                    onPress={() => {
+                        setActiveTab('assignments');
+                        setProgramList([]);
+                        setSelectedStudentIds([]);
+                    }}
                 >
-                    <Ionicons name="create-outline" size={20} color="#94A3B8" />
-                    <Text style={styles.menuText}>Ödev Atama</Text>
+                    <Ionicons name="create-outline" size={20} color={activeTab === 'assignments' ? '#fff' : '#94A3B8'} />
+                    <Text style={[styles.menuText, activeTab === 'assignments' && styles.menuTextActive]}>Ödev Atama</Text>
                 </TouchableOpacity>
 
                 <View style={{ flex: 1 }} />
@@ -834,6 +1017,7 @@ export default function RehberDashboard() {
                 {activeTab === 'classes' && renderClasses()}
                 {activeTab === 'performance' && renderPerformance()}
                 {activeTab === 'notifications' && renderNotifications()}
+                {activeTab === 'assignments' && renderAssignments()}
             </ScrollView>
 
             {/* ─── Student Detail Modal ──────────────── */}
