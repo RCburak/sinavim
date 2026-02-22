@@ -206,6 +206,22 @@ def assign_program(student_id: str, program: list[dict]) -> tuple[bool, str | No
         return False, str(e)
 
 
+def delete_class(institution_id: str, class_id: str) -> tuple[bool, str | None]:
+    """Sınıfı siler ve öğrencilerin class_id'sini temizler."""
+    try:
+        db = get_firestore()
+        # Sınıfı sil
+        db.collection(COLLECTION_INSTITUTIONS).document(institution_id).collection("classes").document(class_id).delete()
+        # Bu sınıftaki öğrencilerin class_id'sini temizle
+        students = db.collection(COLLECTION_USERS).where("class_id", "==", class_id).get()
+        for s in students:
+            db.collection(COLLECTION_USERS).document(s.id).update({"class_id": None})
+        return True, None
+    except Exception as e:
+        logger.exception("Sinif silme hatasi")
+        return False, str(e)
+
+
 class TeacherService:
     join_institution = staticmethod(join_institution)
     leave_institution = staticmethod(leave_institution)
@@ -216,6 +232,7 @@ class TeacherService:
     create_class = staticmethod(create_class)
     get_classes = staticmethod(get_classes)
     update_student_class = staticmethod(update_student_class)
+    delete_class = staticmethod(delete_class)
 
 
 teacher_service = TeacherService()

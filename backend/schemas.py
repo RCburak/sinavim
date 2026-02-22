@@ -68,6 +68,10 @@ class CreateClassRequest(BaseModel):
     institution_id: str
     name: str
 
+class DeleteClassRequest(BaseModel):
+    institution_id: str
+    class_id: str
+
 class AssignClassRequest(BaseModel):
     student_id: str
     class_id: Optional[str] = None

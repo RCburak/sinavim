@@ -25,6 +25,14 @@ const getAuthHeaders = () => {
   };
 };
 
+const showAlert = (title: string, message: string) => {
+  if (Platform.OS === 'web') {
+    window.alert(`${title}\n${message}`);
+  } else {
+    Alert.alert(title, message);
+  }
+};
+
 interface Student {
   id: string;
   name: string;
@@ -136,7 +144,7 @@ export default function AssignmentBuilder() {
 
   const addToProgram = () => {
     if (!subject || !topic || !questionCount) {
-      Alert.alert("Eksik Bilgi", "Lütfen ders, konu ve soru sayısını girin.");
+      showAlert("Eksik Bilgi", "Lütfen ders, konu ve soru sayısını girin.");
       return;
     }
     const newItem: ProgramItem = {
@@ -157,8 +165,8 @@ export default function AssignmentBuilder() {
   };
 
   const sendProgram = async () => {
-    if (selectedStudentIds.length === 0) { Alert.alert("Hata", "Lütfen en az bir öğrenci seçin."); return; }
-    if (programList.length === 0) { Alert.alert("Hata", "Program listesi boş."); return; }
+    if (selectedStudentIds.length === 0) { showAlert("Hata", "Lütfen en az bir öğrenci seçin."); return; }
+    if (programList.length === 0) { showAlert("Hata", "Program listesi boş."); return; }
 
     let successCount = 0;
 
@@ -178,11 +186,11 @@ export default function AssignmentBuilder() {
     }
 
     if (successCount > 0) {
-      Alert.alert("Başarılı", `${successCount} öğrenciye program gönderildi!`);
+      showAlert("Başarılı", `${successCount} öğrenciye program gönderildi!`);
       setProgramList([]);
       setSelectedStudentIds([]);
     } else {
-      Alert.alert("Hata", "Gönderim başarısız oldu.");
+      showAlert("Hata", "Gönderim başarısız oldu.");
     }
   };
 
@@ -194,7 +202,7 @@ export default function AssignmentBuilder() {
           <View style={styles.brandLogo}>
             <Text style={styles.brandText}>RC</Text>
           </View>
-          <Text style={styles.brandTitle}>Yönetim Paneli</Text>
+          <Text style={styles.brandTitle}>Öğretmen Paneli</Text>
         </View>
 
         <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/teacher/dashboard')}>
@@ -224,7 +232,13 @@ export default function AssignmentBuilder() {
             <Text style={styles.userName} numberOfLines={1}>{teacherData?.name || 'Öğretmen'}</Text>
             <Text style={styles.userRole}>Eğitmen</Text>
           </View>
-          <TouchableOpacity onPress={() => router.replace('/staff/login')}>
+          <TouchableOpacity onPress={() => {
+            if (typeof window !== 'undefined') {
+              sessionStorage.removeItem('teacher_data');
+              sessionStorage.removeItem('teacher_token');
+            }
+            router.replace('/staff/login');
+          }}>
             <Ionicons name="log-out-outline" size={20} color="#EF4444" />
           </TouchableOpacity>
         </View>

@@ -10,6 +10,7 @@ from schemas import (
     ApproveStudentRequest,
     CreateClassRequest,
     AssignClassRequest,
+    DeleteClassRequest,
 )
 
 teacher_router = APIRouter()
@@ -77,3 +78,12 @@ def assign_class(req: AssignClassRequest, auth: dict = Depends(require_teacher))
     if not ok:
         return error_response(err, 500)
     return success_response(message="Öğrenci sınıfı güncellendi.")
+
+
+@teacher_router.post("/delete-class")
+def delete_class(req: DeleteClassRequest, auth: dict = Depends(require_teacher)):
+    """Sınıf silme."""
+    ok, err = teacher_service.delete_class(req.institution_id, req.class_id)
+    if not ok:
+        return error_response(err, 500)
+    return success_response(message="Sınıf silindi.")

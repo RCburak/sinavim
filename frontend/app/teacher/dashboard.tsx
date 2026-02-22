@@ -10,7 +10,8 @@ import {
   ScrollView,
   TextInput,
   Image,
-  Dimensions
+  Dimensions,
+  Platform
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -150,7 +151,7 @@ export default function TeacherDashboard() {
     try {
       const res = await fetch(`${API_URL}/leave-institution`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ user_id: studentId }),
       });
       if (res.ok) {
@@ -195,15 +196,34 @@ export default function TeacherDashboard() {
     } catch (e) { console.error(e); }
   };
 
+  const deleteClass = async (classId: string, className: string) => {
+    const confirmed = Platform.OS === 'web'
+      ? window.confirm(`"${className}" sınıfını silmek istediğinize emin misiniz? Öğrencilerin sınıf ataması kaldırılacak.`)
+      : true;
+    if (!confirmed) return;
+    try {
+      const instId = teacherData?.admin_id || teacherData?.id;
+      const res = await fetch(`${API_URL}/teacher/delete-class`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ institution_id: instId, class_id: classId }),
+      });
+      if (res.ok) {
+        setClasses(prev => prev.filter(c => c.id !== classId));
+        setStudents(prev => prev.map(s => s.class_id === classId ? { ...s, class_id: null } : s));
+        if (selectedClass?.id === classId) setSelectedClass(null);
+      }
+    } catch (e) { console.error(e); }
+  };
+
   const openStudentDetail = async (student: Student) => {
     setSelectedStudent(student);
     setModalVisible(true);
     setLoadingDetail(true);
-    setLoadingDetail(true);
     try {
       const [analizRes, historyRes] = await Promise.all([
-        fetch(`${API_URL}/analizler/${student.id}`), // Fixed: use path param
-        fetch(`${API_URL}/get-history/${student.id}`)
+        fetch(`${API_URL}/analizler/${student.id}`, { headers: getAuthHeaders() }),
+        fetch(`${API_URL}/get-history/${student.id}`, { headers: getAuthHeaders() })
       ]);
 
       const analizData = await analizRes.json();
@@ -411,9 +431,14 @@ export default function TeacherDashboard() {
                 <View style={[styles.iconBox, { backgroundColor: '#EDE9FE' }]}>
                   <Ionicons name="school" size={24} color={COLORS.light.primary} />
                 </View>
-                <TouchableOpacity onPress={() => setSelectedClass(c)}>
-                  <Text style={{ color: COLORS.light.primary, fontWeight: '600' }}>Detay</Text>
-                </TouchableOpacity>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <TouchableOpacity onPress={() => setSelectedClass(c)}>
+                    <Text style={{ color: COLORS.light.primary, fontWeight: '600' }}>Detay</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => deleteClass(c.id, c.name)}>
+                    <Ionicons name="trash-outline" size={18} color="#EF4444" />
+                  </TouchableOpacity>
+                </View>
               </View>
               <TouchableOpacity onPress={() => setSelectedClass(c)}>
                 <Text style={styles.gridTitle}>{c.name}</Text>
@@ -422,7 +447,7 @@ export default function TeacherDashboard() {
                 {students.filter(s => s.class_id === c.id).length} Öğrenci
               </Text>
               <View style={styles.progressBar}>
-                <View style={[styles.progressFill, { width: '60%' }]} />
+                <View style={[styles.progressFill, { width: `${Math.min(100, (students.filter(s => s.class_id === c.id).length / Math.max(1, students.length)) * 100)}%` }]} />
               </View>
             </View>
           ))}
@@ -513,7 +538,13 @@ export default function TeacherDashboard() {
             <Text style={styles.userName} numberOfLines={1}>{teacherData?.name || 'Öğretmen'}</Text>
             <Text style={styles.userRole}>Eğitmen</Text>
           </View>
-          <TouchableOpacity onPress={() => router.replace('/staff/login')}>
+          <TouchableOpacity onPress={() => {
+            if (typeof window !== 'undefined') {
+              sessionStorage.removeItem('teacher_data');
+              sessionStorage.removeItem('teacher_token');
+            }
+            router.replace('/staff/login');
+          }}>
             <Ionicons name="log-out-outline" size={20} color="#EF4444" />
           </TouchableOpacity>
         </View>
