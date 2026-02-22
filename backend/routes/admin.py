@@ -48,7 +48,7 @@ def list_teachers(admin_id: str, auth: dict = Depends(require_admin)):
 @admin_router.post("/create-teacher")
 def create_teacher(req: CreateTeacherRequest, auth: dict = Depends(require_admin)):
     """Yeni öğretmen oluşturma."""
-    teacher, err = admin_service.create_teacher(req.admin_id, req.name)
+    teacher, err = admin_service.create_teacher(req.admin_id, req.name, req.teacher_type)
     if err:
         return error_response(err, 400)
     return success_response({"teacher": teacher}, status_code=201)

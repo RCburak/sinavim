@@ -28,10 +28,13 @@ def teacher_login(req: TeacherLoginRequest):
 
 @teacher_router.get("/students/{institution_id}")
 def get_students(
-    institution_id: str, auth: dict = Depends(require_teacher)
+    institution_id: str,
+    teacher_type: str = "teacher",
+    admin_id: str = None,
+    auth: dict = Depends(require_teacher)
 ) -> List[Dict[str, Any]]:
-    """Kurumun öğrenci listesi (frontend uyumluluk için ham array)."""
-    students = teacher_service.get_students(institution_id)
+    """Kurumun öğrenci listesi. Rehber öğretmen tüm öğrencileri görür."""
+    students = teacher_service.get_students(institution_id, teacher_type=teacher_type, admin_id=admin_id)
     return students
 
 
@@ -55,7 +58,9 @@ def approve_student(req: ApproveStudentRequest, auth: dict = Depends(require_tea
 
 @teacher_router.post("/create-class")
 def create_class(req: CreateClassRequest, auth: dict = Depends(require_teacher)):
-    """Yeni sınıf oluşturma."""
+    """Yeni sınıf oluşturma (sadece rehber öğretmen)."""
+    if req.teacher_type != "rehber":
+        return error_response("Sadece rehber öğretmenler sınıf oluşturabilir.", 403)
     res, err = teacher_service.create_class(req.institution_id, req.name)
     if err:
         return error_response(err, 500)
@@ -82,7 +87,9 @@ def assign_class(req: AssignClassRequest, auth: dict = Depends(require_teacher))
 
 @teacher_router.post("/delete-class")
 def delete_class(req: DeleteClassRequest, auth: dict = Depends(require_teacher)):
-    """Sınıf silme."""
+    """Sınıf silme (sadece rehber öğretmen)."""
+    if req.teacher_type != "rehber":
+        return error_response("Sadece rehber öğretmenler sınıf silebilir.", 403)
     ok, err = teacher_service.delete_class(req.institution_id, req.class_id)
     if not ok:
         return error_response(err, 500)

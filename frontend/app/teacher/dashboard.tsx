@@ -97,8 +97,12 @@ export default function TeacherDashboard() {
         const stored = sessionStorage.getItem('teacher_data');
         if (stored) {
           const parsed = JSON.parse(stored);
+          // Rehber öğretmen ise rehber panele yönlendir
+          if (parsed.teacher_type === 'rehber') {
+            router.replace('/teacher/rehber-dashboard');
+            return;
+          }
           setTeacherData(parsed);
-          // Öğrenciler admin'in institution_id'si ile bağlanır
           const institutionId = parsed.admin_id || parsed.id;
           fetchData(institutionId);
           return;
@@ -418,10 +422,7 @@ export default function TeacherDashboard() {
             <Text style={styles.sectionTitle}>Sınıflar</Text>
             <Text style={styles.sectionSub}>{classes.length} aktif sınıf</Text>
           </View>
-          <TouchableOpacity style={styles.primaryBtn} onPress={() => setShowClassModal(true)}>
-            <Ionicons name="add" size={20} color="#fff" />
-            <Text style={styles.primaryBtnText}>Yeni Sınıf</Text>
-          </TouchableOpacity>
+          {/* Sınıf oluşturma yetkisi sadece rehber öğretmenlerde */}
         </View>
 
         <View style={styles.grid}>
@@ -435,9 +436,7 @@ export default function TeacherDashboard() {
                   <TouchableOpacity onPress={() => setSelectedClass(c)}>
                     <Text style={{ color: COLORS.light.primary, fontWeight: '600' }}>Detay</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity onPress={() => deleteClass(c.id, c.name)}>
-                    <Ionicons name="trash-outline" size={18} color="#EF4444" />
-                  </TouchableOpacity>
+                  {/* Sınıf silme yetkisi sadece rehber öğretmenlerde */}
                 </View>
               </View>
               <TouchableOpacity onPress={() => setSelectedClass(c)}>

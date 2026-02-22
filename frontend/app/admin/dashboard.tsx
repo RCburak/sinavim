@@ -57,6 +57,7 @@ export default function AdminDashboard() {
     // Create Teacher Modal
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [newName, setNewName] = useState('');
+    const [newTeacherType, setNewTeacherType] = useState<'teacher' | 'rehber'>('teacher');
     const [creating, setCreating] = useState(false);
 
     // Invite Code Modal
@@ -177,13 +178,14 @@ export default function AdminDashboard() {
         try {
             const res = await fetch(`${API_URL}/admin/create-teacher`, {
                 method: 'POST', headers: getAuthHeaders(),
-                body: JSON.stringify({ admin_id: adminData?.id, name: newName }),
+                body: JSON.stringify({ admin_id: adminData?.id, name: newName, teacher_type: newTeacherType }),
             });
             const data = await res.json();
             if (data.status === 'success') {
-                showAlert("Başarılı", "Öğretmen oluşturuldu!");
+                showAlert("Başarılı", `${newTeacherType === 'rehber' ? 'Rehber öğretmen' : 'Öğretmen'} oluşturuldu!`);
                 setShowCreateModal(false);
                 setNewName('');
+                setNewTeacherType('teacher');
                 loadTeachers();
             } else { showAlert("Hata", data.message || "Bir hata oluştu."); }
         } catch (e) { showAlert("Hata", "Sunucuya bağlanılamadı."); }
@@ -365,6 +367,11 @@ export default function AdminDashboard() {
                                 <View style={[styles.badge, teacher.is_registered ? styles.badgeGreen : styles.badgeYellow]}>
                                     <Text style={[styles.badgeText, { color: teacher.is_registered ? '#059669' : '#D97706' }]}>
                                         {teacher.is_registered ? '✅ Kayıtlı' : '⏳ Bekliyor'}
+                                    </Text>
+                                </View>
+                                <View style={[styles.badge, (teacher as any).teacher_type === 'rehber' ? { backgroundColor: '#DBEAFE' } : { backgroundColor: '#F3F4F6' }]}>
+                                    <Text style={[styles.badgeText, { color: (teacher as any).teacher_type === 'rehber' ? '#2563EB' : '#6B7280', fontSize: 11 }]}>
+                                        {(teacher as any).teacher_type === 'rehber' ? '🔵 Rehber' : '🟢 Normal'}
                                     </Text>
                                 </View>
                             </View>
@@ -573,25 +580,35 @@ export default function AdminDashboard() {
                     {/* Ranking */}
                     {performance.student_rankings && performance.student_rankings.length > 0 && (
                         <View style={styles.sectionCard}>
-                            <Text style={styles.sectionTitle}>🏆 Öğrenci Sıralaması (Ortalama Net)</Text>
-                            <View style={styles.tableHeader}>
-                                <Text style={[styles.tableCell, { flex: 0.5 }]}>#</Text>
-                                <Text style={[styles.tableCell, { flex: 2 }]}>Öğrenci</Text>
-                                <Text style={styles.tableCell}>Deneme</Text>
-                                <Text style={styles.tableCell}>Ort. Net</Text>
-                                <Text style={styles.tableCell}>En İyi</Text>
-                            </View>
-                            {performance.student_rankings.map((s: any, i: number) => (
-                                <View key={i} style={[styles.tableRow, i % 2 === 0 && { backgroundColor: '#F9FAFB' }]}>
-                                    <Text style={[styles.tableCellValue, { flex: 0.5 }]}>
-                                        {i < 3 ? ['🥇', '🥈', '🥉'][i] : `${i + 1}`}
-                                    </Text>
-                                    <Text style={[styles.tableCellValue, { flex: 2, fontWeight: '600' }]}>{s.name}</Text>
-                                    <Text style={styles.tableCellValue}>{s.exam_count}</Text>
-                                    <Text style={[styles.tableCellValue, { color: '#059669', fontWeight: '700' }]}>{s.avg_net}</Text>
-                                    <Text style={[styles.tableCellValue, { color: '#3B82F6' }]}>{s.best_net}</Text>
+                            <Text style={styles.sectionTitle}>🏆 Öğrenci Sıralaması</Text>
+                            <ScrollView horizontal showsHorizontalScrollIndicator={true}>
+                                <View>
+                                    <View style={[styles.tableHeader, { minWidth: 800 }]}>
+                                        <Text style={[styles.tableCell, { flex: 0.4 }]}>#</Text>
+                                        <Text style={[styles.tableCell, { flex: 2 }]}>Öğrenci</Text>
+                                        <Text style={styles.tableCell}>Deneme</Text>
+                                        <Text style={[styles.tableCell, { color: '#3B82F6' }]}>TYT</Text>
+                                        <Text style={[styles.tableCell, { color: '#8B5CF6' }]}>AYT</Text>
+                                        <Text style={[styles.tableCell, { color: '#EC4899' }]}>YDT</Text>
+                                        <Text style={[styles.tableCell, { color: '#F59E0B' }]}>LGS</Text>
+                                        <Text style={[styles.tableCell, { color: '#059669' }]}>Genel</Text>
+                                    </View>
+                                    {performance.student_rankings.map((s: any, i: number) => (
+                                        <View key={i} style={[styles.tableRow, { minWidth: 800 }, i % 2 === 0 && { backgroundColor: '#F9FAFB' }]}>
+                                            <Text style={[styles.tableCellValue, { flex: 0.4 }]}>
+                                                {i < 3 ? ['🥇', '🥈', '🥉'][i] : `${i + 1}`}
+                                            </Text>
+                                            <Text style={[styles.tableCellValue, { flex: 2, fontWeight: '600' }]}>{s.name}</Text>
+                                            <Text style={styles.tableCellValue}>{s.exam_count}</Text>
+                                            <Text style={[styles.tableCellValue, { color: '#3B82F6' }]}>{s.tyt_avg ?? '—'}</Text>
+                                            <Text style={[styles.tableCellValue, { color: '#8B5CF6' }]}>{s.ayt_avg ?? '—'}</Text>
+                                            <Text style={[styles.tableCellValue, { color: '#EC4899' }]}>{s.ydt_avg ?? '—'}</Text>
+                                            <Text style={[styles.tableCellValue, { color: '#F59E0B' }]}>{s.lgs_avg ?? '—'}</Text>
+                                            <Text style={[styles.tableCellValue, { color: '#059669', fontWeight: '700' }]}>{s.overall_avg}</Text>
+                                        </View>
+                                    ))}
                                 </View>
-                            ))}
+                            </ScrollView>
                         </View>
                     )}
                 </>
@@ -680,6 +697,28 @@ export default function AdminDashboard() {
                         </View>
                         <Text style={styles.formLabel}>Öğretmen Adı</Text>
                         <TextInput style={styles.formInput} placeholder="Örn: Ahmet Yılmaz" placeholderTextColor="#9CA3AF" value={newName} onChangeText={setNewName} />
+                        <Text style={[styles.formLabel, { marginTop: 16 }]}>Öğretmen Tipi</Text>
+                        <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
+                            <TouchableOpacity
+                                style={[styles.roleBtn, newTeacherType === 'teacher' && styles.roleBtnActive]}
+                                onPress={() => setNewTeacherType('teacher')}
+                            >
+                                <Ionicons name="person" size={20} color={newTeacherType === 'teacher' ? '#fff' : '#6B7280'} />
+                                <Text style={[styles.roleBtnText, newTeacherType === 'teacher' && { color: '#fff' }]}>Normal Öğretmen</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[styles.roleBtn, newTeacherType === 'rehber' && styles.roleBtnActiveBlue]}
+                                onPress={() => setNewTeacherType('rehber')}
+                            >
+                                <Ionicons name="shield" size={20} color={newTeacherType === 'rehber' ? '#fff' : '#6B7280'} />
+                                <Text style={[styles.roleBtnText, newTeacherType === 'rehber' && { color: '#fff' }]}>Rehber Öğretmen</Text>
+                            </TouchableOpacity>
+                        </View>
+                        <Text style={{ fontSize: 12, color: '#6B7280', marginTop: 8 }}>
+                            {newTeacherType === 'rehber'
+                                ? '🔵 Rehber öğretmen kurumdaki tüm öğrencileri görür, onay/red yapabilir ve ödev atayabilir.'
+                                : '🟢 Normal öğretmen sadece kendi öğrencilerini yönetir.'}
+                        </Text>
                         <View style={styles.modalActions}>
                             <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowCreateModal(false)}>
                                 <Text style={styles.cancelBtnText}>İptal</Text>
@@ -899,4 +938,10 @@ const styles = StyleSheet.create({
     modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
     modalTitle: { fontSize: 20, fontWeight: '800', color: '#111827' },
     modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 12, marginTop: 28 },
+
+    // ROLE SELECTOR
+    roleBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 14, borderRadius: 12, borderWidth: 1.5, borderColor: '#E5E7EB', backgroundColor: '#F9FAFB' },
+    roleBtnActive: { borderColor: '#F59E0B', backgroundColor: '#F59E0B' },
+    roleBtnActiveBlue: { borderColor: '#3B82F6', backgroundColor: '#3B82F6' },
+    roleBtnText: { fontSize: 14, fontWeight: '600', color: '#6B7280' },
 });

@@ -60,9 +60,13 @@ def admin_login(email: str, password: str) -> tuple[dict | None, str | None]:
 # ─── Teacher CRUD (Kurum sahibine bağlı) ─────────────────
 
 def create_teacher(
-    admin_id: str, name: str
+    admin_id: str, name: str, teacher_type: str = "teacher"
 ) -> tuple[dict | None, str | None]:
-    """Kurum sahibine bağlı yeni öğretmen oluşturur (sadece isim)."""
+    """Kurum sahibine bağlı yeni öğretmen oluşturur.
+    teacher_type: 'teacher' (normal) veya 'rehber' (rehber öğretmen)
+    """
+    if teacher_type not in ("teacher", "rehber"):
+        return None, "Geçersiz öğretmen tipi. 'teacher' veya 'rehber' olmalı."
     try:
         db = get_firestore()
 
@@ -75,6 +79,7 @@ def create_teacher(
             "registration_token": token,
             "is_registered": False,
             "admin_id": admin_id,
+            "teacher_type": teacher_type,
             "created_at": firestore.SERVER_TIMESTAMP,
         })
         return {
@@ -83,6 +88,7 @@ def create_teacher(
             "registration_token": token,
             "is_registered": False,
             "admin_id": admin_id,
+            "teacher_type": teacher_type,
         }, None
     except Exception as e:
         logger.exception("Ogretmen olusturma hatasi")
@@ -431,8 +437,10 @@ def update_settings(admin_id: str, settings: dict) -> tuple[bool, str | None]:
         return False, str(e)
 
 
+EXAM_TYPES = ["TYT", "AYT", "YDT", "LGS"]
+
 def get_performance_report(admin_id: str) -> dict:
-    """Kurum geneli performans raporu (öğrenci deneme ortalamaları)."""
+    """Kurum geneli performans raporu — TYT/AYT/YDT/LGS ayrımı ile."""
     try:
         db = get_firestore()
 
@@ -459,7 +467,6 @@ def get_performance_report(admin_id: str) -> dict:
 
         # Her öğrencinin deneme sonuçlarını al
         student_results = []
-        total_net = 0
         total_exam_count = 0
         exam_type_stats = {}
 
@@ -474,42 +481,58 @@ def get_performance_report(admin_id: str) -> dict:
             if not exam_list:
                 continue
 
-            nets = [e.to_dict().get("net", 0) for e in exam_list]
-            avg_net = sum(nets) / len(nets) if nets else 0
-            total_net += sum(nets)
-            total_exam_count += len(nets)
-
-            student_results.append({
-                "id": student["id"],
-                "name": student["name"],
-                "exam_count": len(nets),
-                "avg_net": round(avg_net, 2),
-                "best_net": round(max(nets), 2) if nets else 0,
-            })
-
-            # Tür bazlı istatistik
+            # Tür bazlı ayrım
+            by_type = {}
             for e in exam_list:
                 ed = e.to_dict()
                 etype = ed.get("type", "Diğer")
+                net = ed.get("net", 0)
+                if etype not in by_type:
+                    by_type[etype] = []
+                by_type[etype].append(net)
+
+                # Genel istatistik
                 if etype not in exam_type_stats:
                     exam_type_stats[etype] = {"count": 0, "total_net": 0}
                 exam_type_stats[etype]["count"] += 1
-                exam_type_stats[etype]["total_net"] += ed.get("net", 0)
+                exam_type_stats[etype]["total_net"] += net
 
-        # Ortalamaları hesapla
+            total_exam_count += len(exam_list)
+
+            # Öğrenci satırı
+            row = {
+                "id": student["id"],
+                "name": student["name"],
+                "exam_count": len(exam_list),
+            }
+
+            # Her tür için avg ve best
+            all_nets = []
+            for etype in EXAM_TYPES + ["Diğer"]:
+                nets = by_type.get(etype, [])
+                if nets:
+                    row[f"{etype.lower()}_avg"] = round(sum(nets) / len(nets), 2)
+                    row[f"{etype.lower()}_best"] = round(max(nets), 2)
+                    row[f"{etype.lower()}_count"] = len(nets)
+                    all_nets.extend(nets)
+
+            row["overall_avg"] = round(sum(all_nets) / len(all_nets), 2) if all_nets else 0
+            student_results.append(row)
+
+        # Türlerin ortalamalarını hesapla
         for etype in exam_type_stats:
             stats = exam_type_stats[etype]
             stats["avg_net"] = round(stats["total_net"] / stats["count"], 2) if stats["count"] > 0 else 0
 
-        # En iyilere göre sırala
-        student_results.sort(key=lambda s: s["avg_net"], reverse=True)
+        # Genel ortalamaya göre sırala
+        student_results.sort(key=lambda s: s.get("overall_avg", 0), reverse=True)
 
         return {
             "total_students": len(all_students),
             "students_with_exams": len(student_results),
             "total_exams": total_exam_count,
-            "overall_avg_net": round(total_net / total_exam_count, 2) if total_exam_count > 0 else 0,
-            "student_rankings": student_results[:20],  # Top 20
+            "exam_types": list(exam_type_stats.keys()),
+            "student_rankings": student_results[:30],
             "exam_type_stats": exam_type_stats,
         }
     except Exception as e:

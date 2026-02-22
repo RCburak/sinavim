@@ -29,6 +29,7 @@ class AdminLoginRequest(BaseModel):
 class CreateTeacherRequest(BaseModel):
     admin_id: str
     name: str
+    teacher_type: str = "teacher"  # "teacher" | "rehber"
 
 class DeleteTeacherRequest(BaseModel):
     teacher_id: str

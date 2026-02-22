@@ -126,23 +126,56 @@ def teacher_login(email: str, password: str) -> tuple[dict | None, str | None]:
         return None, str(e)
 
 
-def get_students(institution_id: str) -> list[dict]:
-    """Kuruma bağlı öğrencileri getirir. institution_id Firestore doc id (string)."""
+def get_students(institution_id: str, teacher_type: str = "teacher", admin_id: str | None = None) -> list[dict]:
+    """Kuruma bağlı öğrencileri getirir.
+    Rehber öğretmen ise admin_id üzerinden tüm kuruma bağlı öğrencileri döndürür.
+    """
     try:
         db = get_firestore()
-        snap = (
-            db.collection(COLLECTION_USERS)
-            .where("institution_id", "==", institution_id)
-            .get()
-        )
-        students = [_doc_to_dict(d) for d in snap]
-        # Varsayılan değerler
-        for s in students:
-            if "status" not in s: s["status"] = "approved" # Eski kayıtlar onaylı sayılsın
-            if "class_id" not in s: s["class_id"] = None
-            
-        students.sort(key=lambda s: s.get("name", ""))
-        return students
+
+        if teacher_type == "rehber" and admin_id:
+            # Rehber: admin'e bağlı tüm öğretmenlerin öğrencilerini getir
+            teacher_snap = (
+                db.collection(COLLECTION_INSTITUTIONS)
+                .where("admin_id", "==", admin_id)
+                .get()
+            )
+            all_inst_ids = [admin_id] + [d.id for d in teacher_snap]
+            # Kendisi de dahil
+            if institution_id not in all_inst_ids:
+                all_inst_ids.append(institution_id)
+
+            all_students = []
+            seen_ids = set()
+            for inst_id in all_inst_ids:
+                snap = (
+                    db.collection(COLLECTION_USERS)
+                    .where("institution_id", "==", inst_id)
+                    .get()
+                )
+                for d in snap:
+                    if d.id not in seen_ids:
+                        seen_ids.add(d.id)
+                        s = _doc_to_dict(d)
+                        if "status" not in s: s["status"] = "approved"
+                        if "class_id" not in s: s["class_id"] = None
+                        s["teacher_institution_id"] = inst_id
+                        all_students.append(s)
+            all_students.sort(key=lambda s: s.get("name", ""))
+            return all_students
+        else:
+            # Normal öğretmen: sadece kendi öğrencileri
+            snap = (
+                db.collection(COLLECTION_USERS)
+                .where("institution_id", "==", institution_id)
+                .get()
+            )
+            students = [_doc_to_dict(d) for d in snap]
+            for s in students:
+                if "status" not in s: s["status"] = "approved"
+                if "class_id" not in s: s["class_id"] = None
+            students.sort(key=lambda s: s.get("name", ""))
+            return students
     except Exception as e:
         logger.exception("Ogrenci listesi hatasi")
         return []
