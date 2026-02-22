@@ -44,6 +44,13 @@ class UpdateInviteCodeRequest(BaseModel):
     admin_id: str
     new_code: str
 
+class UpdateSettingsRequest(BaseModel):
+    admin_id: str
+    name: Optional[str] = None
+    contact_email: Optional[str] = None
+    phone: Optional[str] = None
+    address: Optional[str] = None
+
 # --- Teacher Schemas ---
 
 class TeacherLoginRequest(BaseModel):

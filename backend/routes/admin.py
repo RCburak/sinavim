@@ -2,7 +2,10 @@
 from fastapi import APIRouter, Request, Depends
 from fastapi.templating import Jinja2Templates
 from utils.responses import success_response, error_response
-from services.admin_service import admin_service
+from services.admin_service import (
+    admin_service, get_dashboard_stats, get_teacher_detail,
+    get_notifications, update_settings, get_performance_report,
+)
 from middleware.auth import create_token, require_admin
 from schemas import (
     AdminLoginRequest,
@@ -10,6 +13,7 @@ from schemas import (
     DeleteTeacherRequest,
     CompleteRegistrationRequest,
     UpdateInviteCodeRequest,
+    UpdateSettingsRequest,
 )
 
 admin_router = APIRouter()
@@ -91,3 +95,49 @@ def update_invite_code(req: UpdateInviteCodeRequest, auth: dict = Depends(requir
     if not ok:
         return error_response(err, 400)
     return success_response(message="Davet kodu güncellendi.")
+
+
+# ─── Yeni Dashboard Endpointleri ──────────────────────────
+
+@admin_router.get("/dashboard-stats")
+def dashboard_stats(admin_id: str, auth: dict = Depends(require_admin)):
+    """Kurum geneli istatistikler."""
+    stats = get_dashboard_stats(admin_id)
+    return success_response(stats)
+
+
+@admin_router.get("/teacher-detail/{teacher_id}")
+def teacher_detail(teacher_id: str, admin_id: str, auth: dict = Depends(require_admin)):
+    """Öğretmenin detaylı bilgileri."""
+    detail, err = get_teacher_detail(teacher_id, admin_id)
+    if err:
+        return error_response(err, 400)
+    return success_response({"teacher": detail})
+
+
+@admin_router.get("/notifications")
+def notifications(admin_id: str, auth: dict = Depends(require_admin)):
+    """Son aktiviteler / bildirimler."""
+    items = get_notifications(admin_id)
+    return success_response({"notifications": items})
+
+
+@admin_router.post("/update-settings")
+def admin_update_settings(req: UpdateSettingsRequest, auth: dict = Depends(require_admin)):
+    """Kurum ayarlarını günceller."""
+    ok, err = update_settings(req.admin_id, {
+        "name": req.name,
+        "contact_email": req.contact_email,
+        "phone": req.phone,
+        "address": req.address,
+    })
+    if not ok:
+        return error_response(err, 400)
+    return success_response(message="Ayarlar güncellendi.")
+
+
+@admin_router.get("/performance")
+def performance_report(admin_id: str, auth: dict = Depends(require_admin)):
+    """Kurum geneli performans raporu."""
+    report = get_performance_report(admin_id)
+    return success_response(report)
