@@ -9,7 +9,7 @@ import { Platform } from 'react-native';
  * Fiziksel cihazda test ederken bu IP'nin doğru olduğundan emin olun.
  * CMD'de `ipconfig` komutuyla bulabilirsiniz.
  */
-const LOCAL_IP = "192.168.1.200"; // Bilgisayarınızın IP adresi
+const LOCAL_IP = "192.168.1.129"; // Bilgisayarınızın IP adresi
 const LOCAL_PORT = "8000";
 
 /** Ana backend API adresi */

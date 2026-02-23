@@ -24,24 +24,36 @@ import { DashboardViewProps, Theme } from '../src/types';
 // ... (imports remain the same)
 
 // --- ALT NAVİGASYON ÇUBUĞU ---
-const BottomTabBar = ({ setView, theme }: { setView: (view: string) => void; theme: Theme }) => {
+const BottomTabBar = ({ setView, theme, currentView = 'dashboard' }: { setView: (view: string) => void; theme: Theme; currentView?: string }) => {
+  const tabs = [
+    { key: 'dashboard', label: 'Anasayfa', icon: 'home', iconOutline: 'home-outline' },
+    { key: 'announcements', label: 'Duyurular', icon: 'notifications', iconOutline: 'notifications-outline' },
+    { key: 'profile', label: 'Profilim', icon: 'person', iconOutline: 'person-outline' },
+  ];
+
   return (
     <View style={[styles.bottomBar, { backgroundColor: theme.surface }]}>
-      <TouchableOpacity style={styles.tabItem} activeOpacity={0.8}>
-        <View style={[styles.activeIndicator, { backgroundColor: theme.primary }]} />
-        <Ionicons name="home" size={22} color={theme.primary} />
-        <Text style={[styles.tabText, { color: theme.primary, fontWeight: '700' }]}>Anasayfa</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={styles.tabItem}
-        onPress={() => setView('profile')}
-        activeOpacity={0.8}
-      >
-        <View style={styles.activeIndicator} />
-        <Ionicons name="person-outline" size={22} color={theme.textSecondary} />
-        <Text style={[styles.tabText, { color: theme.textSecondary }]}>Profilim</Text>
-      </TouchableOpacity>
+      {tabs.map((tab) => {
+        const isActive = currentView === tab.key;
+        return (
+          <TouchableOpacity
+            key={tab.key}
+            style={styles.tabItem}
+            onPress={() => setView(tab.key)}
+            activeOpacity={0.8}
+          >
+            <View style={[styles.activeIndicator, isActive && { backgroundColor: theme.primary }]} />
+            <Ionicons
+              name={(isActive ? tab.icon : tab.iconOutline) as any}
+              size={22}
+              color={isActive ? theme.primary : theme.textSecondary}
+            />
+            <Text style={[styles.tabText, { color: isActive ? theme.primary : theme.textSecondary, fontWeight: isActive ? '700' : '500' }]}>
+              {tab.label}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
     </View>
   );
 };
@@ -320,9 +332,4 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600'
   },
-
-  emptyAnnouncementText: {
-    fontSize: 14,
-    fontWeight: '500',
-  }
 });

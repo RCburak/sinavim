@@ -19,6 +19,7 @@ import { AnalizView } from "../src/components/AnalizView";
 import { HistoryView } from "./HistoryView";
 import { SplashScreen } from "./SplashScreen";
 import { QuestionPoolView } from "./QuestionPoolView";
+import { AnnouncementsView } from "./AnnouncementsView";
 
 type AuthScreen = "login" | "register";
 type AppView =
@@ -28,10 +29,9 @@ type AppView =
   | "program"
   | "analiz"
   | "profile"
-  | "analiz"
-  | "profile"
   | "history"
-  | "question_pool";
+  | "question_pool"
+  | "announcements";
 
 export default function Index() {
   const router = useRouter();
@@ -286,6 +286,14 @@ export default function Index() {
       case "question_pool":
         return (
           <QuestionPoolView theme={theme} onBack={() => setView("dashboard")} />
+        );
+      case "announcements":
+        return (
+          <AnnouncementsView
+            theme={theme}
+            setView={(v: any) => setView(v)}
+            institution={institution}
+          />
         );
       case "profile":
         return (
