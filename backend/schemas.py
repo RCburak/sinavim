@@ -189,3 +189,28 @@ class SendFriendRequest(BaseModel):
     sender_id: str
     receiver_id: str
 
+# --- Flashcard Schemas ---
+
+class FlashcardItem(BaseModel):
+    front: str
+    back: str
+    subject: str
+
+class CreateDeckRequest(BaseModel):
+    creator_id: str
+    title: str
+    subject: str
+    cards: List[FlashcardItem]
+
+class DuelChallengeRequest(BaseModel):
+    challenger_id: str
+    opponent_id: str
+    deck_id: str
+
+class DuelSubmissionRequest(BaseModel):
+    duel_id: str
+    user_id: str
+    score: int
+    correct_count: int
+    total_count: int
+    time_spent: int # seconds

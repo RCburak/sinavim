@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Alert } from 'react-native';
 import { auth } from '../services/firebaseConfig';
 import { analizService } from '../services/analizService';
@@ -13,26 +13,36 @@ export const useAnaliz = () => {
     return auth.currentUser?.uid || null;
   };
 
-  const refreshAnaliz = useCallback(async () => {
+  const lastFetchedUser = useRef<string | null>(null);
+
+  const refreshAnaliz = useCallback(async (force = false) => {
+    const userId = getUserId();
+    if (!userId) {
+      setAnalizler([]);
+      setLoading(false);
+      return;
+    }
+
+    // Prevent redundant fetches for the same user unless forced
+    if (!force && lastFetchedUser.current === userId && analizler.length > 0) {
+      return;
+    }
+
     setLoading(true);
     try {
-      const userId = getUserId();
-      if (!userId) {
-        setLoading(false);
-        return;
-      }
-
       const data = await analizService.getAll(userId);
       setAnalizler(data || []);
 
       const yorum = await analizService.getAIYorum(userId);
       setAiYorum(yorum || 'Henüz analiz yorumu oluşturulmadı.');
+
+      lastFetchedUser.current = userId;
     } catch (e) {
       console.error("Analiz yükleme hatası:", e);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [analizler.length]);
 
   useEffect(() => {
     // Auth state değiştiğinde analizleri yükle
@@ -40,6 +50,7 @@ export const useAnaliz = () => {
       if (user) {
         refreshAnaliz();
       } else {
+        lastFetchedUser.current = null;
         setAnalizler([]);
       }
     });

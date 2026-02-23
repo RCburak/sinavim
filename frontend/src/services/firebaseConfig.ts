@@ -1,6 +1,7 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { initializeAuth, getAuth } from "firebase/auth";
-import { getStorage } from "firebase/storage"; // Storage eklendi
+import { getStorage } from "firebase/storage";
+import { getFirestore } from "firebase/firestore"; // Firestore eklendi
 // Persistence modülünü doğrudan alt dizinden çağırıyoruz
 // @ts-ignore: TS bazen bu alt modül deklarasyonunu göremeyebilir
 import { getReactNativePersistence } from "@firebase/auth";
@@ -31,9 +32,8 @@ try {
   firebaseAuth = getAuth(app);
 }
 
-// DÜZELTME BURADA:
-const auth = firebaseAuth;      // firebaseAuth değişkenini 'auth' ismine atadık
-const storage = getStorage(app); // Storage servisini başlattık
+const auth = firebaseAuth;
+const storage = getStorage(app);
+const db = getFirestore(app); // Firestore instance
 
-// Artık her ikisi de tanımlı olduğu için hatasız dışarı aktarabiliriz
-export { auth, storage };
+export { auth, storage, db };

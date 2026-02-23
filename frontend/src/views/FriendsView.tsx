@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Theme, AppView } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { API_URL, API_HEADERS } from '../config/api';
+import { flashcardService } from '../services/flashcardService';
 
 const { width } = Dimensions.get('window');
 
@@ -180,6 +181,15 @@ export const FriendsView = ({ theme, setView }: { theme: Theme; setView: (view: 
                                     </View>
                                     <TouchableOpacity onPress={() => removeFriend(friend.id)} style={styles.removeBtn}>
                                         <Ionicons name="trash-outline" size={20} color="#EF4444" />
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        onPress={() => Alert.alert('Düello', 'Bu arkadaşına düello teklif etmek istiyor musun?', [
+                                            { text: 'İptal', style: 'cancel' },
+                                            { text: 'Davet Et', onPress: () => setView('flashcard' as any) } // Simplification: go to flashcards to select a deck
+                                        ])}
+                                        style={[styles.challengeBtn, { backgroundColor: theme.primary }]}
+                                    >
+                                        <Ionicons name="flash" size={16} color="#fff" />
                                     </TouchableOpacity>
                                 </View>
                             ))
@@ -440,6 +450,14 @@ const styles = StyleSheet.create({
     },
     removeBtn: {
         padding: 10,
+    },
+    challengeBtn: {
+        width: 36,
+        height: 36,
+        borderRadius: 12,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginLeft: 8,
     },
     requestActions: {
         flexDirection: 'row',

@@ -197,6 +197,9 @@ export const useGamification = () => {
                 if ((count || 0) >= 10) unlockBadge('flashcard_10', updated);
                 updated.xp += 5;
                 break;
+            case 'flashcard_duel_win':
+                updated.xp += 30 + (count || 0); // Bonus based on score
+                break;
             case 'note_create':
                 if ((count || 0) >= 5) unlockBadge('note_5', updated);
                 updated.xp += 5;
