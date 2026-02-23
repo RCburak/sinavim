@@ -31,3 +31,12 @@ def leave_institution(req: LeaveInstitutionRequest):
         return error_response(err or "Kurumdan ayrılırken bir hata oluştu.", 500)
 
     return success_response(message="Kurumdan başarıyla ayrıldınız.")
+
+
+@institution_router.get("/announcements/{institution_id}")
+def get_announcements_for_student(institution_id: str, class_id: str | None = None):
+    """Öğrenciler için duyuruları listeler."""
+    # Note: Using public access for now as requested for simplicity in dashboard, 
+    # but can add verify_token dependency if strict auth is needed.
+    announcements = teacher_service.get_announcements(institution_id, class_id)
+    return announcements

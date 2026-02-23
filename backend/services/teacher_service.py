@@ -351,7 +351,7 @@ def get_announcements(institution_id: str, class_id: str | None = None) -> list[
         if class_id:
             query = query.where("class_id", "==", class_id)
         
-        snap = query.order_by("created_at", direction=firestore.Query.DESCENDING).get()
+        snap = query.get()
         return [{"id": d.id, **d.to_dict()} for d in snap]
     except Exception as e:
         logger.exception("Duyuru listeleme hatasi")

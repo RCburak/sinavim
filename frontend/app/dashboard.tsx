@@ -16,7 +16,6 @@ import { MenuCard } from '../src/components/Dashboard/MenuCard';
 import { Ionicons } from '@expo/vector-icons';
 import { TeacherJoinModal } from '../src/components/profile/TeacherJoinModal';
 import { auth } from '../src/services/firebaseConfig';
-import { API_URL, API_HEADERS } from '../src/config/api';
 
 const { width } = Dimensions.get('window');
 
@@ -102,6 +101,7 @@ export const DashboardView = ({ username, onLogout, setView, schedule, analiz, p
   const [refreshing, setRefreshing] = useState(false);
   const [teacherModalVisible, setTeacherModalVisible] = useState(false);
 
+
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
     if (analiz && analiz.refreshAnaliz) analiz.refreshAnaliz();
@@ -123,6 +123,7 @@ export const DashboardView = ({ username, onLogout, setView, schedule, analiz, p
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />}
       >
+
 
         <View style={styles.menuGrid}>
           <MenuCard
@@ -318,5 +319,10 @@ const styles = StyleSheet.create({
   tabText: {
     fontSize: 11,
     fontWeight: '600'
+  },
+
+  emptyAnnouncementText: {
+    fontSize: 14,
+    fontWeight: '500',
   }
 });

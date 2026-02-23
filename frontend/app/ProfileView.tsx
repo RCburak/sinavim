@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, StatusBar, SafeAreaView, Switch, ActivityIndicator, Image, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -6,12 +6,31 @@ import { useProfile } from '../src/hooks/useProfile';
 import { ProfileModals } from '../src/components/profile/ProfileModals';
 import { TeacherJoinModal } from '../src/components/profile/TeacherJoinModal';
 import { auth } from '../src/services/firebaseConfig';
+import { API_URL, API_HEADERS } from '../src/config/api';
 
 const { width } = Dimensions.get('window');
 
 export const ProfileView = ({ username, onBack, onLogout, theme, isDarkMode, toggleDarkMode }: any) => {
   const profile = useProfile(username);
   const [teacherModalVisible, setTeacherModalVisible] = useState(false);
+  const [announcements, setAnnouncements] = useState<any[]>([]);
+
+  const fetchAnnouncements = async () => {
+    if (!profile.stats.institution?.id) return;
+    try {
+      const resp = await fetch(`${API_URL}/announcements/${profile.stats.institution.id}`, {
+        headers: API_HEADERS as HeadersInit,
+      });
+      const data = await resp.json();
+      if (Array.isArray(data)) setAnnouncements(data);
+    } catch (e) {
+      console.error("Duyurular alinamadi:", e);
+    }
+  };
+
+  useEffect(() => {
+    fetchAnnouncements();
+  }, [profile.stats.institution?.id]);
 
   const isDark = theme.background === '#0F0F1A' || theme.background === '#121212';
 
@@ -120,6 +139,38 @@ export const ProfileView = ({ username, onBack, onLogout, theme, isDarkMode, tog
             </TouchableOpacity>
           )}
         </View>
+
+        {/* Duyurular */}
+        {profile.stats.institution && (
+          <View style={styles.section}>
+            <View style={styles.sectionTitleRow}>
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>Duyurular</Text>
+              {announcements.length > 0 && (
+                <View style={styles.notifBadge}>
+                  <Text style={styles.notifBadgeText}>{announcements.length}</Text>
+                </View>
+              )}
+            </View>
+            {announcements.length > 0 ? (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.announcementList}>
+                {announcements.map((item: any, index: number) => (
+                  <View key={index} style={[styles.announcementCard, { backgroundColor: theme.surface }, theme.cardShadow]}>
+                    <View style={styles.announcementHeader}>
+                      <Text style={[styles.announcementTitle, { color: theme.text }]} numberOfLines={1}>{item.title}</Text>
+                      <Ionicons name="megaphone" size={14} color={theme.primary} />
+                    </View>
+                    <Text style={[styles.announcementContent, { color: theme.textSecondary }]} numberOfLines={2}>{item.content}</Text>
+                  </View>
+                ))}
+              </ScrollView>
+            ) : (
+              <View style={[styles.emptyAnnouncementCard, { backgroundColor: theme.surface }, theme.cardShadow]}>
+                <Ionicons name="information-circle-outline" size={20} color={theme.textSecondary} />
+                <Text style={[styles.emptyAnnouncementText, { color: theme.textSecondary }]}>Henüz yeni bir duyuru bulunmuyor.</Text>
+              </View>
+            )}
+          </View>
+        )}
 
         {/* Uygulama Ayarları */}
         <View style={styles.section}>
@@ -263,6 +314,65 @@ const styles = StyleSheet.create({
 
   bigSettingsBtn: { flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 18, justifyContent: 'space-between' },
   bigSettingsText: { fontSize: 15, fontWeight: '700' },
+
+  // --- ANNOUNCEMENT STYLES ---
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  notifBadge: {
+    backgroundColor: '#EF4444',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  notifBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  announcementList: {
+    paddingRight: 20,
+  },
+  announcementCard: {
+    width: width * 0.7,
+    padding: 16,
+    borderRadius: 20,
+    marginRight: 15,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
+  },
+  announcementHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  announcementTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    flex: 1,
+    marginRight: 10,
+  },
+  announcementContent: {
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  emptyAnnouncementCard: {
+    padding: 16,
+    borderRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
+  },
+  emptyAnnouncementText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
 });
 
 export default ProfileView;

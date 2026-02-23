@@ -950,55 +950,6 @@ export default function TeacherDashboard() {
           </View>
         </Modal>
 
-        {/* Yeni Duyuru Modalı */}
-        <Modal visible={showAnnouncementModal} transparent animationType="fade">
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Yeni Duyuru Oluştur</Text>
-              <View style={{ gap: 12, marginTop: 15 }}>
-                <TextInput
-                  style={styles.modalInput}
-                  placeholder="Duyuru Başlığı"
-                  value={newAnnouncement.title}
-                  onChangeText={(t) => setNewAnnouncement(prev => ({ ...prev, title: t }))}
-                />
-                <TextInput
-                  style={[styles.modalInput, { height: 100, textAlignVertical: 'top' }]}
-                  placeholder="Duyuru İçeriği..."
-                  multiline
-                  value={newAnnouncement.content}
-                  onChangeText={(t) => setNewAnnouncement(prev => ({ ...prev, content: t }))}
-                />
-                <Text style={styles.modalLabel}>Hedef Sınıf (Boş bırakılırsa tüm kurum)</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                  <TouchableOpacity
-                    style={[styles.filterChip, !newAnnouncement.class_id && styles.filterChipActive]}
-                    onPress={() => setNewAnnouncement(prev => ({ ...prev, class_id: '' }))}
-                  >
-                    <Text style={[styles.filterChipText, !newAnnouncement.class_id && styles.filterChipTextActive]}>Tüm Kurum</Text>
-                  </TouchableOpacity>
-                  {classes.map(c => (
-                    <TouchableOpacity
-                      key={c.id}
-                      style={[styles.filterChip, newAnnouncement.class_id === c.id && styles.filterChipActive]}
-                      onPress={() => setNewAnnouncement(prev => ({ ...prev, class_id: c.id }))}
-                    >
-                      <Text style={[styles.filterChipText, newAnnouncement.class_id === c.id && styles.filterChipTextActive]}>{c.name}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
-              <View style={styles.modalActions}>
-                <TouchableOpacity style={styles.secondaryBtn} onPress={() => setShowAnnouncementModal(false)}>
-                  <Text style={styles.secondaryBtnText}>İptal</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.primaryBtn} onPress={createAnnouncement}>
-                  <Text style={styles.primaryBtnText}>Duyuruyu Yayınla</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
       </View>
     );
   };
@@ -1113,67 +1064,6 @@ export default function TeacherDashboard() {
           </View>
         }
       />
-
-      {/* Materyal Ekleme Modalı */}
-      <Modal visible={showMaterialModal} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Yeni Materyal Paylaş</Text>
-            <View style={{ gap: 12, marginTop: 15 }}>
-              <TextInput
-                style={styles.modalInput}
-                placeholder="Başlık (Örn: Logaritma Fasikülü)"
-                value={newMaterial.title}
-                onChangeText={t => setNewMaterial(prev => ({ ...prev, title: t }))}
-              />
-              <TextInput
-                style={styles.modalInput}
-                placeholder="Dosya URL veya Video Linki"
-                value={newMaterial.file_url}
-                onChangeText={t => setNewMaterial(prev => ({ ...prev, file_url: t }))}
-              />
-              <Text style={styles.modalLabel}>Materyal Tipi</Text>
-              <View style={{ flexDirection: 'row', gap: 10 }}>
-                {['pdf', 'video', 'link'].map(type => (
-                  <TouchableOpacity
-                    key={type}
-                    style={[styles.typeChip, newMaterial.type === type && styles.typeChipActive]}
-                    onPress={() => setNewMaterial(prev => ({ ...prev, type: type as any }))}
-                  >
-                    <Text style={[styles.typeChipText, newMaterial.type === type && styles.typeChipTextActive]}>{type.toUpperCase()}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-              <Text style={styles.modalLabel}>Hedef Sınıf (İsteğe Bağlı)</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                <TouchableOpacity
-                  style={[styles.filterChip, !newMaterial.class_id && styles.filterChipActive]}
-                  onPress={() => setNewMaterial(prev => ({ ...prev, class_id: '' }))}
-                >
-                  <Text style={[styles.filterChipText, !newMaterial.class_id && styles.filterChipTextActive]}>Tümü</Text>
-                </TouchableOpacity>
-                {classes.map(c => (
-                  <TouchableOpacity
-                    key={c.id}
-                    style={[styles.filterChip, newMaterial.class_id === c.id && styles.filterChipActive]}
-                    onPress={() => setNewMaterial(prev => ({ ...prev, class_id: c.id }))}
-                  >
-                    <Text style={[styles.filterChipText, newMaterial.class_id === c.id && styles.filterChipTextActive]}>{c.name}</Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-            <View style={styles.modalActions}>
-              <TouchableOpacity style={styles.secondaryBtn} onPress={() => setShowMaterialModal(false)}>
-                <Text style={styles.secondaryBtnText}>İptal</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.primaryBtn} onPress={addMaterial}>
-                <Text style={styles.primaryBtnText}>Paylaş</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
   const renderGamification = () => (
@@ -1280,42 +1170,6 @@ export default function TeacherDashboard() {
         }
       />
 
-      <Modal visible={showEventModal} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Takvime Ekle</Text>
-            <View style={{ gap: 12, marginTop: 15 }}>
-              <TextInput
-                style={styles.modalInput}
-                placeholder="Etkinlik Başlığı"
-                value={newEvent.title}
-                onChangeText={t => setNewEvent(prev => ({ ...prev, title: t }))}
-              />
-              <TextInput
-                style={styles.modalInput}
-                placeholder="Tarih (YYYY-MM-DD)"
-                value={newEvent.date}
-                onChangeText={t => setNewEvent(prev => ({ ...prev, date: t }))}
-              />
-              <TextInput
-                style={[styles.modalInput, { height: 80 }]}
-                placeholder="Açıklama (İsteğe Bağlı)"
-                multiline
-                value={newEvent.description}
-                onChangeText={t => setNewEvent(prev => ({ ...prev, description: t }))}
-              />
-            </View>
-            <View style={styles.modalActions}>
-              <TouchableOpacity style={styles.secondaryBtn} onPress={() => setShowEventModal(false)}>
-                <Text style={styles.secondaryBtnText}>İptal</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.primaryBtn} onPress={addEvent}>
-                <Text style={styles.primaryBtnText}>Ekle</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 
@@ -1453,6 +1307,132 @@ export default function TeacherDashboard() {
           <View style={{ height: 50 }} />
         </ScrollView>
       </View>
+
+      {/* --- ALL MODALS CENTRALIZED --- */}
+
+      {/* Announcement Modal */}
+      <Modal visible={showAnnouncementModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Yeni Duyuru Oluştur</Text>
+            <View style={{ gap: 12, marginTop: 15 }}>
+              <TextInput
+                style={styles.modalInput}
+                placeholder="Duyuru Başlığı"
+                value={newAnnouncement.title}
+                onChangeText={(t) => setNewAnnouncement(prev => ({ ...prev, title: t }))}
+              />
+              <TextInput
+                style={[styles.modalInput, { height: 100, textAlignVertical: 'top' }]}
+                placeholder="Duyuru İçeriği..."
+                multiline
+                value={newAnnouncement.content}
+                onChangeText={(t) => setNewAnnouncement(prev => ({ ...prev, content: t }))}
+              />
+              <Text style={styles.modalLabel}>Hedef Sınıf (Boş bırakılırsa tüm kurum)</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <TouchableOpacity
+                  style={[styles.filterChip, !newAnnouncement.class_id && styles.filterChipActive]}
+                  onPress={() => setNewAnnouncement(prev => ({ ...prev, class_id: '' }))}
+                >
+                  <Text style={[styles.filterChipText, !newAnnouncement.class_id && styles.filterChipTextActive]}>Tüm Kurum</Text>
+                </TouchableOpacity>
+                {classes.map(c => (
+                  <TouchableOpacity
+                    key={c.id}
+                    style={[styles.filterChip, newAnnouncement.class_id === c.id && styles.filterChipActive]}
+                    onPress={() => setNewAnnouncement(prev => ({ ...prev, class_id: c.id }))}
+                  >
+                    <Text style={[styles.filterChipText, newAnnouncement.class_id === c.id && styles.filterChipTextActive]}>{c.name}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={styles.secondaryBtn} onPress={() => setShowAnnouncementModal(false)}>
+                <Text style={styles.secondaryBtnText}>İptal</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.primaryBtn} onPress={createAnnouncement}>
+                <Text style={styles.primaryBtnText}>Duyuruyu Yayınla</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Material Modal */}
+      <Modal visible={showMaterialModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Yeni Materyal Paylaş</Text>
+            <View style={{ gap: 12, marginTop: 15 }}>
+              <TextInput
+                style={styles.modalInput}
+                placeholder="Başlık"
+                value={newMaterial.title}
+                onChangeText={t => setNewMaterial(prev => ({ ...prev, title: t }))}
+              />
+              <TextInput
+                style={styles.modalInput}
+                placeholder="Dosya URL veya Video Linki"
+                value={newMaterial.file_url}
+                onChangeText={t => setNewMaterial(prev => ({ ...prev, file_url: t }))}
+              />
+              <Text style={styles.modalLabel}>Materyal Tipi</Text>
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                {['pdf', 'video', 'link'].map(type => (
+                  <TouchableOpacity
+                    key={type}
+                    style={[styles.typeChip, newMaterial.type === type && styles.typeChipActive]}
+                    onPress={() => setNewMaterial(prev => ({ ...prev, type: type as any }))}
+                  >
+                    <Text style={[styles.typeChipText, newMaterial.type === type && styles.typeChipTextActive]}>{type.toUpperCase()}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={styles.secondaryBtn} onPress={() => setShowMaterialModal(false)}>
+                <Text style={styles.secondaryBtnText}>İptal</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.primaryBtn} onPress={addMaterial}>
+                <Text style={styles.primaryBtnText}>Paylaş</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Event Modal */}
+      <Modal visible={showEventModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Takvime Ekle</Text>
+            <View style={{ gap: 12, marginTop: 15 }}>
+              <TextInput
+                style={styles.modalInput}
+                placeholder="Etkinlik Başlığı"
+                value={newEvent.title}
+                onChangeText={t => setNewEvent(prev => ({ ...prev, title: t }))}
+              />
+              <TextInput
+                style={styles.modalInput}
+                placeholder="Tarih (YYYY-MM-DD)"
+                value={newEvent.date}
+                onChangeText={t => setNewEvent(prev => ({ ...prev, date: t }))}
+              />
+            </View>
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={styles.secondaryBtn} onPress={() => setShowEventModal(false)}>
+                <Text style={styles.secondaryBtnText}>İptal</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.primaryBtn} onPress={addEvent}>
+                <Text style={styles.primaryBtnText}>Ekle</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* DETAY MODALI */}
       <Modal visible={modalVisible} transparent animationType="fade" onRequestClose={() => setModalVisible(false)}>
