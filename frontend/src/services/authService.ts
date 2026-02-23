@@ -29,8 +29,26 @@ export const authService = {
       await sendEmailVerification(userCredential.user);
       return { status: "success", message: "Kayıt başarılı! Mail onay linkini kontrol et." };
     } catch (error: any) {
+      console.error("Kayıt Hatası Detay:", error);
       let message = "Kayıt sırasında bir hata oluştu.";
-      if (error.code === 'auth/email-already-in-use') message = "Bu e-posta zaten kullanımda!";
+
+      switch (error.code) {
+        case 'auth/email-already-in-use':
+          message = "Bu e-posta zaten kullanımda!";
+          break;
+        case 'auth/invalid-email':
+          message = "Geçersiz bir e-posta adresi girdiniz.";
+          break;
+        case 'auth/weak-password':
+          message = "Şifreniz çok zayıf. Lütfen daha güçlü bir şifre seçin.";
+          break;
+        case 'auth/operation-not-allowed':
+          message = "E-posta/şifre girişi şu an devre dışı. Lütfen yöneticiyle iletişime geçin.";
+          break;
+        default:
+          message = `Hata: ${error.message}`;
+      }
+
       return { status: "error", message };
     }
   },
@@ -135,7 +153,21 @@ export const authService = {
     }
   },
 
-  // 6. Kuruma Katıl (Backend Bağlantısı)
+  // 6. Doğrulama Mailini Tekrar Gönder
+  resendVerification: async (): Promise<AuthResponse> => {
+    try {
+      const user = auth.currentUser;
+      if (user) {
+        await sendEmailVerification(user);
+        return { status: "success", message: "Doğrulama e-postası tekrar gönderildi." };
+      }
+      return { status: "error", message: "Oturum bulunamadı. Lütfen tekrar giriş yapmayı deneyin." };
+    } catch (e: any) {
+      return { status: "error", message: "E-posta gönderilirken bir hata oluştu." };
+    }
+  },
+
+  // 7. Kuruma Katıl (Backend Bağlantısı)
   joinClassroom: async (uid: string, email: string, code: string): Promise<any> => {
     try {
       if (!API_URL) {

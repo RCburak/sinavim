@@ -12,14 +12,14 @@ import {
 } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { LinearGradient } from 'expo-linear-gradient';
-import { MenuCard } from '../src/components/Dashboard/MenuCard';
+import { MenuCard } from '../components/Dashboard/MenuCard';
 import { Ionicons } from '@expo/vector-icons';
-import { TeacherJoinModal } from '../src/components/profile/TeacherJoinModal';
-import { auth } from '../src/services/firebaseConfig';
+import { TeacherJoinModal } from '../components/profile/TeacherJoinModal';
+import { auth } from '../services/firebaseConfig';
 
 const { width } = Dimensions.get('window');
 
-import { DashboardViewProps, Theme } from '../src/types';
+import { DashboardViewProps, Theme } from '../types';
 
 // ... (imports remain the same)
 
@@ -81,7 +81,7 @@ const DashboardHeader = ({ username, theme }: { username: string | null; theme: 
         <View style={styles.topRow}>
           <View style={styles.logoContainer}>
             <Image
-              source={require('../assets/images/icon.png')}
+              source={require('../../assets/images/icon.png')}
               style={styles.actualLogo}
               resizeMode="contain"
             />

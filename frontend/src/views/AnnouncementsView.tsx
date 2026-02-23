@@ -8,9 +8,9 @@ import { ScrollView, Swipeable, TouchableOpacity as GHTouchableOpacity } from 'r
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Theme, AppView } from '../src/types';
-import { API_URL, API_HEADERS } from '../src/config/api';
-import { auth } from '../src/services/firebaseConfig';
+import { Theme, AppView } from '../types';
+import { API_URL, API_HEADERS } from '../config/api';
+import { auth } from '../services/firebaseConfig';
 
 const { width } = Dimensions.get('window');
 

@@ -32,19 +32,20 @@ export default function RegisterScreen({ onBack, onRegisterSuccess, theme = COLO
 
     setLoading(true);
     try {
-      const result = await authService.register({ name, email, password });
+      const result = await authService.register({ name, email: email.trim(), password });
 
       if (result.status === "success") {
         Alert.alert(
           "Doğrulama Linki Gönderildi 📧",
-          `${email} adresine bir onay linki gönderdik. Lütfen linke tıkladıktan sonra giriş yap.`,
+          `${email.trim()} adresine bir onay linki gönderdik. Lütfen linke tıkladıktan sonra giriş yap.`,
           [{ text: "Giriş Ekranına Git", onPress: onRegisterSuccess }]
         );
       } else {
-        Alert.alert("Hata", result.message);
+        Alert.alert("Hata", result.message || "Bilinmeyen bir hata oluştu.");
       }
-    } catch (e) {
-      Alert.alert("Hata", "Kayıt işlemi sırasında bir sorun oluştu.");
+    } catch (e: any) {
+      console.error(e);
+      Alert.alert("Hata", "Kayıt işlemi sırasında teknik bir sorun oluştu.");
     } finally {
       setLoading(false);
     }

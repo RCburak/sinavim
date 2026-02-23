@@ -92,16 +92,40 @@ export default function LoginScreen({ onLogin, onGoToRegister, theme = COLORS.li
     }
     setLoading(true);
     try {
-      const result = await authService.login(email, password);
+      const result = await authService.login(email.trim(), password);
       if (result.status === "success") {
         await saveUserDataAndLogin(result.user);
       } else {
-        Alert.alert("Giriş Başarısız", result.message);
+        if (result.message.includes("e-postanı doğrula")) {
+          Alert.alert(
+            "E-posta Doğrulanmamış 📧",
+            result.message,
+            [
+              { text: "Tamam", style: "cancel" },
+              { text: "Tekrar Gönder", onPress: handleResendVerification }
+            ]
+          );
+        } else {
+          Alert.alert("Giriş Başarısız", result.message);
+        }
       }
     } catch (e) {
       Alert.alert("Hata", "Giriş sırasında bir sorun oluştu.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    try {
+      const result = await authService.resendVerification();
+      if (result.status === 'success') {
+        Alert.alert("Başarılı", result.message);
+      } else {
+        Alert.alert("Hata", result.message);
+      }
+    } catch (e) {
+      Alert.alert("Hata", "E-posta gönderilemedi.");
     }
   };
 

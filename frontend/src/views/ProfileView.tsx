@@ -6,11 +6,11 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useProfile } from '../src/hooks/useProfile';
-import { ProfileModals } from '../src/components/profile/ProfileModals';
-import { TeacherJoinModal } from '../src/components/profile/TeacherJoinModal';
-import { auth } from '../src/services/firebaseConfig';
-import { Theme, AppView } from '../src/types';
+import { useProfile } from '../hooks/useProfile';
+import { ProfileModals } from '../components/profile/ProfileModals';
+import { TeacherJoinModal } from '../components/profile/TeacherJoinModal';
+import { auth } from '../services/firebaseConfig';
+import { Theme, AppView } from '../types';
 
 const { width } = Dimensions.get('window');
 const EXAM_KEY = '@RCSinavim_TargetExam';

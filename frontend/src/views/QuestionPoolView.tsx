@@ -19,9 +19,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { COLORS } from '../src/constants/theme';
-import { useQuestions } from '../src/hooks/useQuestions';
-import { Question, Theme } from '../src/types';
+import { COLORS } from '../constants/theme';
+import { useQuestions } from '../hooks/useQuestions';
+import { Question, Theme } from '../types';
 
 const { width, height } = Dimensions.get('window');
 const FlashListComponent = FlashList as any;

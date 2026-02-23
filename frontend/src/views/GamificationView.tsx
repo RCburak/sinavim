@@ -5,9 +5,9 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { auth } from '../src/services/firebaseConfig';
-import { API_URL, API_HEADERS } from '../src/config/api';
-import { Theme, AppView } from '../src/types';
+import { auth } from '../services/firebaseConfig';
+import { API_URL, API_HEADERS } from '../config/api';
+import { Theme, AppView } from '../types';
 
 const { width } = Dimensions.get('window');
 

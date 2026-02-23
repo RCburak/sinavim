@@ -21,31 +21,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser && firebaseUser.emailVerified) {
-        // "Oturum açık tut" seçilmiş mi kontrol et
-        const rememberMe = await AsyncStorage.getItem("@SınavımAI_RememberMe");
-        if (rememberMe === "false") {
-          // Oturum açık tutma seçilmemiş, çıkış yap
-          await auth.signOut();
-          await AsyncStorage.removeItem("@SınavımAI_RememberMe");
+      try {
+        if (firebaseUser) {
+          // En son e-posta doğrulama durumunu al
+          try {
+            await firebaseUser.reload();
+          } catch (reloadErr) {
+            console.error("User reload error:", reloadErr);
+          }
+
+          const freshUser = auth.currentUser;
+
+          if (freshUser && freshUser.emailVerified) {
+            // "Oturum açık tut" seçilmiş mi kontrol et
+            const rememberMe = await AsyncStorage.getItem("@SınavımAI_RememberMe");
+            if (rememberMe === "false") {
+              await auth.signOut();
+              await AsyncStorage.removeItem("@SınavımAI_RememberMe");
+              setUser(null);
+            } else {
+              const savedName = await AsyncStorage.getItem("@SınavımAI_UserName");
+              const finalName =
+                freshUser.displayName ||
+                savedName ||
+                freshUser.email?.split("@")[0] ||
+                "Öğrenci";
+
+              setUserName(finalName);
+              setUser(freshUser);
+            }
+          } else {
+            setUser(null);
+          }
+        } else {
           setUser(null);
-          // Minimum splash süresi
-          setTimeout(() => setLoading(false), 2600);
-          return;
         }
-        const savedName = await AsyncStorage.getItem("@SınavımAI_UserName");
-        const finalName =
-          firebaseUser.displayName ||
-          savedName ||
-          firebaseUser.email?.split("@")[0] ||
-          "Öğrenci";
-        setUserName(finalName);
-        setUser(firebaseUser);
-      } else {
-        setUser(null);
+      } catch (err) {
+        console.error("Auth state change error:", err);
+      } finally {
+        // Daha hızlı açılış için süreyi kısalttım (800ms)
+        setTimeout(() => setLoading(false), 800);
       }
-      // Minimum 2 saniye splash göster
-      setTimeout(() => setLoading(false), 3400);
     });
     return () => unsubscribe();
   }, []);

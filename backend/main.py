@@ -18,6 +18,7 @@ from routes.questions import questions_router
 from routes.program import program_router
 from routes.institution import institution_router
 from routes.analiz import analiz_router
+from routes.friends import friends_router
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -80,6 +81,7 @@ def create_app(config_name: str = None) -> FastAPI:
     app.include_router(program_router, prefix="", tags=["Program"])
     app.include_router(institution_router, prefix="", tags=["Institution"])
     app.include_router(analiz_router, prefix="", tags=["Analiz"])
+    app.include_router(friends_router, prefix="/friends", tags=["Friends"])
     
     register_error_handlers(app)
     

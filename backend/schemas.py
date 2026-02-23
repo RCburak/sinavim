@@ -173,3 +173,19 @@ class CreateCalendarEventRequest(BaseModel):
     date: str # ISO format or YYYY-MM-DD
     type: str # 'trial', 'exam', 'holiday', 'other'
     class_id: Optional[str] = None
+
+
+# --- Friends Schemas ---
+
+class SearchUserRequest(BaseModel):
+    query: str
+    current_user_id: str
+
+class FriendRequestAction(BaseModel):
+    request_id: str
+    action: str  # "accept" | "decline"
+
+class SendFriendRequest(BaseModel):
+    sender_id: str
+    receiver_id: str
+

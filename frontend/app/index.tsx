@@ -14,21 +14,21 @@ import { AppView } from "../src/types";
 
 import LoginScreen from "./login";
 import RegisterScreen from "./register";
-import { DashboardView } from "./dashboard";
-import { ProfileView } from "./ProfileView";
+import { DashboardView } from "../src/views/DashboardView";
+import { ProfileView } from "../src/views/ProfileView";
 import { ProgramView } from "../src/components/ProgramView";
 import { PomodoroView } from "../src/components/PomodoroView";
 import { AnalizView } from "../src/components/AnalizView";
-import { HistoryView } from "./HistoryView";
-import { SplashScreen } from "./SplashScreen";
-import { QuestionPoolView } from "./QuestionPoolView";
-import { AnnouncementsView } from "./AnnouncementsView";
-import { FriendsView } from "./FriendsView";
-import { FlashcardView } from "./FlashcardView";
-import { NotebookView } from "./NotebookView";
-import { ExamCalendar } from "./ExamCalendar";
-import { FormulaLibraryView } from "./FormulaLibraryView";
-import { GamificationView } from "./GamificationView";
+import { HistoryView } from "../src/views/HistoryView";
+import { SplashScreen } from "../src/views/SplashScreen";
+import { QuestionPoolView } from "../src/views/QuestionPoolView";
+import { AnnouncementsView } from "../src/views/AnnouncementsView";
+import { FriendsView } from "../src/views/FriendsView";
+import { FlashcardView } from "../src/views/FlashcardView";
+import { NotebookView } from "../src/views/NotebookView";
+import { ExamCalendar } from "../src/views/ExamCalendar";
+import { FormulaLibraryView } from "../src/views/FormulaLibraryView";
+import { GamificationView } from "../src/views/GamificationView";
 
 type AuthScreen = "login" | "register";
 
