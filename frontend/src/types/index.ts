@@ -89,3 +89,20 @@ export interface DashboardViewProps {
     institution: any; // Keep specific any for now or define if known
     refreshInstitution: () => void;
 }
+
+export type AppView =
+    | "dashboard"
+    | "manual_setup"
+    | "pomodoro"
+    | "program"
+    | "analiz"
+    | "profile"
+    | "history"
+    | "question_pool"
+    | "announcements"
+    | "friends"
+    | "flashcard"
+    | "notebook"
+    | "exam_calendar"
+    | "formula_library"
+    | "gamification";

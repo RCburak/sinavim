@@ -10,6 +10,7 @@ import { usePomodoro } from "../src/hooks/usePomodoro";
 import { useAnaliz } from "../src/hooks/useAnaliz";
 import { useStreak } from "../src/hooks/useStreak";
 import { useGamification } from "../src/hooks/useGamification";
+import { AppView } from "../src/types";
 
 import LoginScreen from "./login";
 import RegisterScreen from "./register";
@@ -22,28 +23,14 @@ import { HistoryView } from "./HistoryView";
 import { SplashScreen } from "./SplashScreen";
 import { QuestionPoolView } from "./QuestionPoolView";
 import { AnnouncementsView } from "./AnnouncementsView";
+import { FriendsView } from "./FriendsView";
 import { FlashcardView } from "./FlashcardView";
 import { NotebookView } from "./NotebookView";
-import { ExamCalendarView } from "./ExamCalendarView";
+import { ExamCalendar } from "./ExamCalendar";
 import { FormulaLibraryView } from "./FormulaLibraryView";
 import { GamificationView } from "./GamificationView";
 
 type AuthScreen = "login" | "register";
-type AppView =
-  | "dashboard"
-  | "manual_setup"
-  | "pomodoro"
-  | "program"
-  | "analiz"
-  | "profile"
-  | "history"
-  | "question_pool"
-  | "announcements"
-  | "flashcard"
-  | "notebook"
-  | "exam_calendar"
-  | "formula_library"
-  | "gamification";
 
 export default function Index() {
   const router = useRouter();
@@ -316,12 +303,19 @@ export default function Index() {
             institution={institution}
           />
         );
+      case "friends":
+        return (
+          <FriendsView
+            theme={theme}
+            setView={(v: any) => setView(v)}
+          />
+        );
       case "flashcard":
         return <FlashcardView theme={theme} onBack={() => setView("dashboard")} />;
       case "notebook":
         return <NotebookView theme={theme} onBack={() => setView("dashboard")} />;
       case "exam_calendar":
-        return <ExamCalendarView theme={theme} onBack={() => setView("dashboard")} />;
+        return <ExamCalendar theme={theme} onBack={() => setView("dashboard")} />;
       case "formula_library":
         return <FormulaLibraryView theme={theme} onBack={() => setView("dashboard")} />;
       case "gamification":
@@ -333,6 +327,7 @@ export default function Index() {
             theme={theme}
             isDarkMode={isDarkMode}
             toggleDarkMode={toggleDarkMode}
+            setView={(v: AppView) => setView(v)}
             onBack={(n?: string) => {
               if (n) setUserName(n);
               setView("dashboard");

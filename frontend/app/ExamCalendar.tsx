@@ -29,7 +29,7 @@ const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric', weekday: 'short' });
 };
 
-export const ExamCalendarView = ({ onBack, theme }: any) => {
+export const ExamCalendar = ({ onBack, theme }: any) => {
     const [exams, setExams] = useState<ExamEvent[]>([]);
     const [modalVisible, setModalVisible] = useState(false);
     const [title, setTitle] = useState('');

@@ -28,6 +28,7 @@ const BottomTabBar = ({ setView, theme, currentView = 'dashboard' }: { setView: 
   const tabs = [
     { key: 'dashboard', label: 'Anasayfa', icon: 'home', iconOutline: 'home-outline' },
     { key: 'announcements', label: 'Duyurular', icon: 'notifications', iconOutline: 'notifications-outline' },
+    { key: 'friends', label: 'Arkadaşlar', icon: 'people', iconOutline: 'people-outline' },
     { key: 'gamification', label: 'Başarılarım', icon: 'trophy', iconOutline: 'trophy-outline' },
     { key: 'profile', label: 'Profilim', icon: 'person', iconOutline: 'person-outline' },
   ];

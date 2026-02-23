@@ -8,17 +8,18 @@ import { ScrollView, Swipeable, TouchableOpacity as GHTouchableOpacity } from 'r
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Theme, AppView } from '../src/types';
 import { API_URL, API_HEADERS } from '../src/config/api';
 import { auth } from '../src/services/firebaseConfig';
-import { Theme } from '../src/types';
 
 const { width } = Dimensions.get('window');
 
 // ─── BOTTOM TAB BAR ────────────────────────────────
-const BottomTabBar = ({ setView, theme }: { setView: (view: string) => void; theme: Theme }) => {
+const BottomTabBar = ({ setView, theme }: { setView: (view: AppView) => void; theme: Theme }) => {
     const tabs = [
         { key: 'dashboard', label: 'Anasayfa', icon: 'home', iconOutline: 'home-outline' },
         { key: 'announcements', label: 'Duyurular', icon: 'notifications', iconOutline: 'notifications-outline' },
+        { key: 'friends', label: 'Arkadaşlar', icon: 'people', iconOutline: 'people-outline' },
         { key: 'gamification', label: 'Başarılarım', icon: 'trophy', iconOutline: 'trophy-outline' },
         { key: 'profile', label: 'Profilim', icon: 'person', iconOutline: 'person-outline' },
     ];
@@ -27,7 +28,7 @@ const BottomTabBar = ({ setView, theme }: { setView: (view: string) => void; the
             {tabs.map((tab) => {
                 const isActive = tab.key === 'announcements';
                 return (
-                    <TouchableOpacity key={tab.key} style={s.tabItem} onPress={() => setView(tab.key)} activeOpacity={0.8}>
+                    <TouchableOpacity key={tab.key} style={s.tabItem} onPress={() => setView(tab.key as AppView)} activeOpacity={0.8}>
                         <View style={[s.activeIndicator, isActive && { backgroundColor: theme.primary }]} />
                         <Ionicons name={(isActive ? tab.icon : tab.iconOutline) as any} size={22} color={isActive ? theme.primary : theme.textSecondary} />
                         <Text style={[s.tabText, { color: isActive ? theme.primary : theme.textSecondary, fontWeight: isActive ? '700' : '500' }]}>{tab.label}</Text>

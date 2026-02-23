@@ -10,6 +10,7 @@ import { useProfile } from '../src/hooks/useProfile';
 import { ProfileModals } from '../src/components/profile/ProfileModals';
 import { TeacherJoinModal } from '../src/components/profile/TeacherJoinModal';
 import { auth } from '../src/services/firebaseConfig';
+import { Theme, AppView } from '../src/types';
 
 const { width } = Dimensions.get('window');
 const EXAM_KEY = '@RCSinavim_TargetExam';
@@ -48,8 +49,45 @@ const SectionItem = ({ icon, iconColor, iconBg, label, sublabel, theme, onPress,
   </TouchableOpacity>
 );
 
+// ─── BOTTOM TAB BAR ────────────────────────────────
+const BottomTabBar = ({ setView, theme }: { setView: (view: AppView) => void; theme: Theme }) => {
+  const tabs = [
+    { key: 'dashboard', label: 'Anasayfa', icon: 'home', iconOutline: 'home-outline' },
+    { key: 'announcements', label: 'Duyurular', icon: 'notifications', iconOutline: 'notifications-outline' },
+    { key: 'friends', label: 'Arkadaşlar', icon: 'people', iconOutline: 'people-outline' },
+    { key: 'gamification', label: 'Başarılarım', icon: 'trophy', iconOutline: 'trophy-outline' },
+    { key: 'profile', label: 'Profilim', icon: 'person', iconOutline: 'person-outline' },
+  ];
+
+  return (
+    <View style={[s.bottomBar, { backgroundColor: theme.surface }]}>
+      {tabs.map((tab) => {
+        const isActive = tab.key === 'profile';
+        return (
+          <TouchableOpacity
+            key={tab.key}
+            style={s.tabItem}
+            onPress={() => setView(tab.key as AppView)}
+            activeOpacity={0.8}
+          >
+            <View style={[s.activeIndicator, isActive && { backgroundColor: theme.primary }]} />
+            <Ionicons
+              name={(isActive ? tab.icon : tab.iconOutline) as any}
+              size={22}
+              color={isActive ? theme.primary : theme.textSecondary}
+            />
+            <Text style={[s.tabText, { color: isActive ? theme.primary : theme.textSecondary, fontWeight: isActive ? '700' : '500' }]}>
+              {tab.label}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+};
+
 // ═══ MAIN COMPONENT ════════════════════════════════
-export const ProfileView = ({ username, onBack, onLogout, theme, isDarkMode, toggleDarkMode }: any) => {
+export const ProfileView = ({ username, onBack, onLogout, theme, isDarkMode, toggleDarkMode, setView }: any) => {
   const profile = useProfile(username);
   const [teacherModalVisible, setTeacherModalVisible] = useState(false);
   const [targetExam, setTargetExam] = useState('');
@@ -372,6 +410,8 @@ export const ProfileView = ({ username, onBack, onLogout, theme, isDarkMode, tog
           profile.fetchUserStats();
         }}
       />
+
+      <BottomTabBar setView={setView} theme={theme} />
     </View>
   );
 };
@@ -442,6 +482,40 @@ const s = StyleSheet.create({
 
   // Footer
   footerText: { textAlign: 'center', fontSize: 11, fontWeight: '500', marginTop: 24, marginBottom: 10 },
+
+  bottomBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    height: Platform.OS === 'ios' ? 85 : 70,
+    paddingBottom: Platform.OS === 'ios' ? 20 : 0,
+    elevation: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    justifyContent: 'space-around',
+    alignItems: 'center'
+  },
+  tabItem: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: '100%',
+    gap: 3
+  },
+  activeIndicator: {
+    width: 20,
+    height: 3,
+    borderRadius: 2,
+    marginBottom: 4,
+  },
+  tabText: {
+    fontSize: 11,
+    fontWeight: '600'
+  },
 });
 
 export default ProfileView;
