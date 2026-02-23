@@ -8,6 +8,8 @@ import { useTheme } from "../src/contexts/ThemeContext";
 import { useSchedule } from "../src/contexts/ScheduleContext";
 import { usePomodoro } from "../src/hooks/usePomodoro";
 import { useAnaliz } from "../src/hooks/useAnaliz";
+import { useStreak } from "../src/hooks/useStreak";
+import { useGamification } from "../src/hooks/useGamification";
 
 import LoginScreen from "./login";
 import RegisterScreen from "./register";
@@ -20,6 +22,11 @@ import { HistoryView } from "./HistoryView";
 import { SplashScreen } from "./SplashScreen";
 import { QuestionPoolView } from "./QuestionPoolView";
 import { AnnouncementsView } from "./AnnouncementsView";
+import { FlashcardView } from "./FlashcardView";
+import { NotebookView } from "./NotebookView";
+import { ExamCalendarView } from "./ExamCalendarView";
+import { FormulaLibraryView } from "./FormulaLibraryView";
+import { GamificationView } from "./GamificationView";
 
 type AuthScreen = "login" | "register";
 type AppView =
@@ -31,7 +38,12 @@ type AppView =
   | "profile"
   | "history"
   | "question_pool"
-  | "announcements";
+  | "announcements"
+  | "flashcard"
+  | "notebook"
+  | "exam_calendar"
+  | "formula_library"
+  | "gamification";
 
 export default function Index() {
   const router = useRouter();
@@ -52,8 +64,17 @@ export default function Index() {
 
   const pomodoro = usePomodoro();
   const analiz = useAnaliz();
+  const streak = useStreak(user?.uid);
+  const gamification = useGamification();
 
   const [institution, setInstitution] = useState<any>(null);
+
+  // Record streak activity when user opens the app
+  useEffect(() => {
+    if (user?.uid) {
+      streak.recordActivity();
+    }
+  }, [user?.uid]);
 
   // Institution Status Check
   const checkInstitutionStatus = async () => {
@@ -295,6 +316,16 @@ export default function Index() {
             institution={institution}
           />
         );
+      case "flashcard":
+        return <FlashcardView theme={theme} onBack={() => setView("dashboard")} />;
+      case "notebook":
+        return <NotebookView theme={theme} onBack={() => setView("dashboard")} />;
+      case "exam_calendar":
+        return <ExamCalendarView theme={theme} onBack={() => setView("dashboard")} />;
+      case "formula_library":
+        return <FormulaLibraryView theme={theme} onBack={() => setView("dashboard")} />;
+      case "gamification":
+        return <GamificationView theme={theme} setView={(v: any) => setView(v)} gamification={gamification} streak={streak} />;
       case "profile":
         return (
           <ProfileView
@@ -324,6 +355,7 @@ export default function Index() {
             pomodoro={pomodoro}
             institution={institution}
             refreshInstitution={checkInstitutionStatus}
+            streak={streak}
           />
         );
     }

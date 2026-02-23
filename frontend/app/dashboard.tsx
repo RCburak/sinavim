@@ -28,6 +28,7 @@ const BottomTabBar = ({ setView, theme, currentView = 'dashboard' }: { setView: 
   const tabs = [
     { key: 'dashboard', label: 'Anasayfa', icon: 'home', iconOutline: 'home-outline' },
     { key: 'announcements', label: 'Duyurular', icon: 'notifications', iconOutline: 'notifications-outline' },
+    { key: 'gamification', label: 'Başarılarım', icon: 'trophy', iconOutline: 'trophy-outline' },
     { key: 'profile', label: 'Profilim', icon: 'person', iconOutline: 'person-outline' },
   ];
 
@@ -109,7 +110,7 @@ const DashboardHeader = ({ username, theme }: { username: string | null; theme: 
   );
 };
 
-export const DashboardView = ({ username, onLogout, setView, schedule, analiz, pomodoro, theme, institution, refreshInstitution }: DashboardViewProps) => {
+export const DashboardView = ({ username, onLogout, setView, schedule, analiz, pomodoro, theme, institution, refreshInstitution, streak }: DashboardViewProps & { streak?: any }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [teacherModalVisible, setTeacherModalVisible] = useState(false);
 
@@ -193,6 +194,44 @@ export const DashboardView = ({ username, onLogout, setView, schedule, analiz, p
             theme={theme}
             color="#EC4899"
           />
+
+          <MenuCard
+            title="Flashcard"
+            emoji="🃏"
+            subText="Kartlarla çalış"
+            onPress={() => setView('flashcard')}
+            theme={theme}
+            color="#8B5CF6"
+          />
+
+          <MenuCard
+            title="Not Defteri"
+            emoji="📓"
+            subText="Notlarını yaz"
+            onPress={() => setView('notebook')}
+            theme={theme}
+            color="#10B981"
+          />
+
+          <MenuCard
+            title="Deneme Takvimi"
+            emoji="📅"
+            subText="Sınavlarını takip et"
+            onPress={() => setView('exam_calendar')}
+            theme={theme}
+            color="#3B82F6"
+          />
+
+          <MenuCard
+            title="Formüller"
+            emoji="🧮"
+            subText="Formül kütüphanesi"
+            onPress={() => setView('formula_library')}
+            theme={theme}
+            color="#F97316"
+          />
+
+
         </View>
 
         <View style={{ height: 80 }} />
@@ -331,5 +370,42 @@ const styles = StyleSheet.create({
   tabText: {
     fontSize: 11,
     fontWeight: '600'
+  },
+
+  // Streak Banner
+  streakBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 20,
+    marginBottom: 10,
+    padding: 16,
+    borderRadius: 20,
+    gap: 14,
+  },
+  streakFireContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  streakFireEmoji: {
+    fontSize: 32,
+  },
+  streakCount: {
+    fontSize: 28,
+    fontWeight: '900',
+    letterSpacing: -1,
+  },
+  streakInfo: {
+    flex: 1,
+  },
+  streakTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: -0.3,
+  },
+  streakSub: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginTop: 2,
   },
 });

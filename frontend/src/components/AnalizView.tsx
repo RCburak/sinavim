@@ -12,13 +12,15 @@ import {
   ScrollView,
   StatusBar,
   Dimensions,
-  Alert
+  Alert,
+  Modal,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS } from '../constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { LineChart } from "react-native-chart-kit";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width } = Dimensions.get('window');
 
@@ -33,12 +35,28 @@ export const AnalizView = ({
 }: any) => {
   const [denemeAd, setDenemeAd] = useState('');
   const [denemeNet, setDenemeNet] = useState('');
-  const [selectedType, setSelectedType] = useState('TYT'); // For adding new
-  const [filterType, setFilterType] = useState('TYT'); // For filtering view
-  const [examDate, setExamDate] = useState(new Date().toISOString().split('T')[0]); // YYYY-MM-DD
+  const [selectedType, setSelectedType] = useState('TYT');
+  const [filterType, setFilterType] = useState('TYT');
+  const [examDate, setExamDate] = useState(new Date().toISOString().split('T')[0]);
   const [tooltip, setTooltip] = useState({ visible: false, value: 0, label: '' });
+  const [goalModalVisible, setGoalModalVisible] = useState(false);
+  const [goalNet, setGoalNet] = useState('');
+  const [goals, setGoals] = useState<{ [key: string]: number }>({});
 
   const isDark = theme.background === '#0F0F1A' || theme.background === '#121212';
+
+  // Load goals from AsyncStorage
+  useEffect(() => {
+    AsyncStorage.getItem('@RCSinavim_Goals').then(raw => {
+      if (raw) setGoals(JSON.parse(raw));
+    }).catch(() => { });
+  }, []);
+
+  const saveGoal = (type: string, net: number) => {
+    const newGoals = { ...goals, [type]: net };
+    setGoals(newGoals);
+    AsyncStorage.setItem('@RCSinavim_Goals', JSON.stringify(newGoals)).catch(console.error);
+  };
 
   const handleAdd = () => {
     if (!denemeAd || !denemeNet) {
@@ -219,6 +237,160 @@ export const AnalizView = ({
                   </View>
                 )}
               </View>
+
+              {/* Hedef & Karşılaştırma */}
+              {(() => {
+                const currentGoal = goals[filterType];
+                const latestNet = filteredData.length > 0 ? parseFloat(filteredData[0].net) || 0 : 0;
+                const prevNet = filteredData.length > 1 ? parseFloat(filteredData[1].net) || 0 : 0;
+                const change = filteredData.length > 1 ? latestNet - prevNet : 0;
+                const avgNet = filteredData.length > 0
+                  ? (filteredData.reduce((sum: number, item: any) => sum + (parseFloat(item.net) || 0), 0) / filteredData.length).toFixed(1)
+                  : '0';
+                const bestNet = filteredData.length > 0
+                  ? Math.max(...filteredData.map((item: any) => parseFloat(item.net) || 0)).toFixed(1)
+                  : '0';
+                const goalProgress = currentGoal && latestNet ? Math.min((latestNet / currentGoal) * 100, 100) : 0;
+
+                return (
+                  <>
+                    {/* Hedef Belirleme */}
+                    <View style={[styles.goalCard, { backgroundColor: theme.surface }, theme.cardShadow]}>
+                      <View style={styles.goalHeader}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <Ionicons name="flag" size={18} color={getTypeColor(filterType)} />
+                          <Text style={[styles.goalTitle, { color: theme.text }]}>
+                            {filterType} Hedefim
+                          </Text>
+                        </View>
+                        <TouchableOpacity
+                          style={[styles.goalSetBtn, { backgroundColor: getTypeColor(filterType) + '15' }]}
+                          onPress={() => {
+                            setGoalNet(currentGoal ? String(currentGoal) : '');
+                            setGoalModalVisible(true);
+                          }}
+                        >
+                          <Text style={{ fontSize: 12, fontWeight: '700', color: getTypeColor(filterType) }}>
+                            {currentGoal ? 'Güncelle' : 'Hedef Koy'}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                      {currentGoal ? (
+                        <View style={styles.goalProgressSection}>
+                          <View style={styles.goalProgressRow}>
+                            <Text style={[styles.goalProgressLabel, { color: theme.textSecondary }]}>
+                              {latestNet} / {currentGoal} Net
+                            </Text>
+                            <Text style={[styles.goalProgressPercent, { color: getTypeColor(filterType) }]}>
+                              %{goalProgress.toFixed(0)}
+                            </Text>
+                          </View>
+                          <View style={[styles.goalProgressBar, { backgroundColor: theme.background }]}>
+                            <View
+                              style={[
+                                styles.goalProgressFill,
+                                {
+                                  width: `${goalProgress}%` as any,
+                                  backgroundColor: getTypeColor(filterType),
+                                },
+                              ]}
+                            />
+                          </View>
+                        </View>
+                      ) : (
+                        <Text style={[styles.goalEmptyText, { color: theme.textSecondary }]}>
+                          Haftalık net hedefini belirle ve ilerlemeni takip et.
+                        </Text>
+                      )}
+                    </View>
+
+                    {/* Karşılaştırma */}
+                    {filteredData.length > 1 && (
+                      <View style={[styles.comparisonCard, { backgroundColor: theme.surface }, theme.cardShadow]}>
+                        <Text style={[styles.comparisonTitle, { color: theme.text }]}>
+                          <Ionicons name="swap-horizontal" size={16} color={theme.text} /> Son Karşılaştırma
+                        </Text>
+                        <View style={styles.comparisonRow}>
+                          <View style={styles.comparisonItem}>
+                            <Text style={[styles.comparisonLabel, { color: theme.textSecondary }]}>Önceki</Text>
+                            <Text style={[styles.comparisonValue, { color: theme.text }]}>{prevNet}</Text>
+                          </View>
+                          <View style={[styles.comparisonArrow, { backgroundColor: change >= 0 ? '#10B98115' : '#EF444415' }]}>
+                            <Ionicons
+                              name={change >= 0 ? 'trending-up' : 'trending-down'}
+                              size={20}
+                              color={change >= 0 ? '#10B981' : '#EF4444'}
+                            />
+                            <Text style={{ fontSize: 14, fontWeight: '800', color: change >= 0 ? '#10B981' : '#EF4444' }}>
+                              {change >= 0 ? '+' : ''}{change.toFixed(1)}
+                            </Text>
+                          </View>
+                          <View style={styles.comparisonItem}>
+                            <Text style={[styles.comparisonLabel, { color: theme.textSecondary }]}>Son</Text>
+                            <Text style={[styles.comparisonValue, { color: theme.text }]}>{latestNet}</Text>
+                          </View>
+                        </View>
+                      </View>
+                    )}
+
+                    {/* Özet Kartları */}
+                    <View style={styles.summaryRow}>
+                      <View style={[styles.summaryCard, { backgroundColor: theme.surface }, theme.cardShadow]}>
+                        <Ionicons name="analytics" size={20} color="#3B82F6" />
+                        <Text style={[styles.summaryValue, { color: theme.text }]}>{avgNet}</Text>
+                        <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>Ort. Net</Text>
+                      </View>
+                      <View style={[styles.summaryCard, { backgroundColor: theme.surface }, theme.cardShadow]}>
+                        <Ionicons name="trophy" size={20} color="#F59E0B" />
+                        <Text style={[styles.summaryValue, { color: theme.text }]}>{bestNet}</Text>
+                        <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>En İyi</Text>
+                      </View>
+                      <View style={[styles.summaryCard, { backgroundColor: theme.surface }, theme.cardShadow]}>
+                        <Ionicons name="documents" size={20} color="#10B981" />
+                        <Text style={[styles.summaryValue, { color: theme.text }]}>{filteredData.length}</Text>
+                        <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>Deneme</Text>
+                      </View>
+                    </View>
+                  </>
+                );
+              })()}
+
+              {/* Hedef Modal */}
+              <Modal visible={goalModalVisible} transparent animationType="fade">
+                <View style={styles.modalOverlay}>
+                  <View style={[styles.modalContent, { backgroundColor: theme.surface }]}>
+                    <Text style={[styles.modalTitle, { color: theme.text }]}>{filterType} Hedef Net</Text>
+                    <TextInput
+                      style={[styles.input, { color: theme.text, borderColor: theme.border, backgroundColor: theme.background, marginBottom: 16 }]}
+                      placeholder="Örn: 80"
+                      keyboardType="numeric"
+                      value={goalNet}
+                      onChangeText={setGoalNet}
+                      placeholderTextColor={theme.textSecondary}
+                    />
+                    <View style={{ flexDirection: 'row', gap: 12 }}>
+                      <TouchableOpacity
+                        style={[styles.modalBtn, { backgroundColor: theme.border }]}
+                        onPress={() => setGoalModalVisible(false)}
+                      >
+                        <Text style={{ color: theme.text, fontWeight: '700' }}>İptal</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.modalBtn, { backgroundColor: getTypeColor(filterType), flex: 1 }]}
+                        onPress={() => {
+                          const val = parseFloat(goalNet);
+                          if (val > 0) {
+                            saveGoal(filterType, val);
+                            setGoalModalVisible(false);
+                          }
+                        }}
+                      >
+                        <Text style={{ color: '#fff', fontWeight: '700' }}>Kaydet</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
+              </Modal>
 
               {/* Form */}
               <View style={[styles.formCard, { backgroundColor: theme.surface }, theme.cardShadow]}>
@@ -460,6 +632,40 @@ const styles = StyleSheet.create({
   netValue: { fontWeight: '800', fontSize: 14 },
   listName: { fontWeight: '700', fontSize: 15, marginBottom: 4 },
   deleteBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#FEE2E2', justifyContent: 'center', alignItems: 'center' },
+
+  // Goal Section
+  goalCard: { marginHorizontal: 20, marginBottom: 16, padding: 18, borderRadius: 20 },
+  goalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  goalTitle: { fontSize: 15, fontWeight: '700' },
+  goalSetBtn: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 12 },
+  goalProgressSection: { marginTop: 4 },
+  goalProgressRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  goalProgressLabel: { fontSize: 13, fontWeight: '600' },
+  goalProgressPercent: { fontSize: 14, fontWeight: '800' },
+  goalProgressBar: { height: 8, borderRadius: 4, overflow: 'hidden' },
+  goalProgressFill: { height: '100%', borderRadius: 4 },
+  goalEmptyText: { fontSize: 13, fontWeight: '500', lineHeight: 18 },
+
+  // Comparison Section
+  comparisonCard: { marginHorizontal: 20, marginBottom: 16, padding: 18, borderRadius: 20 },
+  comparisonTitle: { fontSize: 15, fontWeight: '700', marginBottom: 14 },
+  comparisonRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  comparisonItem: { alignItems: 'center', flex: 1 },
+  comparisonLabel: { fontSize: 12, fontWeight: '500', marginBottom: 4 },
+  comparisonValue: { fontSize: 24, fontWeight: '900' },
+  comparisonArrow: { alignItems: 'center', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 14, gap: 2 },
+
+  // Summary Cards
+  summaryRow: { flexDirection: 'row', marginHorizontal: 20, gap: 10, marginBottom: 20 },
+  summaryCard: { flex: 1, padding: 16, borderRadius: 18, alignItems: 'center', gap: 6 },
+  summaryValue: { fontSize: 20, fontWeight: '900' },
+  summaryLabel: { fontSize: 11, fontWeight: '600' },
+
+  // Modal
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 30 },
+  modalContent: { width: '100%', padding: 24, borderRadius: 24 },
+  modalTitle: { fontSize: 18, fontWeight: '800', marginBottom: 16 },
+  modalBtn: { paddingVertical: 14, paddingHorizontal: 20, borderRadius: 14, alignItems: 'center' },
 });
 
 export default AnalizView;
