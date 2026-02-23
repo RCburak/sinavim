@@ -54,6 +54,15 @@ export const PremiumCard: React.FC<PremiumCardProps> = ({
         flipRotation.value = withSpring(isFlipped ? 180 : 0, { damping: 15 });
     }, [isFlipped]);
 
+    // Reset position when card changes (if it was swiped but not unmounted)
+    React.useEffect(() => {
+        translateX.value = 0;
+        translateY.value = 0;
+        rotateZ.value = 0;
+        tiltX.value = 0;
+        tiltY.value = 0;
+    }, [card.id]);
+
     const gesture = Gesture.Pan()
         .onUpdate((event) => {
             translateX.value = event.translationX;
@@ -133,7 +142,7 @@ export const PremiumCard: React.FC<PremiumCardProps> = ({
                 <Animated.View style={shadowStyle} />
 
                 {/* Front Side */}
-                <Animated.View style={[styles.cardContent, frontStyle]}>
+                <Animated.View style={[styles.cardContent, frontStyle, { position: 'absolute', backfaceVisibility: 'hidden' }]}>
                     <BlurView intensity={20} tint="light" style={styles.glass}>
                         <View style={styles.badge}>
                             <Text style={styles.badgeText}>{card.subject}</Text>
@@ -147,7 +156,7 @@ export const PremiumCard: React.FC<PremiumCardProps> = ({
                 </Animated.View>
 
                 {/* Back Side */}
-                <Animated.View style={[styles.cardContent, backStyle]}>
+                <Animated.View style={[styles.cardContent, backStyle, { position: 'absolute', backfaceVisibility: 'hidden' }]}>
                     <BlurView intensity={30} tint="dark" style={[styles.glass, styles.glassBack]}>
                         <Text style={[styles.cardText, { color: '#FFF' }]}>{card.back}</Text>
                         <View style={styles.footer}>
@@ -173,9 +182,10 @@ const styles = StyleSheet.create({
         elevation: 10,
     },
     cardContent: {
-        flex: 1,
+        ...StyleSheet.absoluteFillObject,
         borderRadius: 30,
         overflow: 'hidden',
+        backfaceVisibility: 'hidden',
     },
     glass: {
         flex: 1,

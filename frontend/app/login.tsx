@@ -13,7 +13,8 @@ import {
   ActivityIndicator,
   Modal,
   Pressable,
-  Dimensions
+  Dimensions,
+  Image
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -166,9 +167,13 @@ export default function LoginScreen({ onLogin, onGoToRegister, theme = COLORS.li
             {/* Logo & Branding */}
             <View style={styles.header}>
               <View style={styles.logoCircle}>
-                <Text style={styles.logoText}>RC</Text>
+                <Image
+                  source={require('../assets/images/icon.png')}
+                  style={styles.logoImage}
+                  resizeMode="contain"
+                />
               </View>
-              <Text style={styles.title}>Sınavım</Text>
+              <Text style={styles.title}>RC Sınavım</Text>
               <Text style={styles.subtitle}>Başarıya giden yolda asistanın.</Text>
             </View>
 
@@ -320,7 +325,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)',
     marginBottom: 16,
   },
-  logoText: { fontSize: 32, fontWeight: '900', color: '#fff', letterSpacing: -1 },
+  logoImage: { width: '100%', height: '100%', borderRadius: 24 },
   title: { fontSize: 34, fontWeight: '800', color: '#fff', letterSpacing: -0.5 },
   subtitle: { fontSize: 15, color: 'rgba(255,255,255,0.6)', marginTop: 6, fontWeight: '500' },
 

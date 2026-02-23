@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, Keyboard,
-  TouchableWithoutFeedback, KeyboardAvoidingView, Platform, Alert, ActivityIndicator, StatusBar
+  TouchableWithoutFeedback, KeyboardAvoidingView, Platform, Alert, ActivityIndicator, StatusBar, Image
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -68,10 +68,14 @@ export default function RegisterScreen({ onBack, onRegisterSuccess, theme = COLO
             {/* Header */}
             <View style={styles.header}>
               <View style={styles.logoCircle}>
-                <Ionicons name="person-add" size={32} color="#fff" />
+                <Image
+                  source={require('../assets/images/icon.png')}
+                  style={styles.logoImage}
+                  resizeMode="contain"
+                />
               </View>
               <Text style={styles.title}>Yeni Hesap</Text>
-              <Text style={styles.subtitle}>RC Sınavım ailesine katıl.</Text>
+              <Text style={styles.subtitle}>Sınavım ailesine katıl.</Text>
             </View>
 
             {/* Form */}
@@ -158,6 +162,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)',
     marginBottom: 16,
   },
+  logoImage: { width: '100%', height: '100%', borderRadius: 22 },
   title: { fontSize: 30, fontWeight: '800', color: '#fff', letterSpacing: -0.5 },
   subtitle: { fontSize: 15, color: 'rgba(255,255,255,0.6)', marginTop: 6, fontWeight: '500' },
 

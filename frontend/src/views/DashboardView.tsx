@@ -87,8 +87,7 @@ const DashboardHeader = ({ username, theme }: { username: string | null; theme: 
             />
             <View style={styles.brandContainer}>
               <Text style={styles.brandText}>
-                <Text style={styles.brandBold}>RC </Text>
-                <Text style={styles.brandLight}>Sınavım</Text>
+                <Text style={styles.brandBold}>Sınavım</Text>
               </Text>
             </View>
           </View>

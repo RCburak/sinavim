@@ -12,6 +12,7 @@ import {
     Animated,
     KeyboardAvoidingView,
     ScrollView,
+    Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -201,7 +202,12 @@ export default function StaffLogin() {
                 >
                     {/* Logo Area */}
                     <View style={styles.logoArea}>
-                        <Text style={styles.logoText}>RC Sınavım</Text>
+                        <Image
+                            source={require('../../assets/images/icon.png')}
+                            style={styles.logoImage}
+                            resizeMode="contain"
+                        />
+                        <Text style={styles.logoText}>Sınavım</Text>
                         <Text style={styles.logoSubtext}>Yönetim Sistemi</Text>
                     </View>
 
@@ -332,7 +338,7 @@ export default function StaffLogin() {
             </KeyboardAvoidingView>
 
             {/* Footer */}
-            <Text style={styles.footerText}>© 2025 RC Sınavım. Tüm hakları saklıdır.</Text>
+            <Text style={styles.footerText}>© 2025 Sınavım. Tüm hakları saklıdır.</Text>
         </View>
     );
 }
@@ -385,6 +391,12 @@ const styles = StyleSheet.create({
     logoArea: {
         alignItems: 'center',
         marginBottom: 28,
+    },
+    logoImage: {
+        width: 60,
+        height: 60,
+        marginBottom: 10,
+        borderRadius: 15,
     },
     logoText: {
         fontSize: 32,

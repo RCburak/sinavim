@@ -10,6 +10,7 @@ import {
     TextInput,
     Dimensions,
     Platform,
+    Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -635,8 +636,12 @@ export default function AdminDashboard() {
             {/* Sidebar */}
             <LinearGradient colors={['#1F2937', '#111827']} style={styles.sidebar}>
                 <View style={styles.brand}>
-                    <View style={styles.brandLogo}><Text style={styles.brandLogoText}>RC</Text></View>
-                    <Text style={styles.brandTitle}>Yönetici Paneli</Text>
+                    <Image
+                        source={require('../../assets/images/icon.png')}
+                        style={styles.brandLogo}
+                        resizeMode="contain"
+                    />
+                    <Text style={styles.brandTitle}>Sınavım</Text>
                 </View>
 
                 {menuItems.map(item => (
@@ -831,9 +836,8 @@ const styles = StyleSheet.create({
     // SIDEBAR
     sidebar: { width: 260, paddingVertical: 30, paddingHorizontal: 20 },
     brand: { flexDirection: 'row', alignItems: 'center', marginBottom: 40, gap: 12 },
-    brandLogo: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#F59E0B', justifyContent: 'center', alignItems: 'center' },
-    brandLogoText: { color: '#fff', fontWeight: '900', fontSize: 16 },
-    brandTitle: { color: '#fff', fontWeight: '700', fontSize: 18 },
+    brandLogo: { width: 40, height: 40, borderRadius: 8 },
+    brandTitle: { color: '#fff', fontWeight: '900', fontSize: 20, letterSpacing: -0.5 },
     menuItem: { flexDirection: 'row', alignItems: 'center', padding: 12, borderRadius: 12, marginBottom: 5, gap: 12 },
     menuItemActive: { backgroundColor: 'rgba(245,158,11,0.15)' },
     menuText: { color: '#9CA3AF', fontSize: 14, fontWeight: '500' },

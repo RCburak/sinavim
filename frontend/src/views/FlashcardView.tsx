@@ -42,7 +42,7 @@ export const FlashcardView = ({ onBack, theme }: any) => {
     const [back, setBack] = useState('');
     const [selectedSubject, setSelectedSubject] = useState('Matematik');
     const [filterSubject, setFilterSubject] = useState<string | null>(null);
-    const [viewMode, setViewMode] = useState<'study' | 'manage' | 'duels' | 'duel-active'>('study');
+    const [viewMode, setViewMode] = useState<'study' | 'manage' | 'duels' | 'duel-active' | 'deck-builder' | 'hub'>('hub');
     const [duels, setDuels] = useState<any[]>([]);
     const [friends, setFriends] = useState<any[]>([]);
     const [isSyncing, setIsSyncing] = useState(false);
@@ -380,20 +380,13 @@ export const FlashcardView = ({ onBack, theme }: any) => {
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={s.hubScroll}
                 snapToInterval={width * 0.7 + 20}
+                snapToAlignment="start"
                 decelerationRate="fast"
             >
                 {SUBJECTS.map((sub, idx) => {
                     const count = cards.filter(c => c.subject === sub).length;
                     return (
-                        <TouchableOpacity
-                            key={sub}
-                            style={[s.deckCard, { borderLeftColor: ACCENT_COLORS[idx] }]}
-                            onPress={() => {
-                                setFilterSubject(sub);
-                                setViewMode('study');
-                                setCurrentIndex(0);
-                            }}
-                        >
+                        <View key={sub} style={[s.deckCard, { borderLeftColor: ACCENT_COLORS[idx] }]}>
                             <LinearGradient
                                 colors={['rgba(255,255,255,0.05)', 'rgba(255,255,255,0.01)']}
                                 style={StyleSheet.absoluteFill}
@@ -404,12 +397,48 @@ export const FlashcardView = ({ onBack, theme }: any) => {
                                 <Text style={s.deckCount}>{count} KART</Text>
                             </View>
                             <View style={s.deckProgress}>
-                                <View style={[s.progressDot, { backgroundColor: ACCENT_COLORS[idx] }]} />
-                                <Text style={s.progressText}>Mastery: %42</Text>
+                                <TouchableOpacity
+                                    style={[s.forgeBtn, { backgroundColor: ACCENT_COLORS[idx] }]}
+                                    onPress={() => {
+                                        setFilterSubject(sub);
+                                        setViewMode('deck-builder');
+                                    }}
+                                >
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                                        <Ionicons name="hammer" size={14} color="#FFF" />
+                                        <Text style={s.forgeBtnText}>FORGE</Text>
+                                    </View>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    style={[s.forgeBtn, { backgroundColor: '#F59E0B' }]}
+                                    onPress={() => {
+                                        setFilterSubject(sub);
+                                        shareDeck();
+                                    }}
+                                >
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                                        <Ionicons name="people" size={14} color="#FFF" />
+                                        <Text style={s.forgeBtnText}>INVITE</Text>
+                                    </View>
+                                </TouchableOpacity>
                             </View>
-                        </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={s.deckEnterBtn}
+                                onPress={() => {
+                                    setFilterSubject(sub);
+                                    setViewMode('study');
+                                    setCurrentIndex(0);
+                                }}
+                            >
+                                <Ionicons name="play" size={24} color="#FFF" />
+                            </TouchableOpacity>
+                        </View>
                     );
                 })}
+                {/* Empty space at the end to allow scrolling last card into view properly */}
+                <View style={{ width: 40 }} />
             </ScrollView>
 
             <View style={s.quickActions}>
@@ -434,7 +463,10 @@ export const FlashcardView = ({ onBack, theme }: any) => {
             <SafeAreaView style={{ flex: 1 }}>
                 {/* Immersive Header */}
                 <View style={s.premiumHeader}>
-                    <TouchableOpacity onPress={onBack} style={s.pBackBtn}>
+                    <TouchableOpacity
+                        onPress={() => viewMode === 'hub' ? onBack() : setViewMode('hub')}
+                        style={s.pBackBtn}
+                    >
                         <Ionicons name="chevron-back" size={24} color="#FFF" />
                     </TouchableOpacity>
                     <Text style={s.pTitle}>ARENA</Text>
@@ -467,7 +499,7 @@ export const FlashcardView = ({ onBack, theme }: any) => {
                             ) : (
                                 <View style={s.emptyImmersion}>
                                     <Text style={s.emptyImmersionText}>Bu destede kart kalmadı!</Text>
-                                    <TouchableOpacity style={s.backToHub} onPress={() => setViewMode('study')}>
+                                    <TouchableOpacity style={s.backToHub} onPress={() => setViewMode('hub')}>
                                         <Text style={s.backToHubText}>HUB'A DÖN</Text>
                                     </TouchableOpacity>
                                 </View>
@@ -508,7 +540,7 @@ export const FlashcardView = ({ onBack, theme }: any) => {
                                     </View>
                                 </View>
                             ) : (
-                                currentCard && (
+                                currentCard ? (
                                     <PremiumCard
                                         card={currentCard}
                                         isFlipped={isFlipped}
@@ -517,6 +549,13 @@ export const FlashcardView = ({ onBack, theme }: any) => {
                                         onSwipeRight={() => submitAnswer('hit')}
                                         onSwipeUp={() => submitAnswer('critical')}
                                     />
+                                ) : (
+                                    <View style={s.emptyImmersion}>
+                                        <Text style={s.emptyImmersionText}>Tüm kartları bitirdin!</Text>
+                                        <TouchableOpacity style={[s.backToHub, { marginTop: 10 }]} onPress={() => setViewMode('hub')}>
+                                            <Text style={s.backToHubText}>HUB'A DÖN</Text>
+                                        </TouchableOpacity>
+                                    </View>
                                 )
                             )}
                         </View>
@@ -553,6 +592,60 @@ export const FlashcardView = ({ onBack, theme }: any) => {
                             </TouchableOpacity>
                         )}
                     />
+                ) : viewMode === 'deck-builder' ? (
+                    <View style={s.deckHub}>
+                        <View style={s.hubHeader}>
+                            <Text style={s.hubTitle}>DESTEYİ DÖV</Text>
+                            <Text style={s.hubSub}>{filterSubject} için yeni kartlar ekle</Text>
+                        </View>
+
+                        {/* Quick Add Form */}
+                        <BlurView intensity={20} tint="light" style={s.forgeMatrix}>
+                            <TextInput
+                                style={s.pInput}
+                                placeholder="Soru / Ön Yüz"
+                                placeholderTextColor="rgba(255,255,255,0.3)"
+                                value={front}
+                                onChangeText={setFront}
+                            />
+                            <TextInput
+                                style={s.pInput}
+                                placeholder="Cevap / Arka Yüz"
+                                placeholderTextColor="rgba(255,255,255,0.3)"
+                                value={back}
+                                onChangeText={setBack}
+                            />
+                            <TouchableOpacity style={[s.pModalBtn, s.pModalBtnPrimary, { height: 50 }]} onPress={addCard}>
+                                <Text style={s.pModalBtnText}>KARTI DÖV (EKLE)</Text>
+                            </TouchableOpacity>
+                        </BlurView>
+
+                        <Text style={[s.hubSub, { marginLeft: 25, marginTop: 20, marginBottom: 10 }]}>MEVCUT KARTLAR ({filteredCards.length})</Text>
+
+                        <FlatList
+                            data={filteredCards}
+                            keyExtractor={item => item.id}
+                            contentContainerStyle={s.manageList}
+                            renderItem={({ item }) => (
+                                <View style={s.pManageCard}>
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={s.pManageText} numberOfLines={1}>{item.front}</Text>
+                                        <Text style={[s.pDuelMeta, { marginTop: 4 }]} numberOfLines={1}>{item.back}</Text>
+                                    </View>
+                                    <TouchableOpacity onPress={() => deleteCard(item.id)}>
+                                        <Ionicons name="trash" size={20} color="#EF4444" />
+                                    </TouchableOpacity>
+                                </View>
+                            )}
+                        />
+
+                        <TouchableOpacity
+                            style={[s.backToHub, { alignSelf: 'center', marginBottom: 30 }]}
+                            onPress={() => setViewMode('hub')}
+                        >
+                            <Text style={s.backToHubText}>KARTLARI HAZIRLADIM, ŞİMDİ ARKADAŞLARIMA MEYDAN OKUYACAĞIM</Text>
+                        </TouchableOpacity>
+                    </View>
                 ) : (
                     renderDeckHub()
                 )}
@@ -587,6 +680,39 @@ export const FlashcardView = ({ onBack, theme }: any) => {
                         </BlurView>
                     </View>
                 </Modal>
+
+                {friendModalVisible && (
+                    <Modal transparent animationType="slide">
+                        <View style={s.modalOverlay}>
+                            <BlurView intensity={95} tint="dark" style={s.pModalContent}>
+                                <Text style={s.pModalTitle}>RKİP SEÇ</Text>
+                                <FlatList
+                                    data={friends}
+                                    keyExtractor={item => item.id}
+                                    style={{ maxHeight: 300, marginBottom: 20 }}
+                                    renderItem={({ item }) => (
+                                        <TouchableOpacity style={s.pDuelCard} onPress={() => inviteToDuel(item.id)}>
+                                            <View style={s.pDuelAvatar}>
+                                                <Text style={s.pDuelAvatarText}>{(item.name || item.email || "U")[0].toUpperCase()}</Text>
+                                            </View>
+                                            <View style={{ flex: 1, marginLeft: 15 }}>
+                                                <Text style={s.pDuelName}>{item.name || item.email}</Text>
+                                            </View>
+                                            <Ionicons name="send" size={20} color="#8B5CF6" />
+                                        </TouchableOpacity>
+                                    )}
+                                    ListEmptyComponent={<Text style={{ color: 'rgba(255,255,255,0.4)', textAlign: 'center' }}>Arkadaş bulunamadı.</Text>}
+                                />
+                                <TouchableOpacity
+                                    style={[s.pModalBtn, { width: '100%' }]}
+                                    onPress={() => setFriendModalVisible(false)}
+                                >
+                                    <Text style={s.pModalBtnText}>KAPAT (İPTAL)</Text>
+                                </TouchableOpacity>
+                            </BlurView>
+                        </View>
+                    </Modal>
+                )}
 
                 {showResultModal && (
                     <Modal transparent animationType="fade">
@@ -815,6 +941,40 @@ const s = StyleSheet.create({
     pDuelMeta: {
         color: 'rgba(255,255,255,0.4)',
         fontSize: 12,
+    },
+    forgeMatrix: {
+        marginHorizontal: 20,
+        padding: 20,
+        borderRadius: 25,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+        gap: 10,
+    },
+
+    forgeBtn: {
+        width: 80,
+        height: 36,
+        borderRadius: 12,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    forgeBtnText: {
+        color: '#FFF',
+        fontSize: 10,
+        fontWeight: '900',
+    },
+    deckEnterBtn: {
+        position: 'absolute',
+        right: 25,
+        bottom: 25,
+        width: 50,
+        height: 50,
+        borderRadius: 25,
+        backgroundColor: 'rgba(255,255,255,0.1)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.2)',
     },
 
     // Modals
