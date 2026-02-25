@@ -29,10 +29,10 @@ export default function RootLayout() {
                 <Stack.Screen name="index" />
                 <Stack.Screen name="login" />
                 <Stack.Screen name="register" />
-                <Stack.Screen name="dashboard" />
                 <Stack.Screen name="staff/login" options={{ headerShown: false }} />
                 <Stack.Screen name="teacher/dashboard" options={{ headerShown: false }} />
                 <Stack.Screen name="teacher/assignments" options={{ headerShown: false }} />
+                <Stack.Screen name="teacher/rehber-dashboard" options={{ headerShown: false }} />
                 <Stack.Screen name="admin/dashboard" options={{ headerShown: false }} />
               </Stack>
             </ScheduleProvider>
