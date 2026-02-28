@@ -23,6 +23,7 @@ const getAuthHeaders = () => {
     const token = typeof window !== 'undefined' ? sessionStorage.getItem('teacher_token') : null;
     return {
         'Content-Type': 'application/json',
+        'ngrok-skip-browser-warning': 'true',
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
     };
 };

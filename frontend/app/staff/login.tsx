@@ -134,7 +134,7 @@ export default function StaffLogin() {
             } else {
                 const response = await fetch(`${API_URL}/admin/login`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
                     body: JSON.stringify({ email, password }),
                 });
                 const result = await response.json();

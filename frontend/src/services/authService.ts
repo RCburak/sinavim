@@ -13,7 +13,7 @@ import {
 } from "firebase/auth";
 import { Platform } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
-import { API_URL } from '../config/api';
+import { API_URL, API_HEADERS } from '../config/api';
 import { AuthResponse, RegisterData, User } from '../types';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -69,7 +69,7 @@ export const authService = {
         try {
           await fetch(`${API_URL}/sync-user`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: API_HEADERS as HeadersInit,
             body: JSON.stringify({
               uid: user.uid,
               email: user.email,
@@ -177,7 +177,7 @@ export const authService = {
 
       const response = await fetch(`${API_URL}/join-institution`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: API_HEADERS as HeadersInit,
         body: JSON.stringify({ user_id: uid, email, code })
       });
 
@@ -196,7 +196,7 @@ export const authService = {
 
       const response = await fetch(`${API_URL}/teacher/login`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: API_HEADERS as HeadersInit,
         body: JSON.stringify({ email, password })
       });
 
@@ -214,7 +214,7 @@ export const authService = {
 
       const response = await fetch(`${API_URL}/leave-institution`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: API_HEADERS as HeadersInit,
         body: JSON.stringify({ user_id: uid })
       });
 
