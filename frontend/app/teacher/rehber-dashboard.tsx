@@ -102,6 +102,7 @@ export default function RehberDashboard() {
     // Calendar State (Migrated)
     const [events, setEvents] = useState<any[]>([]);
     const [showEventModal, setShowEventModal] = useState(false);
+    const [savingEvent, setSavingEvent] = useState(false);
     const [newEvent, setNewEvent] = useState({ title: '', date: '', type: 'trial', description: '', class_id: '' });
     const [programStudent, setProgramStudent] = useState<Student | null>(null);
     const [programList, setProgramList] = useState<any[]>([]);
@@ -177,7 +178,12 @@ export default function RehberDashboard() {
 
     const addEvent = async () => {
         const instId = teacherData?.admin_id || teacherData?.id;
-        if (!newEvent.title || !newEvent.date || !instId) return;
+        if (!newEvent.title || !newEvent.date || !instId) {
+            showAlert("Eksik Bilgi", "Lütfen en az başlık ve tarih alanlarını doldurun.");
+            return;
+        }
+
+        setSavingEvent(true);
         try {
             const response = await fetch(`${API_URL}/teacher/create-event`, {
                 method: 'POST',
@@ -191,13 +197,23 @@ export default function RehberDashboard() {
                     class_id: newEvent.class_id || null
                 }),
             });
+
+            const result = await response.json();
+
             if (response.ok) {
                 showAlert("Başarı", "Etkinlik takvime eklendi!");
                 setNewEvent({ title: '', date: '', type: 'trial', description: '', class_id: '' });
                 setShowEventModal(false);
                 fetchEvents(instId);
+            } else {
+                showAlert("Hata", result.message || result.detail || "Etkinlik oluşturulurken bir hata oluştu.");
             }
-        } catch (e) { console.error(e); }
+        } catch (e) {
+            console.error(e);
+            showAlert("Bağlantı Hatası", "Sunucuya ulaşılamadı. Lütfen internet bağlantınızı kontrol edin.");
+        } finally {
+            setSavingEvent(false);
+        }
     };
 
     const loadPerformance = async () => {
@@ -1397,8 +1413,16 @@ export default function RehberDashboard() {
                             <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowEventModal(false)}>
                                 <Text style={{ color: '#6B7280', fontWeight: '600' }}>İptal</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity style={styles.primaryBtn} onPress={addEvent}>
-                                <Text style={{ color: '#fff', fontWeight: '600' }}>Kaydet</Text>
+                            <TouchableOpacity
+                                style={[styles.primaryBtn, savingEvent && { opacity: 0.7 }]}
+                                onPress={addEvent}
+                                disabled={savingEvent}
+                            >
+                                {savingEvent ? (
+                                    <ActivityIndicator size="small" color="#fff" />
+                                ) : (
+                                    <Text style={{ color: '#fff', fontWeight: '600' }}>Kaydet</Text>
+                                )}
                             </TouchableOpacity>
                         </View>
                     </View>

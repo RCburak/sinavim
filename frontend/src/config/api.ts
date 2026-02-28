@@ -14,11 +14,9 @@ const LOCAL_PORT = "8000";
 
 /** Ana backend API adresi */
 export const API_URL =
-  process.env.EXPO_PUBLIC_API_URL ??
-  (Platform.OS === 'android'
-    ? `http://${LOCAL_IP}:${LOCAL_PORT}`  // Fiziksel Cihaz için. Emulator kullanıyorsanız "10.0.2.2" yapın.
-    : `http://${LOCAL_IP}:${LOCAL_PORT}`  // iOS
-  );
+  (Platform.OS === 'web' && typeof window !== 'undefined' && window.location.hostname === 'localhost')
+    ? `http://localhost:${LOCAL_PORT}`
+    : (process.env.EXPO_PUBLIC_API_URL ?? `http://${LOCAL_IP}:${LOCAL_PORT}`);
 
 /** API istekleri için ortak headers */
 export const API_HEADERS: HeadersInit = {
