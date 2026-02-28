@@ -30,7 +30,7 @@ const getAuthHeaders = () => {
   };
 };
 
-type TabType = 'overview' | 'students' | 'classes' | 'assignments' | 'messages' | 'materials' | 'gamification' | 'calendar';
+type TabType = 'overview' | 'students' | 'classes' | 'assignments' | 'messages' | 'materials';
 
 interface Student {
   id: string;
@@ -140,11 +140,6 @@ export default function TeacherDashboard() {
   const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
   const [newAnnouncement, setNewAnnouncement] = useState({ title: '', content: '', class_id: '' });
 
-  // Phase 5: Gamification & Calendar States
-  const [leaderboard, setLeaderboard] = useState<any[]>([]);
-  const [events, setEvents] = useState<any[]>([]);
-  const [showEventModal, setShowEventModal] = useState(false);
-  const [newEvent, setNewEvent] = useState({ title: '', date: '', type: 'trial', description: '', class_id: '' });
 
   useEffect(() => {
     try {
@@ -180,8 +175,6 @@ export default function TeacherDashboard() {
     tasks.push(fetchTemplates());
     tasks.push(fetchAnnouncements(institutionId));
     tasks.push(fetchMaterials(institutionId));
-    tasks.push(fetchEvents(institutionId));
-    tasks.push(fetchLeaderboard(institutionId));
     await Promise.all(tasks);
     setLoading(false);
   };
@@ -258,50 +251,6 @@ export default function TeacherDashboard() {
     } catch (e) { console.error(e); }
   };
 
-  const fetchLeaderboard = async (instId: string) => {
-    try {
-      const response = await fetch(`${API_URL}/teacher/leaderboard/${instId}`, {
-        headers: getAuthHeaders(),
-      });
-      const data = await response.json();
-      if (Array.isArray(data)) setLeaderboard(data);
-    } catch (e) { console.error("Siralama yuklenemedi", e); }
-  };
-
-  const fetchEvents = async (instId: string) => {
-    try {
-      const response = await fetch(`${API_URL}/teacher/events/${instId}`, {
-        headers: getAuthHeaders(),
-      });
-      const data = await response.json();
-      if (Array.isArray(data)) setEvents(data);
-    } catch (e) { console.error("Takvim yuklenemedi", e); }
-  };
-
-  const addEvent = async () => {
-    const instId = teacherData?.admin_id || teacherData?.id;
-    if (!newEvent.title || !newEvent.date || !instId) return;
-    try {
-      const response = await fetch(`${API_URL}/teacher/create-event`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({
-          institution_id: instId,
-          title: newEvent.title,
-          date: newEvent.date,
-          type: newEvent.type,
-          description: newEvent.description,
-          class_id: newEvent.class_id || null
-        }),
-      });
-      if (response.ok) {
-        alert("Etkinlik takvime eklendi!");
-        setNewEvent({ title: '', date: '', type: 'trial', description: '', class_id: '' });
-        setShowEventModal(false);
-        fetchEvents(instId);
-      }
-    } catch (e) { console.error(e); }
-  };
 
   const fetchTemplates = async () => {
     try {
@@ -1067,112 +1016,6 @@ export default function TeacherDashboard() {
       />
     </View>
   );
-  const renderGamification = () => (
-    <View style={styles.tabContent}>
-      <View style={styles.paneHeader}>
-        <View>
-          <Text style={styles.paneTitle}>Liderlik Tablosu & Başarılar</Text>
-          <Text style={styles.sectionSub}>Öğrenci başarı sıralamaları ve rozet sistemi.</Text>
-        </View>
-      </View>
-
-      <View style={{ flexDirection: 'row', gap: 24 }}>
-        <View style={{ flex: 1.5, backgroundColor: '#fff', borderRadius: 24, padding: 24, ...COLORS.light.cardShadow }}>
-          <Text style={styles.sectionHeader}>En Başarılı Öğrenciler</Text>
-          <FlatList
-            data={leaderboard}
-            keyExtractor={item => item.id}
-            renderItem={({ item, index }) => (
-              <View style={styles.leaderboardRow}>
-                <View style={[styles.rankBadge, index === 0 && { backgroundColor: '#FCD34D' }, index === 1 && { backgroundColor: '#D1D5DB' }, index === 2 && { backgroundColor: '#F97316' }]}>
-                  <Text style={[styles.rankText, index < 3 && { color: '#fff' }]}>{item.rank}</Text>
-                </View>
-                <View style={{ flex: 1, marginLeft: 16 }}>
-                  <Text style={styles.leaderName}>{item.name}</Text>
-                </View>
-                <View style={styles.avgBadge}>
-                  <Text style={styles.avgText}>{item.avg_net} Net Ort.</Text>
-                </View>
-              </View>
-            )}
-            ListEmptyComponent={
-              <View style={styles.emptyActivity}>
-                <Ionicons name="trophy-outline" size={48} color="#D1D5DB" />
-                <Text style={styles.emptyText}>Veri toplanıyor...</Text>
-              </View>
-            }
-          />
-        </View>
-
-        <View style={{ flex: 1, gap: 20 }}>
-          <View style={[styles.sectionCard, { backgroundColor: '#4F46E5' }]}>
-            <Ionicons name="sparkles" size={32} color="#fff" style={{ marginBottom: 12 }} />
-            <Text style={{ color: '#fff', fontSize: 18, fontWeight: '800' }}>Haftanın Yıldızı</Text>
-            <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13, marginTop: 4 }}>Netlerini en çok artıran öğrenci için otomatik rozet atanır.</Text>
-          </View>
-
-          <View style={styles.sectionCard}>
-            <Text style={styles.cardTitle}>Rozetler</Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 15 }}>
-              {['Hızlı Okur', 'Net Canavarı', 'Düzenli Çalışan', 'Sabah Kuşu'].map((b, i) => (
-                <View key={i} style={styles.badgeItem}>
-                  <Ionicons name="ribbon" size={20} color={COLORS.light.primary} />
-                  <Text style={styles.badgeItemText}>{b}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-        </View>
-      </View>
-    </View>
-  );
-
-  const renderCalendar = () => (
-    <View style={styles.tabContent}>
-      <View style={styles.paneHeader}>
-        <View>
-          <Text style={styles.paneTitle}>Deneme Takvimi & Planlayıcı</Text>
-          <Text style={styles.sectionSub}>Kurumsal sınavlar ve önemli tarihleri takip edin.</Text>
-        </View>
-        <TouchableOpacity style={styles.primaryBtn} onPress={() => setShowEventModal(true)}>
-          <Ionicons name="calendar-outline" size={18} color="#fff" />
-          <Text style={styles.primaryBtnText}>Etkinlik Ekle</Text>
-        </TouchableOpacity>
-      </View>
-
-      <FlatList
-        data={events}
-        keyExtractor={item => item.id}
-        renderItem={({ item }) => (
-          <View style={styles.calendarRow}>
-            <View style={styles.dateBox}>
-              <Text style={styles.dateDay}>{item.date.split('-')[2]}</Text>
-              <Text style={styles.dateMonth}>{item.date.split('-')[1]}</Text>
-            </View>
-            <View style={{ flex: 1, marginLeft: 20 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Text style={styles.eventTitle}>{item.title}</Text>
-                <View style={[styles.typeTag, { backgroundColor: item.type === 'trial' ? '#DBEAFE' : '#F3F4F6' }]}>
-                  <Text style={[styles.typeTagText, { color: item.type === 'trial' ? '#2563EB' : '#6B7280' }]}>
-                    {item.type === 'trial' ? 'DENEME' : item.type.toUpperCase()}
-                  </Text>
-                </View>
-              </View>
-              <Text style={styles.eventDesc}>{item.description}</Text>
-            </View>
-          </View>
-        )}
-        ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Ionicons name="calendar-outline" size={64} color="#D1D5DB" />
-            <Text style={styles.emptyStateTitle}>Takvim Boş</Text>
-            <Text style={styles.emptyStateSub}>Henüz bir sınav veya etkinlik eklenmemiş.</Text>
-          </View>
-        }
-      />
-
-    </View>
-  );
 
   return (
     <View style={styles.container}>
@@ -1233,21 +1076,6 @@ export default function TeacherDashboard() {
           <Text style={[styles.menuText, activeTab === 'materials' && styles.menuTextActive]}>Materyaller</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.menuItem, activeTab === 'gamification' && styles.menuItemActive]}
-          onPress={() => setActiveTab('gamification')}
-        >
-          <Ionicons name="trophy-outline" size={20} color={activeTab === 'gamification' ? "#fff" : "#9CA3AF"} />
-          <Text style={[styles.menuText, activeTab === 'gamification' && styles.menuTextActive]}>Oyunlaştırma</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.menuItem, activeTab === 'calendar' && styles.menuItemActive]}
-          onPress={() => setActiveTab('calendar')}
-        >
-          <Ionicons name="calendar-outline" size={20} color={activeTab === 'calendar' ? "#fff" : "#9CA3AF"} />
-          <Text style={[styles.menuText, activeTab === 'calendar' && styles.menuTextActive]}>Takvim</Text>
-        </TouchableOpacity>
 
         <View style={{ flex: 1 }} />
 
@@ -1282,9 +1110,7 @@ export default function TeacherDashboard() {
                 activeTab === 'students' ? 'Öğrenci Listesi' :
                   activeTab === 'classes' ? 'Sınıf Yönetimi' :
                     activeTab === 'assignments' ? 'Ödev Merkezi' :
-                      activeTab === 'messages' ? 'Mesajlar' :
-                        activeTab === 'materials' ? 'Materyaller & Drive' :
-                          activeTab === 'gamification' ? 'Başarı & Oyunlaştırma' : 'Takvim & Ajanda'}
+                      activeTab === 'messages' ? 'Mesajlar' : 'Materyaller & Drive'}
             </Text>
             <Text style={styles.headerDate}>{new Date().toLocaleDateString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long' })}</Text>
           </View>
@@ -1303,8 +1129,6 @@ export default function TeacherDashboard() {
           {activeTab === 'assignments' && renderAssignments()}
           {activeTab === 'messages' && renderMessages()}
           {activeTab === 'materials' && renderMaterials()}
-          {activeTab === 'gamification' && renderGamification()}
-          {activeTab === 'calendar' && renderCalendar()}
           <View style={{ height: 50 }} />
         </ScrollView>
       </View>
@@ -1404,36 +1228,6 @@ export default function TeacherDashboard() {
         </View>
       </Modal>
 
-      {/* Event Modal */}
-      <Modal visible={showEventModal} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Takvime Ekle</Text>
-            <View style={{ gap: 12, marginTop: 15 }}>
-              <TextInput
-                style={styles.modalInput}
-                placeholder="Etkinlik Başlığı"
-                value={newEvent.title}
-                onChangeText={t => setNewEvent(prev => ({ ...prev, title: t }))}
-              />
-              <TextInput
-                style={styles.modalInput}
-                placeholder="Tarih (YYYY-MM-DD)"
-                value={newEvent.date}
-                onChangeText={t => setNewEvent(prev => ({ ...prev, date: t }))}
-              />
-            </View>
-            <View style={styles.modalActions}>
-              <TouchableOpacity style={styles.secondaryBtn} onPress={() => setShowEventModal(false)}>
-                <Text style={styles.secondaryBtnText}>İptal</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.primaryBtn} onPress={addEvent}>
-                <Text style={styles.primaryBtnText}>Ekle</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
 
       {/* DETAY MODALI */}
       <Modal visible={modalVisible} transparent animationType="fade" onRequestClose={() => setModalVisible(false)}>

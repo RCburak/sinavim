@@ -316,7 +316,7 @@ export default function Index() {
       case "notebook":
         return <NotebookView theme={theme} onBack={() => setView("dashboard")} onRecordAction={gamification.recordAction} />;
       case "exam_calendar":
-        return <ExamCalendar theme={theme} onBack={() => setView("dashboard")} />;
+        return <ExamCalendar theme={theme} onBack={() => setView("dashboard")} institution={institution} />;
       case "gamification":
         return <GamificationView theme={theme} setView={(v: any) => setView(v)} gamification={gamification} streak={streak} />;
       case "profile":

@@ -55,7 +55,7 @@ interface ClassItem {
     name: string;
 }
 
-type TabType = 'overview' | 'students' | 'classes' | 'performance' | 'notifications' | 'assignments';
+type TabType = 'overview' | 'students' | 'classes' | 'performance' | 'notifications' | 'assignments' | 'calendar';
 
 export default function RehberDashboard() {
     const router = useRouter();
@@ -98,6 +98,11 @@ export default function RehberDashboard() {
 
     // Program Modal
     const [showProgramModal, setShowProgramModal] = useState(false);
+
+    // Calendar State (Migrated)
+    const [events, setEvents] = useState<any[]>([]);
+    const [showEventModal, setShowEventModal] = useState(false);
+    const [newEvent, setNewEvent] = useState({ title: '', date: '', type: 'trial', description: '', class_id: '' });
     const [programStudent, setProgramStudent] = useState<Student | null>(null);
     const [programList, setProgramList] = useState<any[]>([]);
     const [subject, setSubject] = useState('');
@@ -135,6 +140,7 @@ export default function RehberDashboard() {
         await Promise.all([
             fetchStudents(institutionId, adminId),
             fetchClasses(institutionId),
+            fetchEvents(institutionId),
         ]);
         setLoading(false);
     };
@@ -156,6 +162,41 @@ export default function RehberDashboard() {
             const response = await fetch(`${API_URL}/teacher/classes/${institutionId}`, { headers: getAuthHeaders() });
             const data = await response.json();
             if (Array.isArray(data)) setClasses(data);
+        } catch (e) { console.error(e); }
+    };
+
+    const fetchEvents = async (instId: string) => {
+        try {
+            const response = await fetch(`${API_URL}/teacher/events/${instId}`, {
+                headers: getAuthHeaders(),
+            });
+            const data = await response.json();
+            if (Array.isArray(data)) setEvents(data);
+        } catch (e) { console.error("Takvim yuklenemedi", e); }
+    };
+
+    const addEvent = async () => {
+        const instId = teacherData?.admin_id || teacherData?.id;
+        if (!newEvent.title || !newEvent.date || !instId) return;
+        try {
+            const response = await fetch(`${API_URL}/teacher/create-event`, {
+                method: 'POST',
+                headers: getAuthHeaders(),
+                body: JSON.stringify({
+                    institution_id: instId,
+                    title: newEvent.title,
+                    date: newEvent.date,
+                    type: newEvent.type,
+                    description: newEvent.description,
+                    class_id: newEvent.class_id || null
+                }),
+            });
+            if (response.ok) {
+                showAlert("Başarı", "Etkinlik takvime eklendi!");
+                setNewEvent({ title: '', date: '', type: 'trial', description: '', class_id: '' });
+                setShowEventModal(false);
+                fetchEvents(instId);
+            }
         } catch (e) { console.error(e); }
     };
 
@@ -936,6 +977,58 @@ export default function RehberDashboard() {
         );
     };
 
+
+
+    // ─── TAB: Calendar ─────────────────────────────
+    const renderCalendar = () => {
+        return (
+            <>
+                <View style={styles.tabHeader}>
+                    <View>
+                        <Text style={styles.headerTitle}>📅 Deneme Takvimi</Text>
+                        <Text style={styles.sectionSub}>Kurumsal sınavlar ve önemli tarihleri buradan yönetebilirsiniz.</Text>
+                    </View>
+                    <TouchableOpacity style={styles.primaryBtn} onPress={() => setShowEventModal(true)}>
+                        <Ionicons name="calendar-outline" size={18} color="#fff" />
+                        <Text style={styles.primaryBtnText}>Etkinlik Ekle</Text>
+                    </TouchableOpacity>
+                </View>
+
+                <FlatList
+                    data={events}
+                    keyExtractor={item => item.id}
+                    renderItem={({ item }) => (
+                        <View style={styles.calendarRow}>
+                            <View style={styles.dateBox}>
+                                <Text style={styles.dateDay}>{item.date.split('-')[2]}</Text>
+                                <Text style={styles.dateMonth}>{item.date.split('-')[1]}</Text>
+                            </View>
+                            <View style={{ flex: 1, marginLeft: 20 }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                    <Text style={styles.eventTitle}>{item.title}</Text>
+                                    <View style={[styles.typeTag, { backgroundColor: item.type === 'trial' ? '#DBEAFE' : '#F3F4F6' }]}>
+                                        <Text style={[styles.typeTagText, { color: item.type === 'trial' ? '#2563EB' : '#6B7280' }]}>
+                                            {item.type === 'trial' ? 'DENEME' : item.type.toUpperCase()}
+                                        </Text>
+                                    </View>
+                                </View>
+                                <Text style={styles.eventDesc}>{item.description}</Text>
+                            </View>
+                        </View>
+                    )}
+                    ListEmptyComponent={
+                        <View style={styles.emptyState}>
+                            <Ionicons name="calendar-outline" size={64} color="#D1D5DB" />
+                            <Text style={styles.emptyStateTitle}>Takvim Boş</Text>
+                            <Text style={styles.emptyStateSub}>Henüz bir sınav veya etkinlik eklenmemiş.</Text>
+                        </View>
+                    }
+                    contentContainerStyle={{ paddingBottom: 40 }}
+                />
+            </>
+        );
+    };
+
     // ─── SIDEBAR ───────────────────────────────────
     const menuItems: { id: TabType; icon: string; label: string }[] = [
         { id: 'overview', icon: 'grid-outline', label: 'Genel Bakış' },
@@ -943,6 +1036,7 @@ export default function RehberDashboard() {
         { id: 'classes', icon: 'layers-outline', label: 'Sınıflar' },
         { id: 'performance', icon: 'trending-up-outline', label: 'Performans' },
         { id: 'notifications', icon: 'notifications-outline', label: 'Bildirimler' },
+        { id: 'calendar', icon: 'calendar-outline', label: 'Takvim' },
     ];
 
     if (loading && !teacherData) {
@@ -1022,6 +1116,7 @@ export default function RehberDashboard() {
                 {activeTab === 'performance' && renderPerformance()}
                 {activeTab === 'notifications' && renderNotifications()}
                 {activeTab === 'assignments' && renderAssignments()}
+                {activeTab === 'calendar' && renderCalendar()}
             </ScrollView>
 
             {/* ─── Student Detail Modal ──────────────── */}
@@ -1237,6 +1332,78 @@ export default function RehberDashboard() {
                     </View>
                 </View>
             </Modal>
+
+            {/* ─── Event Modal ─────────────────────────── */}
+            <Modal visible={showEventModal} transparent animationType="fade">
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>📅 Yeni Etkinlik/Sınav</Text>
+                            <TouchableOpacity onPress={() => setShowEventModal(false)}>
+                                <Ionicons name="close" size={24} color="#4B5563" />
+                            </TouchableOpacity>
+                        </View>
+                        <ScrollView style={{ maxHeight: 400 }}>
+                            <View style={{ gap: 16 }}>
+                                <View>
+                                    <Text style={{ fontSize: 13, fontWeight: '600', color: '#6B7280', marginBottom: 8 }}>Etkinlik Adı</Text>
+                                    <TextInput
+                                        style={styles.formInput}
+                                        placeholder="Örn: TYT Genel Deneme"
+                                        value={newEvent.title}
+                                        onChangeText={t => setNewEvent(prev => ({ ...prev, title: t }))}
+                                    />
+                                </View>
+                                <View>
+                                    <Text style={{ fontSize: 13, fontWeight: '600', color: '#6B7280', marginBottom: 8, marginTop: 12 }}>Tarih</Text>
+                                    <TextInput
+                                        style={styles.formInput}
+                                        placeholder="YYYY-MM-DD"
+                                        value={newEvent.date}
+                                        onChangeText={t => setNewEvent(prev => ({ ...prev, date: t }))}
+                                    />
+                                </View>
+                                <View>
+                                    <Text style={{ fontSize: 13, fontWeight: '600', color: '#6B7280', marginBottom: 8, marginTop: 12 }}>Tür</Text>
+                                    <View style={{ flexDirection: 'row', gap: 10 }}>
+                                        <TouchableOpacity
+                                            style={[styles.filterBtn, newEvent.type === 'trial' && styles.filterBtnActive]}
+                                            onPress={() => setNewEvent(prev => ({ ...prev, type: 'trial' }))}
+                                        >
+                                            <Text style={[styles.filterBtnText, newEvent.type === 'trial' && { color: '#fff' }]}>Deneme</Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity
+                                            style={[styles.filterBtn, newEvent.type === 'event' && styles.filterBtnActive]}
+                                            onPress={() => setNewEvent(prev => ({ ...prev, type: 'event' }))}
+                                        >
+                                            <Text style={[styles.filterBtnText, newEvent.type === 'event' && { color: '#fff' }]}>Etkinlik</Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                </View>
+                                <View>
+                                    <Text style={{ fontSize: 13, fontWeight: '600', color: '#6B7280', marginBottom: 8, marginTop: 12 }}>Açıklama</Text>
+                                    <TextInput
+                                        style={[styles.formInput, { height: 80, textAlignVertical: 'top' }]}
+                                        placeholder="Detaylar..."
+                                        multiline
+                                        value={newEvent.description}
+                                        onChangeText={t => setNewEvent(prev => ({ ...prev, description: t }))}
+                                    />
+                                </View>
+                            </View>
+                        </ScrollView>
+
+                        <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 12, marginTop: 24 }}>
+                            <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowEventModal(false)}>
+                                <Text style={{ color: '#6B7280', fontWeight: '600' }}>İptal</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.primaryBtn} onPress={addEvent}>
+                                <Text style={{ color: '#fff', fontWeight: '600' }}>Kaydet</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 }
@@ -1334,8 +1501,8 @@ const styles = StyleSheet.create({
     analizScoreText: { color: '#2563EB', fontWeight: 'bold', fontSize: 13 },
 
     // EMPTY
-    emptyState: { alignItems: 'center', padding: 60 },
     emptyText: { color: '#6B7280', marginTop: 16, fontSize: 16, fontWeight: '600' },
+    sectionSub: { fontSize: 13, color: '#6B7280' },
 
     // MODAL
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
@@ -1350,4 +1517,17 @@ const styles = StyleSheet.create({
     // SMALL BUTTONS
     smallBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10 },
     smallBtnText: { fontSize: 13, fontWeight: '700', color: '#fff' },
+
+    // CALENDAR STYLES
+    calendarRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 20, padding: 18, marginBottom: 12, borderWidth: 1, borderColor: '#F3F4F6' },
+    dateBox: { width: 60, height: 60, backgroundColor: '#EFF6FF', borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
+    dateDay: { fontSize: 24, fontWeight: '800', color: COLORS.primary },
+    dateMonth: { fontSize: 12, fontWeight: '700', color: COLORS.primary, textTransform: 'uppercase', marginTop: -2 },
+    eventTitle: { fontSize: 16, fontWeight: '700', color: '#111827' },
+    eventDesc: { fontSize: 13, color: '#6B7280', marginTop: 4 },
+    typeTag: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+    typeTagText: { fontSize: 10, fontWeight: '800' },
+    emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 100 },
+    emptyStateTitle: { fontSize: 18, fontWeight: '800', color: '#111827', marginTop: 16 },
+    emptyStateSub: { fontSize: 14, color: '#6B7280', marginTop: 8, textAlign: 'center' },
 });

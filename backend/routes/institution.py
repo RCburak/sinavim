@@ -40,3 +40,10 @@ def get_announcements_for_student(institution_id: str, class_id: str | None = No
     # but can add verify_token dependency if strict auth is needed.
     announcements = teacher_service.get_announcements(institution_id, class_id)
     return announcements
+
+
+@institution_router.get("/events/{institution_id}")
+def get_events_for_student(institution_id: str, class_id: str | None = None):
+    """Öğrenciler için kurum etkinliklerini listeler."""
+    events = teacher_service.get_events(institution_id, class_id)
+    return events
