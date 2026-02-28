@@ -160,15 +160,22 @@ export const AnalizView = ({
 
             {/* Header */}
             <LinearGradient
-              colors={isDark ? ['#92400E', '#78350F'] : ['#F59E0B', '#D97706']}
+              colors={isDark ? ['#5C3D0A', '#92400E', '#78350F'] : ['#F59E0B', '#D97706', '#B45309']}
               style={styles.header}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
             >
-              <TouchableOpacity onPress={onBack} style={styles.backBtn}>
-                <Ionicons name="arrow-back" size={22} color="#FFF" />
-              </TouchableOpacity>
-              <Text style={styles.headerTitle}>Deneme Analizi</Text>
+              <View style={{ position: 'absolute', top: -30, right: -20, width: 100, height: 100, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.06)' }} />
+              <View style={{ position: 'absolute', bottom: -10, left: -25, width: 70, height: 70, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.06)' }} />
+              <View style={styles.headerRow}>
+                <TouchableOpacity onPress={onBack} style={styles.backBtn}>
+                  <Ionicons name="arrow-back" size={22} color="#FFF" />
+                </TouchableOpacity>
+                <View style={{ flex: 1, marginLeft: 14 }}>
+                  <Text style={styles.headerTitle}>Deneme Analizi</Text>
+                  <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12, fontWeight: '600', marginTop: 2 }}>{filteredData.length} kayıt</Text>
+                </View>
+              </View>
             </LinearGradient>
 
             <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 20 }} showsVerticalScrollIndicator={false}>
@@ -531,13 +538,13 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: 20,
     paddingVertical: 18,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+    overflow: 'hidden',
   },
-  backBtn: { width: 38, height: 38, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center' },
-  headerTitle: { color: '#FFF', fontSize: 20, fontWeight: '800', marginLeft: 15 },
+  headerRow: { flexDirection: 'row', alignItems: 'center' },
+  backBtn: { width: 40, height: 40, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.12)', justifyContent: 'center', alignItems: 'center' },
+  headerTitle: { color: '#FFF', fontSize: 20, fontWeight: '800' },
 
   filterContainer: { marginTop: 20, marginBottom: 10 },
   filterTab: {
