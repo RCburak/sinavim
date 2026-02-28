@@ -14,6 +14,22 @@ const { width } = Dimensions.get('window');
 const DAY_COLORS = ['#3B82F6', '#EC4899', '#10B981', '#F59E0B', '#8B5CF6', '#EF4444', '#06B6D4'];
 const DAY_ICONS = ['school', 'book', 'flask', 'calculator', 'planet', 'star', 'cafe'];
 
+const LESSON_PRESETS = [
+  { name: 'Matematik', icon: 'calculator', color: '#3B82F6' },
+  { name: 'Geometri', icon: 'shapes', color: '#06B6D4' },
+  { name: 'Fizik', icon: 'flash', color: '#EF4444' },
+  { name: 'Kimya', icon: 'flask', color: '#10B981' },
+  { name: 'Biyoloji', icon: 'leaf', color: '#F59E0B' },
+  { name: 'Türkçe', icon: 'book', color: '#EC4899' },
+  { name: 'Tarih', icon: 'time', color: '#8B5CF6' },
+  { name: 'Coğrafya', icon: 'globe', color: '#14B8A6' },
+  { name: 'Felsefe', icon: 'bulb', color: '#6366F1' },
+  { name: 'Din', icon: 'moon', color: '#F97316' },
+  { name: 'İngilizce', icon: 'language', color: '#D946EF' },
+];
+
+const DURATION_PRESETS = ['30 Dk', '45 Dk', '1 Saat', '1.5 Saat', '2 Saat', '2.5 Saat', '3 Saat'];
+
 export const ProgramView = ({ tasks, toggleTask, updateQuestions, onBack, onAddTask, onDeleteTask, onFinalize, theme = COLORS.light, isEditMode = false }: any) => {
   const [selectedDay, setSelectedDay] = useState(GUNLER[0]);
   const [modalVisible, setModalVisible] = useState(false);
@@ -228,45 +244,129 @@ export const ProgramView = ({ tasks, toggleTask, updateQuestions, onBack, onAddT
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={s.modalOverlay}>
           <View style={[s.modalContent, { backgroundColor: theme.surface }]}>
             <View style={s.modalHandle} />
-            <Text style={[s.modalTitle, { color: theme.text }]}>{selectedDay} İçin Ders Ekle</Text>
 
-            <TextInput
-              style={[s.modalInput, { color: theme.text, borderColor: theme.border, backgroundColor: theme.background }]}
-              placeholder="Ders veya Konu Adı"
-              placeholderTextColor={theme.textSecondary}
-              value={taskName}
-              onChangeText={setTaskName}
-            />
-
-            <View style={s.modalRow}>
-              <TextInput
-                style={[s.modalInput, { flex: 1, marginRight: 10, color: theme.text, borderColor: theme.border, backgroundColor: theme.background }]}
-                placeholder="Süre (Örn: 2 Saat)"
-                placeholderTextColor={theme.textSecondary}
-                value={duration}
-                onChangeText={setDuration}
-              />
-              <TextInput
-                style={[s.modalInput, { flex: 1, color: theme.text, borderColor: theme.border, backgroundColor: theme.background }]}
-                placeholder="Soru Hedefi"
-                keyboardType="numeric"
-                placeholderTextColor={theme.textSecondary}
-                value={questions}
-                onChangeText={setQuestions}
-              />
-            </View>
-
-            <View style={s.modalBtns}>
-              <TouchableOpacity onPress={() => setModalVisible(false)} style={[s.modalCancelBtn, { backgroundColor: theme.border }]}>
-                <Text style={{ color: theme.text, fontWeight: '700' }}>Vazgeç</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={handleSaveTask} style={{ flex: 1, borderRadius: 16, overflow: 'hidden' }}>
-                <LinearGradient colors={isEditMode ? ['#3B82F6', '#2563EB'] : ['#7C3AED', '#6D28D9']} style={s.modalSaveGrad}>
-                  <Ionicons name="add-circle" size={18} color="#fff" />
-                  <Text style={{ color: '#fff', fontWeight: '800', fontSize: 15 }}>Ekle</Text>
-                </LinearGradient>
+            {/* Modal Header */}
+            <View style={s.modalHeaderRow}>
+              <View style={[s.modalIconBox, { backgroundColor: '#3B82F615' }]}>
+                <Ionicons name="book" size={20} color="#3B82F6" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[s.modalTitle, { color: theme.text }]}>{selectedDay} İçin Ders Ekle</Text>
+                <Text style={{ fontSize: 11, color: theme.textSecondary, fontWeight: '500', marginTop: 2 }}>Ders seç veya konu yaz</Text>
+              </View>
+              <TouchableOpacity onPress={() => setModalVisible(false)} style={[s.modalCloseBtn, { backgroundColor: theme.background }]}>
+                <Ionicons name="close" size={18} color={theme.textSecondary} />
               </TouchableOpacity>
             </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
+              {/* Section: Ders Seç */}
+              <View style={s.sectionLabel}>
+                <Ionicons name="school-outline" size={14} color={theme.textSecondary} />
+                <Text style={[s.sectionLabelText, { color: theme.textSecondary }]}>DERS SEÇ</Text>
+              </View>
+              <View style={s.lessonGrid}>
+                {LESSON_PRESETS.map((l) => {
+                  const active = taskName === l.name;
+                  return (
+                    <TouchableOpacity
+                      key={l.name}
+                      style={[s.lessonChip, active ? { backgroundColor: l.color, borderColor: l.color } : { borderColor: theme.border, backgroundColor: theme.background }]}
+                      onPress={() => setTaskName(l.name)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={[s.lessonChipIcon, { backgroundColor: active ? 'rgba(255,255,255,0.2)' : l.color + '15' }]}>
+                        <Ionicons name={l.icon as any} size={14} color={active ? '#fff' : l.color} />
+                      </View>
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: active ? '#fff' : theme.text }}>{l.name}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              {/* Custom Topic Input */}
+              <View style={s.sectionLabel}>
+                <Ionicons name="create-outline" size={14} color={theme.textSecondary} />
+                <Text style={[s.sectionLabelText, { color: theme.textSecondary }]}>VEYA KONU YAZ</Text>
+              </View>
+              <TextInput
+                style={[s.modalInput, { color: theme.text, borderColor: theme.border, backgroundColor: theme.background }]}
+                placeholder="Örn: Türev, Osmanlı Tarihi..."
+                placeholderTextColor={theme.textSecondary + '80'}
+                value={taskName}
+                onChangeText={setTaskName}
+              />
+
+              {/* Section: Süre */}
+              <View style={s.sectionLabel}>
+                <Ionicons name="time-outline" size={14} color={theme.textSecondary} />
+                <Text style={[s.sectionLabelText, { color: theme.textSecondary }]}>ÇALIŞMA SÜRESİ</Text>
+              </View>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0, marginBottom: 14 }}>
+                <View style={s.durationRow}>
+                  {DURATION_PRESETS.map((d) => {
+                    const active = duration === d;
+                    return (
+                      <TouchableOpacity
+                        key={d}
+                        style={[s.durationChip, active ? { backgroundColor: '#3B82F6', borderColor: '#3B82F6' } : { borderColor: theme.border, backgroundColor: theme.background }]}
+                        onPress={() => setDuration(d)}
+                      >
+                        <Text style={{ fontSize: 13, fontWeight: '700', color: active ? '#fff' : theme.text }}>{d}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </ScrollView>
+
+              {/* Section: Soru Hedefi */}
+              <View style={s.sectionLabel}>
+                <Ionicons name="pencil-outline" size={14} color={theme.textSecondary} />
+                <Text style={[s.sectionLabelText, { color: theme.textSecondary }]}>SORU HEDEFİ (Opsiyonel)</Text>
+              </View>
+              <View style={s.questionInputRow}>
+                <TouchableOpacity onPress={() => setQuestions(String(Math.max(0, (parseInt(questions) || 0) - 5)))} style={[s.qStepBtn, { backgroundColor: theme.background, borderColor: theme.border }]}>
+                  <Ionicons name="remove" size={18} color={theme.textSecondary} />
+                </TouchableOpacity>
+                <TextInput
+                  style={[s.qBigInput, { color: theme.text, backgroundColor: theme.background, borderColor: theme.border }]}
+                  keyboardType="numeric"
+                  placeholder="0"
+                  placeholderTextColor={theme.textSecondary + '60'}
+                  value={questions}
+                  onChangeText={setQuestions}
+                />
+                <TouchableOpacity onPress={() => setQuestions(String((parseInt(questions) || 0) + 5))} style={[s.qStepBtn, { backgroundColor: theme.background, borderColor: theme.border }]}>
+                  <Ionicons name="add" size={18} color={theme.primary} />
+                </TouchableOpacity>
+                <Text style={{ fontSize: 13, fontWeight: '600', color: theme.textSecondary, marginLeft: 8 }}>Soru</Text>
+              </View>
+
+              {/* Preview Card */}
+              {taskName.length > 0 && (
+                <View style={[s.previewCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#F8FAFC', borderColor: theme.border }]}>
+                  <Ionicons name="eye-outline" size={14} color={theme.textSecondary} />
+                  <Text style={{ fontSize: 12, color: theme.textSecondary, fontWeight: '600' }}>Önizleme:</Text>
+                  <Text style={{ fontSize: 13, color: theme.text, fontWeight: '700', flex: 1 }} numberOfLines={1}>
+                    {taskName} • {duration} {questions && parseInt(questions) > 0 ? `• ${questions} Soru` : ''}
+                  </Text>
+                </View>
+              )}
+
+              {/* Buttons */}
+              <View style={s.modalBtns}>
+                <TouchableOpacity onPress={() => setModalVisible(false)} style={[s.modalCancelBtn, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#F1F5F9' }]}>
+                  <Ionicons name="close-outline" size={18} color={theme.textSecondary} />
+                  <Text style={{ color: theme.textSecondary, fontWeight: '700' }}>Vazgeç</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={handleSaveTask} style={[{ flex: 1, borderRadius: 16, overflow: 'hidden', opacity: taskName.length > 0 ? 1 : 0.5 }]} disabled={!taskName}>
+                  <LinearGradient colors={['#3B82F6', '#2563EB']} style={s.modalSaveGrad}>
+                    <Ionicons name="add-circle" size={18} color="#fff" />
+                    <Text style={{ color: '#fff', fontWeight: '800', fontSize: 15 }}>Programa Ekle</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
           </View>
         </KeyboardAvoidingView>
       </Modal>
@@ -348,13 +448,32 @@ const s = StyleSheet.create({
 
   // Modal
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalContent: { borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, paddingBottom: 40 },
-  modalHandle: { width: 40, height: 4, backgroundColor: '#D1D5DB', borderRadius: 2, alignSelf: 'center', marginBottom: 16 },
-  modalTitle: { fontSize: 20, fontWeight: '800', marginBottom: 20 },
-  modalInput: { height: 52, borderWidth: 1, borderRadius: 14, paddingHorizontal: 16, marginBottom: 14, fontSize: 15, fontWeight: '500' },
-  modalRow: { flexDirection: 'row' },
-  modalBtns: { flexDirection: 'row', gap: 12, marginTop: 10 },
-  modalCancelBtn: { paddingVertical: 16, paddingHorizontal: 20, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
+  modalContent: { borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingTop: 12, paddingHorizontal: 24, maxHeight: '90%' },
+  modalHandle: { width: 40, height: 4, backgroundColor: '#D1D5DB', borderRadius: 2, alignSelf: 'center', marginBottom: 12 },
+  modalHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 20, paddingRight: 4 },
+  modalIconBox: { width: 42, height: 42, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
+  modalTitle: { fontSize: 18, fontWeight: '800' },
+  modalCloseBtn: { width: 34, height: 34, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+  modalInput: { height: 50, borderWidth: 1, borderRadius: 14, paddingHorizontal: 16, marginBottom: 14, fontSize: 14, fontWeight: '500' },
+
+  sectionLabel: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10, marginTop: 6 },
+  sectionLabelText: { fontSize: 11, fontWeight: '800', letterSpacing: 0.5 },
+
+  lessonGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
+  lessonChip: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingVertical: 9, borderRadius: 14, borderWidth: 1.5 },
+  lessonChipIcon: { width: 26, height: 26, borderRadius: 9, justifyContent: 'center', alignItems: 'center' },
+
+  durationRow: { flexDirection: 'row', gap: 8, paddingRight: 8 },
+  durationChip: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 14, borderWidth: 1.5 },
+
+  questionInputRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
+  qStepBtn: { width: 40, height: 40, borderRadius: 14, borderWidth: 1.5, justifyContent: 'center', alignItems: 'center' },
+  qBigInput: { width: 64, height: 44, borderRadius: 14, borderWidth: 1.5, textAlign: 'center', fontSize: 18, fontWeight: '900', marginHorizontal: 10, padding: 0 },
+
+  previewCard: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, borderRadius: 14, borderWidth: 1, marginBottom: 16 },
+
+  modalBtns: { flexDirection: 'row', gap: 12, marginTop: 6, marginBottom: 20 },
+  modalCancelBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 16, paddingHorizontal: 18, borderRadius: 16 },
   modalSaveGrad: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 16 },
 });
 
