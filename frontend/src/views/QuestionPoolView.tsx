@@ -28,7 +28,7 @@ const FlashListComponent = FlashList as any;
 
 const LESSONS = ["Matematik", "Geometri", "Fizik", "Kimya", "Biyoloji", "Türkçe", "Tarih", "Coğrafya", "Felsefe", "Din", "İngilizce"];
 
-export const QuestionPoolView = ({ onBack, theme = COLORS.light }: { onBack: () => void, theme: Theme }) => {
+export const QuestionPoolView = ({ onBack, theme = COLORS.light, onRecordAction }: any) => {
     const {
         questions,
         loading,
@@ -101,10 +101,13 @@ export const QuestionPoolView = ({ onBack, theme = COLORS.light }: { onBack: () 
         setAdding(false);
         if (success) {
             setAddModalVisible(false);
-            // Reset form
             setNewImage(null);
             setNewTopic('');
             setNewNotes('');
+            // Gamification trigger
+            if (onRecordAction) {
+                onRecordAction('question_add', (questions?.length || 0) + 1);
+            }
         }
     };
 

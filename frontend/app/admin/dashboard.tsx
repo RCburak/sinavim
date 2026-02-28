@@ -23,6 +23,7 @@ const getAuthHeaders = () => {
     const token = typeof window !== 'undefined' ? sessionStorage.getItem('admin_token') : null;
     return {
         'Content-Type': 'application/json',
+        'ngrok-skip-browser-warning': 'true',
         ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
     };
 };
@@ -641,7 +642,7 @@ export default function AdminDashboard() {
                         style={styles.brandLogo}
                         resizeMode="contain"
                     />
-                    <Text style={styles.brandTitle}>Sınavım</Text>
+                    <Text style={styles.brandTitle}>Yönetici Paneli</Text>
                 </View>
 
                 {menuItems.map(item => (

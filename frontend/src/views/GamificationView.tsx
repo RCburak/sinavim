@@ -1,15 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity, ScrollView,
-    StatusBar, Platform, Dimensions, ActivityIndicator,
+    StatusBar, Platform, Dimensions, ActivityIndicator, Animated,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { auth } from '../services/firebaseConfig';
 import { API_URL, API_HEADERS } from '../config/api';
 import { Theme, AppView } from '../types';
+import { BadgeUnlockModal } from '../components/gamification/BadgeUnlockModal';
+import { BadgeCategory } from '../hooks/useGamification';
 
 const { width } = Dimensions.get('window');
+
+const CATEGORY_LABELS: Record<string, { label: string; icon: string; color: string }> = {
+    all: { label: 'Tümü', icon: 'grid', color: '#7C3AED' },
+    analiz: { label: 'Analiz', icon: 'analytics', color: '#3B82F6' },
+    study: { label: 'Çalışma', icon: 'time', color: '#6366F1' },
+    productivity: { label: 'Üretkenlik', icon: 'create', color: '#EC4899' },
+    level: { label: 'Seviye', icon: 'star', color: '#F59E0B' },
+    streak: { label: 'Seri', icon: 'flame', color: '#EF4444' },
+};
 
 // ─── BOTTOM TAB BAR ────────────────────────────────
 const BottomTabBar = ({ setView, theme }: { setView: (view: AppView) => void; theme: Theme }) => {
@@ -41,47 +52,70 @@ export const GamificationView = ({ setView, theme, gamification, streak }: any) 
     const {
         xp, level, levelName, badges, dailyTasks,
         xpForNextLevel, xpForCurrentLevel, xpProgress,
-        completeTask, totalBadges,
+        completeTask, totalBadges, lastUnlockedBadge,
+        showBadgeModal, dismissBadgeModal, getBadgesByCategory,
     } = gamification;
 
     const isDark = theme.background === '#0F0F1A' || theme.background === '#121212';
-    const unlockedBadges = badges.filter((b: any) => b.unlocked);
-    const lockedBadges = badges.filter((b: any) => !b.unlocked);
     const completedTasks = dailyTasks.filter((t: any) => t.completed).length;
 
-    // ─── Study Performance Stats ────────────────────
+    // Badge category filter
+    const [selectedCategory, setSelectedCategory] = useState('all');
+    const filteredBadges = getBadgesByCategory(selectedCategory);
+    const unlockedFiltered = filteredBadges.filter((b: any) => b.unlocked);
+    const lockedFiltered = filteredBadges.filter((b: any) => !b.unlocked);
+
+    // Performance stats
     const [perfStats, setPerfStats] = useState({ total_hours: 0, total_tasks: 0 });
     const [perfLoading, setPerfLoading] = useState(true);
 
+    // Friend leaderboard
+    const [friends, setFriends] = useState<any[]>([]);
+    const [friendsLoading, setFriendsLoading] = useState(true);
+
     useEffect(() => {
-        const fetchPerf = async () => {
-            const user = auth.currentUser;
-            if (!user) { setPerfLoading(false); return; }
-            try {
-                const res = await fetch(`${API_URL}/user-stats/${user.uid}`, { headers: API_HEADERS as HeadersInit });
-                const data = await res.json();
-                setPerfStats({ total_hours: data.total_hours || 0, total_tasks: data.total_tasks || 0 });
-            } catch { /* silently fail */ }
-            finally { setPerfLoading(false); }
-        };
-        fetchPerf();
+        const user = auth.currentUser;
+        if (!user) { setPerfLoading(false); setFriendsLoading(false); return; }
+
+        // Fetch performance
+        fetch(`${API_URL}/user-stats/${user.uid}`, { headers: API_HEADERS as HeadersInit })
+            .then(r => r.json())
+            .then(d => setPerfStats({ total_hours: d.total_hours || 0, total_tasks: d.total_tasks || 0 }))
+            .catch(() => { })
+            .finally(() => setPerfLoading(false));
+
+        // Fetch friends for leaderboard
+        fetch(`${API_URL}/friends/${user.uid}/list`, { headers: API_HEADERS as HeadersInit })
+            .then(r => r.json())
+            .then(d => setFriends(d.friends || []))
+            .catch(() => { })
+            .finally(() => setFriendsLoading(false));
     }, []);
 
     const progressPercent = Math.min(xpProgress * 100, 100);
     const xpInLevel = xp - xpForCurrentLevel;
     const xpNeeded = xpForNextLevel - xpForCurrentLevel;
 
+    // Streak warning logic
+    const streakWarning = streak && streak.currentStreak > 0 && !streak.isActiveToday;
+
     return (
         <View style={[s.container, { backgroundColor: theme.background }]}>
             <StatusBar barStyle="light-content" />
 
-            {/* ═══ PREMIUM HERO HEADER ═══ */}
+            {/* Badge Unlock Modal */}
+            <BadgeUnlockModal
+                visible={showBadgeModal}
+                badge={lastUnlockedBadge}
+                onDismiss={dismissBadgeModal}
+            />
+
+            {/* ═══ HERO HEADER ═══ */}
             <LinearGradient
                 colors={isDark ? ['#1E0A3C', '#2D1B69', '#4C1D95'] : ['#5B21B6', '#7C3AED', '#A78BFA']}
                 style={s.heroHeader}
                 start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
             >
-                {/* Decorative circles */}
                 <View style={[s.decorCircle, { top: -30, right: -20, width: 120, height: 120, opacity: 0.08 }]} />
                 <View style={[s.decorCircle, { top: 40, left: -40, width: 100, height: 100, opacity: 0.06 }]} />
                 <View style={[s.decorCircle, { bottom: -10, right: 60, width: 60, height: 60, opacity: 0.1 }]} />
@@ -101,7 +135,6 @@ export const GamificationView = ({ setView, theme, gamification, streak }: any) 
                         </LinearGradient>
                     </View>
 
-                    {/* Level Info */}
                     <Text style={s.levelNameHero}>{levelName}</Text>
 
                     {/* XP Progress */}
@@ -113,12 +146,10 @@ export const GamificationView = ({ setView, theme, gamification, streak }: any) 
                                 start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
                             />
                         </View>
-                        <Text style={s.xpProgressText}>
-                            {xpInLevel} / {xpNeeded} XP
-                        </Text>
+                        <Text style={s.xpProgressText}>{xpInLevel} / {xpNeeded} XP</Text>
                     </View>
 
-                    {/* Quick Stats Row */}
+                    {/* Stats Row */}
                     <View style={s.heroStatsRow}>
                         <View style={s.heroStatItem}>
                             <Text style={s.heroStatValue}>{xp}</Text>
@@ -140,14 +171,28 @@ export const GamificationView = ({ setView, theme, gamification, streak }: any) 
 
             <ScrollView contentContainerStyle={{ paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
 
+                {/* ═══ STREAK WARNING ═══ */}
+                {streakWarning && (
+                    <TouchableOpacity style={s.streakWarning} activeOpacity={0.8}>
+                        <LinearGradient colors={['#EF444420', '#F59E0B10']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+                        <View style={s.streakWarningIcon}>
+                            <Ionicons name="warning" size={22} color="#EF4444" />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                            <Text style={[s.streakWarningTitle, { color: isDark ? '#FCA5A5' : '#DC2626' }]}>
+                                🔥 {streak.currentStreak} günlük serini kaybetme!
+                            </Text>
+                            <Text style={[s.streakWarningDesc, { color: isDark ? '#FCA5A580' : '#DC262690' }]}>
+                                Bugün henüz çalışma kaydetmedin. Serini korumak için bir aktivite tamamla!
+                            </Text>
+                        </View>
+                    </TouchableOpacity>
+                )}
+
                 {/* ═══ STREAK CARD ═══ */}
                 {streak && (
                     <View style={[s.streakCard, { backgroundColor: isDark ? '#1A1623' : '#FFFBEB' }]}>
-                        <LinearGradient
-                            colors={['#F59E0B20', '#EF444410']}
-                            style={s.streakGradBg}
-                            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-                        />
+                        <LinearGradient colors={['#F59E0B20', '#EF444410']} style={s.streakGradBg} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
                         <View style={s.streakContent}>
                             <View style={s.streakFireBox}>
                                 <Text style={{ fontSize: 36 }}>🔥</Text>
@@ -171,47 +216,27 @@ export const GamificationView = ({ setView, theme, gamification, streak }: any) 
                     </View>
                 )}
 
-                {/* ═══ ÇALIŞMA PERFORMANSI ═══ */}
+                {/* ═══ PERFORMANS ═══ */}
                 <View style={s.sectionHeader}>
                     <Ionicons name="stats-chart" size={18} color={theme.primary} />
                     <Text style={[s.sectionTitle, { color: theme.text }]}>Çalışma Performansım</Text>
                 </View>
                 <View style={s.perfRow}>
-                    <View style={[s.perfCard, { backgroundColor: theme.surface }, theme.cardShadow]}>
-                        <LinearGradient colors={['#7C3AED15', '#7C3AED05']} style={s.perfCardGrad}>
-                            <View style={[s.perfIconBox, { backgroundColor: '#7C3AED18' }]}>
-                                <Ionicons name="time" size={22} color="#7C3AED" />
-                            </View>
-                            {perfLoading ? (
-                                <ActivityIndicator size="small" color="#7C3AED" style={{ marginVertical: 8 }} />
-                            ) : (
-                                <Text style={[s.perfValue, { color: theme.text }]}>{perfStats.total_hours}s</Text>
-                            )}
-                            <Text style={[s.perfLabel, { color: theme.textSecondary }]}>Toplam Süre</Text>
-                        </LinearGradient>
-                    </View>
-                    <View style={[s.perfCard, { backgroundColor: theme.surface }, theme.cardShadow]}>
-                        <LinearGradient colors={['#10B98115', '#10B98105']} style={s.perfCardGrad}>
-                            <View style={[s.perfIconBox, { backgroundColor: '#10B98118' }]}>
-                                <Ionicons name="checkmark-done-circle" size={22} color="#10B981" />
-                            </View>
-                            {perfLoading ? (
-                                <ActivityIndicator size="small" color="#10B981" style={{ marginVertical: 8 }} />
-                            ) : (
-                                <Text style={[s.perfValue, { color: theme.text }]}>{perfStats.total_tasks}</Text>
-                            )}
-                            <Text style={[s.perfLabel, { color: theme.textSecondary }]}>Biten Görev</Text>
-                        </LinearGradient>
-                    </View>
-                    <View style={[s.perfCard, { backgroundColor: theme.surface }, theme.cardShadow]}>
-                        <LinearGradient colors={['#F59E0B15', '#F59E0B05']} style={s.perfCardGrad}>
-                            <View style={[s.perfIconBox, { backgroundColor: '#F59E0B18' }]}>
-                                <Ionicons name="trophy" size={22} color="#F59E0B" />
-                            </View>
-                            <Text style={[s.perfValue, { color: theme.text }]}>{level}</Text>
-                            <Text style={[s.perfLabel, { color: theme.textSecondary }]}>Seviye</Text>
-                        </LinearGradient>
-                    </View>
+                    {[
+                        { icon: 'time', color: '#7C3AED', value: perfLoading ? '...' : `${perfStats.total_hours}s`, label: 'Toplam Süre' },
+                        { icon: 'checkmark-done-circle', color: '#10B981', value: perfLoading ? '...' : `${perfStats.total_tasks}`, label: 'Biten Görev' },
+                        { icon: 'trophy', color: '#F59E0B', value: `${level}`, label: 'Seviye' },
+                    ].map((item, i) => (
+                        <View key={i} style={[s.perfCard, { backgroundColor: theme.surface }, theme.cardShadow]}>
+                            <LinearGradient colors={[item.color + '15', item.color + '05']} style={s.perfCardGrad}>
+                                <View style={[s.perfIconBox, { backgroundColor: item.color + '18' }]}>
+                                    <Ionicons name={item.icon as any} size={22} color={item.color} />
+                                </View>
+                                <Text style={[s.perfValue, { color: theme.text }]}>{item.value}</Text>
+                                <Text style={[s.perfLabel, { color: theme.textSecondary }]}>{item.label}</Text>
+                            </LinearGradient>
+                        </View>
+                    ))}
                 </View>
 
                 {/* ═══ GÜNLÜK GÖREVLER ═══ */}
@@ -254,29 +279,84 @@ export const GamificationView = ({ setView, theme, gamification, streak }: any) 
                     </TouchableOpacity>
                 ))}
 
-                {/* ═══ ROZETLER - KAZANILAN ═══ */}
+                {/* ═══ ARKADAŞ KARŞILAŞTIRMASI ═══ */}
+                {friends.length > 0 && (
+                    <>
+                        <View style={s.sectionHeader}>
+                            <Ionicons name="people" size={18} color="#3B82F6" />
+                            <Text style={[s.sectionTitle, { color: theme.text }]}>Arkadaş Sıralaması</Text>
+                        </View>
+                        <View style={[s.leaderboardCard, { backgroundColor: theme.surface }, theme.cardShadow]}>
+                            {/* Current user */}
+                            <View style={[s.leaderRow, { backgroundColor: theme.primary + '10', borderLeftWidth: 3, borderLeftColor: theme.primary }]}>
+                                <View style={[s.leaderAvatar, { backgroundColor: theme.primary + '20' }]}>
+                                    <Ionicons name="person" size={18} color={theme.primary} />
+                                </View>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={[s.leaderName, { color: theme.text }]}>Sen</Text>
+                                </View>
+                                <View style={[s.leaderBadge, { backgroundColor: '#F59E0B20' }]}>
+                                    <Text style={[s.leaderBadgeText, { color: '#F59E0B' }]}>Lv.{level}</Text>
+                                </View>
+                                <View style={[s.leaderBadge, { backgroundColor: '#7C3AED20' }]}>
+                                    <Text style={[s.leaderBadgeText, { color: '#7C3AED' }]}>{xp} XP</Text>
+                                </View>
+                            </View>
+                            {/* Friends */}
+                            {friends.slice(0, 5).map((friend: any, i: number) => (
+                                <View key={friend.id || i} style={s.leaderRow}>
+                                    <View style={[s.leaderAvatar, { backgroundColor: '#E5E7EB' }]}>
+                                        <Text style={{ fontSize: 14, fontWeight: '800', color: '#6B7280' }}>
+                                            {friend.name?.[0]?.toUpperCase() || '?'}
+                                        </Text>
+                                    </View>
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={[s.leaderName, { color: theme.text }]}>{friend.name}</Text>
+                                    </View>
+                                    <View style={[s.leaderBadge, { backgroundColor: '#E5E7EB' }]}>
+                                        <Ionicons name="person" size={12} color="#9CA3AF" />
+                                    </View>
+                                </View>
+                            ))}
+                        </View>
+                    </>
+                )}
+
+                {/* ═══ ROZETLER — KATEGORİ FİLTRE ═══ */}
                 <View style={s.sectionHeader}>
                     <Ionicons name="ribbon" size={18} color="#EC4899" />
-                    <Text style={[s.sectionTitle, { color: theme.text }]}>Kazanılan Rozetler</Text>
+                    <Text style={[s.sectionTitle, { color: theme.text }]}>Rozetler</Text>
                     <View style={[s.taskCountBadge, { backgroundColor: '#EC489920' }]}>
-                        <Text style={{ fontSize: 11, fontWeight: '800', color: '#EC4899' }}>{unlockedBadges.length}</Text>
+                        <Text style={{ fontSize: 11, fontWeight: '800', color: '#EC4899' }}>
+                            {badges.filter((b: any) => b.unlocked).length}/{badges.length}
+                        </Text>
                     </View>
                 </View>
-                {unlockedBadges.length === 0 ? (
-                    <View style={[s.emptyBadgeBox, { backgroundColor: theme.surface }, theme.cardShadow]}>
-                        <View style={s.emptyBadgeIcon}>
-                            <Ionicons name="lock-open-outline" size={28} color={theme.textSecondary + '60'} />
-                        </View>
-                        <Text style={{ fontSize: 13, color: theme.textSecondary, fontWeight: '500' }}>Rozet kazanmak için görevleri tamamla!</Text>
-                    </View>
-                ) : (
+
+                {/* Category Tabs */}
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.categoryScroll} contentContainerStyle={{ paddingHorizontal: 20, gap: 8 }}>
+                    {Object.entries(CATEGORY_LABELS).map(([key, cat]) => {
+                        const isActive = selectedCategory === key;
+                        return (
+                            <TouchableOpacity
+                                key={key}
+                                style={[s.categoryTab, isActive && { backgroundColor: cat.color + '20', borderColor: cat.color }]}
+                                onPress={() => setSelectedCategory(key)}
+                                activeOpacity={0.7}
+                            >
+                                <Ionicons name={cat.icon as any} size={14} color={isActive ? cat.color : theme.textSecondary} />
+                                <Text style={[s.categoryTabText, { color: isActive ? cat.color : theme.textSecondary }]}>{cat.label}</Text>
+                            </TouchableOpacity>
+                        );
+                    })}
+                </ScrollView>
+
+                {/* Unlocked Badges */}
+                {unlockedFiltered.length > 0 && (
                     <View style={s.badgeGrid}>
-                        {unlockedBadges.map((badge: any) => (
+                        {unlockedFiltered.map((badge: any) => (
                             <View key={badge.id} style={[s.badgeCard, { backgroundColor: theme.surface }, theme.cardShadow]}>
-                                <LinearGradient
-                                    colors={[badge.color + '20', badge.color + '08']}
-                                    style={s.badgeIconGrad}
-                                >
+                                <LinearGradient colors={[badge.color + '20', badge.color + '08']} style={s.badgeIconGrad}>
                                     <Text style={{ fontSize: 26 }}>{badge.icon}</Text>
                                 </LinearGradient>
                                 <Text style={[s.badgeName, { color: theme.text }]} numberOfLines={1}>{badge.name}</Text>
@@ -286,18 +366,20 @@ export const GamificationView = ({ setView, theme, gamification, streak }: any) 
                     </View>
                 )}
 
-                {/* ═══ ROZETLER - KİLİTLİ ═══ */}
-                {lockedBadges.length > 0 && (
+                {/* Locked Badges */}
+                {lockedFiltered.length > 0 && (
                     <>
-                        <View style={s.sectionHeader}>
-                            <Ionicons name="lock-closed" size={16} color={theme.textSecondary} />
-                            <Text style={[s.sectionTitle, { color: theme.textSecondary }]}>Kilitli Rozetler</Text>
-                            <View style={[s.taskCountBadge, { backgroundColor: theme.border + '20' }]}>
-                                <Text style={{ fontSize: 11, fontWeight: '800', color: theme.textSecondary }}>{lockedBadges.length}</Text>
+                        {unlockedFiltered.length > 0 && (
+                            <View style={[s.sectionHeader, { marginTop: 16 }]}>
+                                <Ionicons name="lock-closed" size={16} color={theme.textSecondary} />
+                                <Text style={[s.sectionTitle, { color: theme.textSecondary }]}>Kilitli</Text>
+                                <View style={[s.taskCountBadge, { backgroundColor: theme.border + '20' }]}>
+                                    <Text style={{ fontSize: 11, fontWeight: '800', color: theme.textSecondary }}>{lockedFiltered.length}</Text>
+                                </View>
                             </View>
-                        </View>
+                        )}
                         <View style={s.badgeGrid}>
-                            {lockedBadges.map((badge: any) => (
+                            {lockedFiltered.map((badge: any) => (
                                 <View key={badge.id} style={[s.badgeCard, { backgroundColor: theme.surface, opacity: 0.55 }]}>
                                     <View style={[s.badgeIconGrad, { backgroundColor: theme.border + '20' }]}>
                                         <Text style={{ fontSize: 22 }}>🔒</Text>
@@ -308,6 +390,16 @@ export const GamificationView = ({ setView, theme, gamification, streak }: any) 
                             ))}
                         </View>
                     </>
+                )}
+
+                {/* Empty state */}
+                {unlockedFiltered.length === 0 && lockedFiltered.length === 0 && (
+                    <View style={[s.emptyBadgeBox, { backgroundColor: theme.surface }, theme.cardShadow]}>
+                        <View style={s.emptyBadgeIcon}>
+                            <Ionicons name="lock-open-outline" size={28} color={theme.textSecondary + '60'} />
+                        </View>
+                        <Text style={{ fontSize: 13, color: theme.textSecondary, fontWeight: '500' }}>Bu kategoride henüz rozet yok.</Text>
+                    </View>
                 )}
 
                 <View style={{ height: 20 }} />
@@ -330,11 +422,7 @@ const s = StyleSheet.create({
         borderBottomRightRadius: 32,
         overflow: 'hidden',
     },
-    decorCircle: {
-        position: 'absolute',
-        borderRadius: 999,
-        backgroundColor: '#fff',
-    },
+    decorCircle: { position: 'absolute', borderRadius: 999, backgroundColor: '#fff' },
     heroContent: { alignItems: 'center', paddingHorizontal: 20 },
     levelRingOuter: { width: 88, height: 88, borderRadius: 44, marginBottom: 12 },
     levelRingGrad: { width: 88, height: 88, borderRadius: 44, justifyContent: 'center', alignItems: 'center' },
@@ -352,8 +440,29 @@ const s = StyleSheet.create({
     heroStatLabel: { color: 'rgba(255,255,255,0.55)', fontSize: 10, fontWeight: '600', marginTop: 2 },
     heroStatDivider: { width: 1, height: 28, backgroundColor: 'rgba(255,255,255,0.12)' },
 
-    // Streak
-    streakCard: { marginHorizontal: 20, marginTop: 20, borderRadius: 22, overflow: 'hidden' },
+    // Streak Warning
+    streakWarning: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginHorizontal: 20,
+        marginTop: 16,
+        padding: 14,
+        borderRadius: 18,
+        borderWidth: 1,
+        borderColor: '#EF444430',
+        overflow: 'hidden',
+        gap: 12,
+    },
+    streakWarningIcon: {
+        width: 44, height: 44, borderRadius: 14,
+        backgroundColor: '#EF444415',
+        justifyContent: 'center', alignItems: 'center',
+    },
+    streakWarningTitle: { fontSize: 14, fontWeight: '800' },
+    streakWarningDesc: { fontSize: 11, fontWeight: '500', marginTop: 2 },
+
+    // Streak Card
+    streakCard: { marginHorizontal: 20, marginTop: 16, borderRadius: 22, overflow: 'hidden' },
     streakGradBg: { ...StyleSheet.absoluteFillObject, borderRadius: 22 },
     streakContent: { flexDirection: 'row', alignItems: 'center', padding: 18 },
     streakFireBox: { width: 58, height: 58, borderRadius: 18, backgroundColor: 'rgba(245,158,11,0.12)', justifyContent: 'center', alignItems: 'center' },
@@ -383,6 +492,28 @@ const s = StyleSheet.create({
     taskTitle: { fontSize: 14, fontWeight: '700' },
     taskDoneText: { textDecorationLine: 'line-through', opacity: 0.45 },
     xpRewardTag: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 },
+
+    // Leaderboard
+    leaderboardCard: { marginHorizontal: 20, borderRadius: 20, overflow: 'hidden' },
+    leaderRow: { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12, borderBottomWidth: 1, borderBottomColor: '#F3F4F620' },
+    leaderAvatar: { width: 38, height: 38, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+    leaderName: { fontSize: 14, fontWeight: '700' },
+    leaderBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
+    leaderBadgeText: { fontSize: 11, fontWeight: '800' },
+
+    // Category Tabs
+    categoryScroll: { marginBottom: 14 },
+    categoryTab: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 14,
+        paddingVertical: 8,
+        borderRadius: 14,
+        borderWidth: 1.5,
+        borderColor: 'transparent',
+        gap: 6,
+    },
+    categoryTabText: { fontSize: 12, fontWeight: '700' },
 
     // Badges
     emptyBadgeBox: { marginHorizontal: 20, padding: 28, borderRadius: 22, alignItems: 'center', gap: 10 },

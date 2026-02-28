@@ -5,7 +5,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { Theme, AppView } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { API_URL, API_HEADERS } from '../config/api';
-import { flashcardService } from '../services/flashcardService';
 
 const { width } = Dimensions.get('window');
 
@@ -185,7 +184,7 @@ export const FriendsView = ({ theme, setView }: { theme: Theme; setView: (view: 
                                     <TouchableOpacity
                                         onPress={() => Alert.alert('Düello', 'Bu arkadaşına düello teklif etmek istiyor musun?', [
                                             { text: 'İptal', style: 'cancel' },
-                                            { text: 'Davet Et', onPress: () => setView('flashcard' as any) } // Simplification: go to flashcards to select a deck
+                                            { text: 'Davet Et', onPress: () => Alert.alert('Bilgi', 'Düello özelliği yakında aktif olacak!') }
                                         ])}
                                         style={[styles.challengeBtn, { backgroundColor: theme.primary }]}
                                     >

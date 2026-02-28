@@ -24,10 +24,8 @@ import { SplashScreen } from "../src/views/SplashScreen";
 import { QuestionPoolView } from "../src/views/QuestionPoolView";
 import { AnnouncementsView } from "../src/views/AnnouncementsView";
 import { FriendsView } from "../src/views/FriendsView";
-import { FlashcardView } from "../src/views/FlashcardView";
 import { NotebookView } from "../src/views/NotebookView";
 import { ExamCalendar } from "../src/views/ExamCalendar";
-import { FormulaLibraryView } from "../src/views/FormulaLibraryView";
 import { GamificationView } from "../src/views/GamificationView";
 
 type AuthScreen = "login" | "register";
@@ -60,6 +58,10 @@ export default function Index() {
   useEffect(() => {
     if (user?.uid) {
       streak.recordActivity();
+      // Update gamification with current streak for badge checks
+      if (streak.currentStreak > 0) {
+        gamification.recordAction('streak_update', streak.currentStreak);
+      }
     }
   }, [user?.uid]);
 
@@ -280,6 +282,7 @@ export default function Index() {
             onAdd={analiz.addAnaliz}
             onSil={analiz.deleteAnaliz}
             onBack={() => setView("dashboard")}
+            onRecordAction={gamification.recordAction}
           />
         );
       case "history":
@@ -293,7 +296,7 @@ export default function Index() {
         );
       case "question_pool":
         return (
-          <QuestionPoolView theme={theme} onBack={() => setView("dashboard")} />
+          <QuestionPoolView theme={theme} onBack={() => setView("dashboard")} onRecordAction={gamification.recordAction} />
         );
       case "announcements":
         return (
@@ -310,14 +313,10 @@ export default function Index() {
             setView={(v: any) => setView(v)}
           />
         );
-      case "flashcard":
-        return <FlashcardView theme={theme} onBack={() => setView("dashboard")} />;
       case "notebook":
-        return <NotebookView theme={theme} onBack={() => setView("dashboard")} />;
+        return <NotebookView theme={theme} onBack={() => setView("dashboard")} onRecordAction={gamification.recordAction} />;
       case "exam_calendar":
         return <ExamCalendar theme={theme} onBack={() => setView("dashboard")} />;
-      case "formula_library":
-        return <FormulaLibraryView theme={theme} onBack={() => setView("dashboard")} />;
       case "gamification":
         return <GamificationView theme={theme} setView={(v: any) => setView(v)} gamification={gamification} streak={streak} />;
       case "profile":

@@ -87,7 +87,7 @@ const DashboardHeader = ({ username, theme }: { username: string | null; theme: 
             />
             <View style={styles.brandContainer}>
               <Text style={styles.brandText}>
-                <Text style={styles.brandBold}>Sınavım</Text>
+                <Text style={styles.brandBold}>RC Sınavım</Text>
               </Text>
             </View>
           </View>
@@ -196,15 +196,6 @@ export const DashboardView = ({ username, onLogout, setView, schedule, analiz, p
           />
 
           <MenuCard
-            title="Flashcard"
-            emoji="🃏"
-            subText="Kartlarla çalış"
-            onPress={() => setView('flashcard')}
-            theme={theme}
-            color="#8B5CF6"
-          />
-
-          <MenuCard
             title="Not Defteri"
             emoji="📓"
             subText="Notlarını yaz"
@@ -221,16 +212,6 @@ export const DashboardView = ({ username, onLogout, setView, schedule, analiz, p
             theme={theme}
             color="#3B82F6"
           />
-
-          <MenuCard
-            title="Formüller"
-            emoji="🧮"
-            subText="Formül kütüphanesi"
-            onPress={() => setView('formula_library')}
-            theme={theme}
-            color="#F97316"
-          />
-
 
         </View>
 

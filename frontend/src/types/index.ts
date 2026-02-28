@@ -101,8 +101,6 @@ export type AppView =
     | "question_pool"
     | "announcements"
     | "friends"
-    | "flashcard"
     | "notebook"
     | "exam_calendar"
-    | "formula_library"
     | "gamification";

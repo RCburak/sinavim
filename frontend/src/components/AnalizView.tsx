@@ -31,7 +31,8 @@ export const AnalizView = ({
   onAdd,
   onSil,
   onBack,
-  theme = COLORS.light
+  theme = COLORS.light,
+  onRecordAction,
 }: any) => {
   const [denemeAd, setDenemeAd] = useState('');
   const [denemeNet, setDenemeNet] = useState('');
@@ -65,6 +66,14 @@ export const AnalizView = ({
     }
     // onAdd signature: (ad, net, type, date)
     onAdd(denemeAd, denemeNet, selectedType, examDate);
+    // Gamification triggers
+    if (onRecordAction) {
+      const totalCount = (analizler?.length || 0) + 1;
+      onRecordAction('analiz_add', totalCount);
+      const netVal = parseFloat(denemeNet);
+      if (netVal >= 200) onRecordAction('net_200');
+      else if (netVal >= 100) onRecordAction('net_100');
+    }
     setDenemeAd('');
     setDenemeNet('');
     Keyboard.dismiss();

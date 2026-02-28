@@ -26,7 +26,7 @@ interface Note {
     pinned: boolean;
 }
 
-export const NotebookView = ({ onBack, theme }: any) => {
+export const NotebookView = ({ onBack, theme, onRecordAction }: any) => {
     const [notes, setNotes] = useState<Note[]>([]);
     const [modalVisible, setModalVisible] = useState(false);
     const [editingNote, setEditingNote] = useState<Note | null>(null);
@@ -74,6 +74,10 @@ export const NotebookView = ({ onBack, theme }: any) => {
         } else {
             const newNote: Note = { id: Date.now().toString(), title: title.trim(), content: content.trim(), subject, createdAt: now, updatedAt: now, pinned: false };
             saveNotes([newNote, ...notes]);
+            // Gamification trigger
+            if (onRecordAction) {
+                onRecordAction('note_create', notes.length + 1);
+            }
         }
         setModalVisible(false);
     };
